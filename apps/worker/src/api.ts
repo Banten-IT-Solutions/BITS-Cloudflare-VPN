@@ -1,7 +1,7 @@
 import type { SubQuery, Proxy } from "@bits-vpn/shared";
 import { SubQuerySchema } from "@bits-vpn/shared";
 import { Hono } from "hono";
-import { getCachedSub, setCachedSub, queryProxies } from "./proxy";
+import { getCachedSub, getScannedProxies, setCachedSub, queryProxies } from "./proxy";
 import { checkProxyHealth } from "./health";
 import type { Env } from "./env";
 import { cors } from "hono/cors";
@@ -49,6 +49,18 @@ apiApp.get("/api/v1/sub", async (c) => {
   await setCachedSub(c.env, q, bytes);
 
   return new Response(bytes, { headers: { "Content-Type": ct } });
+});
+
+apiApp.get("/api/v1/proxies", async (c) => {
+  const region = c.req.query("region")?.toUpperCase();
+  if (region && region !== "ID" && region !== "SG") return c.json({ error: "region must be ID or SG" }, 400);
+  try {
+    const list = await getScannedProxies(c.env, region);
+    return list ? c.json(list) : c.json({ error: "proxy list unavailable" }, 503);
+  } catch (error) {
+    console.error(JSON.stringify({ message: "read scanned proxy list failed", error: error instanceof Error ? error.message : String(error) }));
+    return c.json({ error: "proxy list unavailable" }, 503);
+  }
 });
 
 apiApp.get("/api/v1/check", async (c) => {

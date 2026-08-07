@@ -252,6 +252,68 @@ Hash-routed SPA (`#/monitor`, `#/build`, `#/convert`):
 | `bun run migrate:local` | Apply D1 migrations locally |
 | `bun run migrate:remote` | Apply D1 migrations to production |
 
+## Scheduled proxy scanner
+
+`apps/scanner-worker` runs `0 0 * * *` UTC. It reads HTTPS source endpoints, accepts either JSON (`[{"ip","port","region"}]` or `{ "proxies": [...] }`) or `IP:PORT REGION` lines, keeps only ID/SG IPv4 entries, probes each target with bounded concurrency and retry, then atomically writes R2 objects:
+
+- `proxy-lists/latest.json` — current document read by proxy Worker.
+- `proxy-lists/history/<ISO timestamp>.json` — immutable scan history.
+
+R2 chosen over KV: list is file-shaped, strongly consistent after write, supports history without KV key/list limits. Scanner and proxy Worker bind same `bits-vpn-proxy-lists` bucket.
+
+### API and tunnel contract
+
+`GET /api/v1/proxies?region=ID` returns scanner output. `region` accepts `ID` or `SG`; invalid value returns `400`; missing/invalid scanner file returns `503`.
+
+```json
+{
+  "generated_at": "2026-08-08T00:00:00.000Z",
+  "proxies": [
+    {
+      "ip": "203.0.113.10",
+      "port": 443,
+      "region": "ID",
+      "last_checked": "2026-08-08T00:00:00.000Z",
+      "response_time_ms": 42,
+      "source": "https://source.example/proxies.json"
+    }
+  ]
+}
+```
+
+WebSocket `/ID`, `/SG`, `/ID,SG` selects cryptographically random healthy entry from R2. Empty list returns `503`. Direct `/IP:PORT` paths remain backward compatible.
+
+### Deploy
+
+1. Create shared R2 bucket once:
+   ```bash
+   bunx wrangler r2 bucket create bits-vpn-proxy-lists
+   ```
+2. Replace D1 and KV placeholders in `apps/worker/wrangler.jsonc`.
+3. Set scanner source endpoints before deploy. `SOURCE_URLS` is non-secret config; use comma-separated HTTPS URLs. Edit `apps/scanner-worker/wrangler.jsonc` or deploy with environment-specific vars. Never put API credentials in this field. If private source needs credentials, add secret-backed authenticated fetch before enabling it.
+4. Deploy both Workers:
+   ```bash
+   bun run --filter @bits-vpn/shared build
+   bun run --cwd apps/worker deploy
+   bun run --cwd apps/scanner-worker deploy
+   ```
+
+Cron config changes can take up to 15 minutes to propagate. First list stays unavailable until first successful scan.
+
+### Test and monitor
+
+```bash
+bun install
+bun run typecheck
+bun run build
+bun run --cwd apps/scanner-worker dev
+curl 'http://localhost:8787/cdn-cgi/handler/scheduled?format=json'
+bunx wrangler tail bits-vpn-scanner
+bunx wrangler tail bits-vpn
+```
+
+Use separate local Wrangler ports when both Workers run. Set `SOURCE_URLS` in `apps/scanner-worker/.dev.vars`; file is ignored by Git. Check Workers Cron Events for last 100 runs. Structured scanner log fields: `sources`, `candidates`, `valid`, `success_rate`, `duration_ms`. Alert on scan errors, `valid: 0`, or stale `generated_at` older than 48 hours.
+
 ## License
 
 MIT License

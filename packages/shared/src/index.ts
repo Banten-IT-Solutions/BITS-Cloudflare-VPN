@@ -18,6 +18,24 @@ export const ProxySchema = z.object({
 
 export type Proxy = z.infer<typeof ProxySchema>;
 
+export const ScannedProxySchema = z.object({
+  ip: z.string().min(1),
+  port: z.number().int().min(1).max(65535),
+  region: z.enum(["ID", "SG"]),
+  last_checked: z.string().datetime(),
+  response_time_ms: z.number().int().min(0),
+  source: z.string().url(),
+});
+
+export type ScannedProxy = z.infer<typeof ScannedProxySchema>;
+
+export const ProxyListSchema = z.object({
+  generated_at: z.string().datetime(),
+  proxies: z.array(ScannedProxySchema),
+});
+
+export type ProxyList = z.infer<typeof ProxyListSchema>;
+
 // ─── Subscription query params ────────────────────────────────────────────
 
 export const SubQuerySchema = z.object({

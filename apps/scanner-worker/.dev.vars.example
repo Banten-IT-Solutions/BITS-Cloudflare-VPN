@@ -1,0 +1,16 @@
+# Comma-separated HTTPS URLs for proxy sources
+# Accepts JSON format: [{"ip":"1.1.1.1","port":443,"region":"ID"}] or {"proxies":[...]}
+# Or plain text: IP:PORT REGION (one per line)
+SOURCE_URLS=https://example.com/id-proxies.json,https://example.com/sg-proxies.json
+
+# Maximum number of candidates to process (default: 500, max: 2000)
+MAX_CANDIDATES=500
+
+# Concurrent validation requests (default: 10, max: 25)
+MAX_CONCURRENCY=10
+
+# Probe timeout in milliseconds (default: 2000, max: 10000)
+PROBE_TIMEOUT_MS=2000
+
+# Maximum acceptable response time in milliseconds (default: 2000, max: 10000)
+MAX_DELAY_MS=2000

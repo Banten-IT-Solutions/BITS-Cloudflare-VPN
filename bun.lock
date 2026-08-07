@@ -8,6 +8,18 @@
         "wrangler": "^4.0.0",
       },
     },
+    "apps/scanner-worker": {
+      "name": "@bits-vpn/scanner-worker",
+      "version": "2.0.0",
+      "dependencies": {
+        "@bits-vpn/shared": "2.0.0",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^4.20250901.0",
+        "typescript": "^5.7.0",
+        "wrangler": "^4.0.0",
+      },
+    },
     "apps/web": {
       "name": "@bits-vpn/web",
       "version": "2.0.0",
@@ -46,6 +58,8 @@
     },
   },
   "packages": {
+    "@bits-vpn/scanner-worker": ["@bits-vpn/scanner-worker@workspace:apps/scanner-worker"],
+
     "@bits-vpn/shared": ["@bits-vpn/shared@workspace:packages/shared"],
 
     "@bits-vpn/web": ["@bits-vpn/web@workspace:apps/web"],

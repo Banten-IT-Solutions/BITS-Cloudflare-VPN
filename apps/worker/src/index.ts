@@ -21,7 +21,7 @@ export default {
 
     // ── Tunnel (WebSocket) ───────────────────────────────────────────────
     if (isTunnelRequest(url, request)) {
-      return handleTunnel(request, url);
+      return handleTunnel(request, url, env);
     }
 
     // ── API router + static fallback ─────────────────────────────────────
