@@ -22,7 +22,7 @@ export async function handleTunnel(request: Request, url: URL, env: Env): Promis
 
   if (!proxyTarget && regions.length) {
     const list = await getScannedProxies(env);
-    const matches = list?.proxies.filter((proxy) => regions.includes(proxy.region)) ?? [];
+    const matches = list?.proxies.filter((proxy: { region: "ID" | "SG" }) => regions.includes(proxy.region)) ?? [];
     if (!matches.length) return new Response("No healthy proxy available", { status: 503 });
     const selected = matches[crypto.getRandomValues(new Uint32Array(1))[0]! % matches.length]!;
     proxyTarget = `${selected.ip}:${selected.port}`;

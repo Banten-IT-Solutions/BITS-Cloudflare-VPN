@@ -29,14 +29,14 @@ export async function queryProxies(env: Env, q: SubQuery): Promise<Proxy[]> {
   const args: (string | number)[] = [];
 
   if (q.cc) {
-    const codes = q.cc.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean);
+    const codes = q.cc.split(",").map((c: string) => c.trim().toUpperCase()).filter(Boolean);
     if (codes.length) {
       conditions.push(`country IN (${codes.map(() => "?").join(",")})`);
       args.push(...codes);
     }
   }
   if (q.vpn) {
-    const protos = q.vpn.split(",").map((p) => p.trim().toLowerCase()).filter(Boolean);
+    const protos = q.vpn.split(",").map((p: string) => p.trim().toLowerCase()).filter(Boolean);
     if (protos.length) {
       conditions.push(`protocol IN (${protos.map(() => "?").join(",")})`);
       args.push(...protos);
@@ -66,7 +66,7 @@ export async function getScannedProxies(env: Env, region?: string): Promise<Prox
   if (!object) return null;
   const list = ProxyListSchema.safeParse(await object.json<unknown>());
   if (!list.success) throw new Error("invalid scanned proxy list");
-  return region ? { ...list.data, proxies: list.data.proxies.filter((proxy) => proxy.region === region) } : list.data;
+  return region ? { ...list.data, proxies: list.data.proxies.filter((proxy: { region: string }) => proxy.region === region) } : list.data;
 }
 
 /** Read-through cache for a rendered subscription payload. */
