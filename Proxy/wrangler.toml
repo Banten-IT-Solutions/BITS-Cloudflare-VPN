@@ -1,0 +1,14 @@
+name = "vpn"
+main = "_worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat_v2"]
+routes = [
+  { pattern = "vpn.bits.co.id", custom_domain = true },
+  { pattern = "support.zoom.us.vpn.bits.co.id", custom_domain = true },
+]
+
+[unsafe.metadata.observability]
+enabled = true
+
+[observability.logs]
+enabled = true

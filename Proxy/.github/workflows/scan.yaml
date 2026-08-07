@@ -1,0 +1,31 @@
+name: Scan Proxy List
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  scanner:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: proxy-scan
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GIT_TOKEN }}
+      - name: Use Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Start Scan
+        run: |
+          bun install && bun run scan:proxy-list
+      - name: Publish Result
+        if: ${{ success() }}
+        run: |
+          git config user.name "Github Actions"
+          git config user.email "actions@github.com"
+          git add .
+          git diff --cached --quiet && exit 0
+          git commit -m "Update proxy list"
+          git push origin main
