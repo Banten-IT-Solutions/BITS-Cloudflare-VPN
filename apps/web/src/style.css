@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+body {
+  font-family: "Space Grotesk", "Plus Jakarta Sans", system-ui, sans-serif;
+}

@@ -1,0 +1,21 @@
+{
+  "name": "bits-vpn",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter @bits-vpn/shared build && bun run --filter @bits-vpn/web build && bun run --filter @bits-vpn/worker build",
+    "dev:worker": "bun run --filter @bits-vpn/worker dev",
+    "dev:web": "bun run --filter @bits-vpn/web dev",
+    "typecheck": "bun run --filter '@bits-vpn/*' typecheck",
+    "migrate:local": "bun run --cwd apps/worker wrangler d1 migrations apply vpn --local",
+    "migrate:remote": "bun run --cwd apps/worker wrangler d1 migrations apply vpn --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

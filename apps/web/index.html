@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BITS VPN</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="bg-slate-950 text-slate-100 min-h-screen">
+    <div
+      class="p-6 max-w-4xl mx-auto"
+      x-data="appStore()"
+      x-init="init()"
+    >
+      <nav class="flex gap-4 mb-8 text-slate-300">
+        <a href="#/build" class="hover:text-cyan-400" :class="route === 'build' && 'text-cyan-400'">Build</a>
+        <a href="#/convert" class="hover:text-cyan-400" :class="route === 'convert' && 'text-cyan-400'">Convert</a>
+        <a href="#/monitor" class="hover:text-cyan-400" :class="route === 'monitor' && 'text-cyan-400'">Monitor</a>
+      </nav>
+
+      <template x-if="route === 'monitor'">
+        <section>
+          <h1 class="text-2xl font-bold mb-4">Proxy Monitor</h1>
+          <button
+            class="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500"
+            @click="runChecks()"
+            :disabled="loading"
+          >
+            <span x-show="!loading">Refresh</span><span x-show="loading">…</span>
+          </button>
+
+          <ul class="mt-6 space-y-2">
+            <template x-for="(p, i) in proxies" :key="i">
+              <li class="flex justify-between bg-slate-900 rounded px-4 py-3">
+                <span class="font-mono" x-text="`${p.ip}:${p.port}`"></span>
+                <span
+                  :class="p.delay == null ? 'text-slate-500' : p.healthy ? 'text-emerald-400' : 'text-rose-400'"
+                  x-text="p.delay == null ? '…' : p.healthy ? `${p.delay}ms` : 'down'"
+                ></span>
+              </li>
+            </template>
+          </ul>
+        </section>
+      </template>
+
+      <template x-if="route === 'build'">
+        <section>
+          <h1 class="text-2xl font-bold mb-4">Build</h1>
+          <p class="text-slate-400">Konfigurasi daftar proxy Anda.</p>
+        </section>
+      </template>
+
+      <template x-if="route === 'convert'">
+        <section>
+          <h1 class="text-2xl font-bold mb-4">Convert</h1>
+          <p class="text-slate-400">Ubah format URL/daftar proxy.</p>
+        </section>
+      </template>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
