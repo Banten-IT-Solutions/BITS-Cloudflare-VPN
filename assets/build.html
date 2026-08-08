@@ -257,7 +257,7 @@ document.getElementById("buildBtn").addEventListener("click", () => {
 
   // Generate Clash YAML
   const yamlProxies = selectedProxies.map((prx, i) => {
-    return `  - name: ${i+1} ${getFlag(prx.country)} ${prx.org}
+    return `  - name: ${getFlag(prx.country)} ${prx.org}
     server: ${server}
     port: ${port}
     type: vless
