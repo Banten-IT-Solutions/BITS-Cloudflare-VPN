@@ -23,6 +23,7 @@ jobs:
         uses: actions/checkout@v7.0.1
         with:
           token: ${{ github.token }}
+          fetch-depth: 0
 
       - name: 🟣 Setup Bun
         uses: oven-sh/setup-bun@v2.2.0
@@ -45,4 +46,8 @@ jobs:
           fi
           git commit -m "Update proxy list"
           echo "::notice::📤 Proxy list updated and published"
-          git push origin main --force-with-lease
+          # Rebase di atas main terbaru (untuk menghindari "stale info" ketika
+          # ada commit lain yang sudah masuk sebelum workflow ini selesai)
+          git fetch origin main
+          git rebase origin/main
+          git push origin main
