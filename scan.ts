@@ -107,31 +107,6 @@ export async function checkProxy(proxyAddress: string, proxyPort: number): Promi
   return result;
 }
 
-// async function checkProxy(proxyAddress: string, proxyPort: number): Promise<ProxyTestResult> {
-//   const controller = new AbortController();
-//   setTimeout(() => controller.abort(), 5000);
-
-//   try {
-//     const res = await Bun.fetch(IP_RESOLVER_DOMAIN + `?ip=${proxyAddress}:${proxyPort}`, {
-//       signal: controller.signal,
-//     });
-
-//     if (res.status == 200) {
-//       return {
-//         error: false,
-//         result: await res.json(),
-//       };
-//     } else {
-//       throw new Error(res.statusText);
-//     }
-//   } catch (e: any) {
-//     return {
-//       error: true,
-//       message: e.message,
-//     };
-//   }
-// }
-
 async function readProxyList(): Promise<ProxyStruct[]> {
   const proxyList: ProxyStruct[] = [];
 
