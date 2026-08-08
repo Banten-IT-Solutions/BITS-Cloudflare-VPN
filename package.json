@@ -45,6 +45,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "fetch": "bun run fetch.ts",
     "scan": "bun run scan.ts",
     "test": "bun test src/core/relay.test.ts || bun run src/core/relay.test.ts",
     "types": "tsc --noEmit"
