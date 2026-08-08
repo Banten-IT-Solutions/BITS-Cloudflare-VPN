@@ -127,7 +127,8 @@ export function createApiRoutes() {
   // GET /proxies - list proxies with filter & pagination (untuk /build page)
   app.get("/proxies", async (c) => {
     const q = c.req.query("q") || "";
-    const cc = c.req.query("cc")?.split(",") || [];
+    const ccParam = c.req.query("cc") || "";
+    const cc = ccParam ? ccParam.split(",").filter(Boolean) : [];
     const port = c.req.query("port");
     const page = parseInt(c.req.query("page") || "1") || 1;
     const limit = Math.min(parseInt(c.req.query("limit") || "20") || 20, 100);
@@ -135,8 +136,8 @@ export function createApiRoutes() {
     const prxBankUrl = c.env.PRX_BANK_URL;
     let items = await getPrxList(prxBankUrl);
 
-    // Filter by country
-    if (cc.length) {
+    // Filter by country (hanya jika cc tidak kosong)
+    if (cc.length > 0 && cc[0] !== "") {
       items = items.filter((prx) => cc.includes(prx.country));
     }
 

@@ -122,14 +122,18 @@ document.getElementById("loadProxies").addEventListener("click", async () => {
   const q = document.getElementById("filterQ").value.trim();
   const url = `/api/proxies?limit=50&cc=${cc}&q=${q}`;
   
+  console.log('Fetching:', url);
+  
   try {
     const res = await fetch(url);
+    console.log('Response status:', res.status);
     const data = await res.json();
+    console.log('Data received:', data);
     const list = document.getElementById("proxyList");
     list.innerHTML = "";
     
     if (data.items.length === 0) {
-      list.innerHTML = "<p class='note'>Tidak ada proxy ditemukan.</p>";
+      list.innerHTML = `<p class='note'>Tidak ada proxy ditemukan. (Total: ${data.count}, Filter: cc="${cc}", q="${q}")</p>`;
       return;
     }
     
