@@ -29,7 +29,12 @@ export async function getKVPrxList(kvPrxUrl: string = KV_PRX_URL): Promise<Recor
     return cached.data;
   }
 
-  const kvPrx = await fetch(kvPrxUrl);
+  const kvPrx = await fetch(kvPrxUrl, {
+    cf: {
+      cacheTtl: 300,
+      cacheEverything: true,
+    },
+  } as any);
   if (kvPrx.status == 200) {
     const data = await kvPrx.json() as Record<string, string[]>;
     kvPrxCache.set(kvPrxUrl, { data, expiresAt: Date.now() + CACHE_TTL_MS });
@@ -61,7 +66,12 @@ export async function getPrxList(prxBankUrl: string = PRX_BANK_URL): Promise<Pro
     return cached.data;
   }
 
-  const prxBank = await fetch(prxBankUrl);
+  const prxBank = await fetch(prxBankUrl, {
+    cf: {
+      cacheTtl: 300,
+      cacheEverything: true,
+    },
+  } as any);
   if (prxBank.status == 200) {
     const text = (await prxBank.text()) || "";
 
