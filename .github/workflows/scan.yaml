@@ -1,4 +1,4 @@
-name: Proxy Scanner
+name: 🛰️ Proxy Scanner
 
 on:
   workflow_dispatch:
@@ -14,33 +14,35 @@ concurrency:
 
 jobs:
   scanner:
-    name: Scan & update proxy list
+    name: ✅ Scan & update proxy list
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:
-      - name: Checkout
+      - name: 🏞️ Checkout repository
         uses: actions/checkout@v7.0.1
         with:
           token: ${{ github.token }}
 
-      - name: Use Bun
+      - name: 🟣 Setup Bun
         uses: oven-sh/setup-bun@v2.2.0
 
-      - name: Start Scan
+      - name: 👀 Start scan
         run: |
+          echo "::notice::🛰️ Scanning proxy list ..."
           bun install --frozen-lockfile
           bun run ./scan.ts
 
-      - name: Publish Result
+      - name: 📤 Publish result
         if: ${{ success() }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           if git diff --cached --quiet; then
-            echo "No changes to commit"
+            echo "::notice::✅ No changes in proxy list, nothing to commit"
             exit 0
           fi
           git commit -m "Update proxy list"
+          echo "::notice::📤 Proxy list updated and published"
           git push origin main --force-with-lease

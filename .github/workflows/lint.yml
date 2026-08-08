@@ -1,4 +1,4 @@
-name: Lint Workflows
+name: 🧪 Lint
 
 on:
   push:
@@ -13,19 +13,19 @@ permissions:
 
 jobs:
   actionlint:
-    name: actionlint
+    name: ✅ Validate workflow YAML
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
     steps:
-      - name: Checkout
+      - name: 🏞️ Checkout repository
         uses: actions/checkout@v7.0.1
 
-      - name: Download actionlint
+      - name: 📥 Download actionlint
         id: get_actionlint
         run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
         shell: bash
 
-      - name: Run actionlint
+      - name: 🔍 Run actionlint
         run: ${{ steps.get_actionlint.outputs.executable }} -color
         shell: bash
