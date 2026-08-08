@@ -38,11 +38,11 @@
       <li>Generate link vless:// dengan config SNI/CDN, wildcard, port.</li>
       <li>Salin URL atau YAML Clash, lalu import ke aplikasi VPN (v2rayN, Nekoray, Clash, dll.).</li>
     </ol>
-    <div class="url" id="apiExample">https://.../api/v1/sub?vpn=vless&limit=10&format=v2ray</div>
+    <div class="url" id="apiExample">https://.../api/sub?vpn=vless&limit=10&format=v2ray</div>
   </div>
 
   <div class="card">
-    <h2>Parameter API /api/v1/sub</h2>
+    <h2>Parameter API /api/sub</h2>
     <div class="grid">
       <div><label>vpn</label><code>vless</code>, <code>vmess</code>, <code>trojan</code></div>
       <div><label>cc</label>kode negara <code>ID</code>, <code>SG</code>, ...</div>
@@ -57,7 +57,7 @@
     <h2>Tools</h2>
     <p class="note"><a href="/build">🔨 Build</a> — Pilih proxy + konfigurasi SNI/CDN → generate vless:// + Clash YAML</p>
     <p class="note"><a href="/convert">🔄 Convert</a> — Convert vless:// URL ke Clash YAML format</p>
-    <p class="note"><a href="/api/v1/myip">📍 /api/v1/myip</a> — Cek IP & colo kamu saat ini</p>
+    <p class="note"><a href="/api/myip">📍 /api/myip</a> — Cek IP & colo kamu saat ini</p>
   </div>
 
   <div class="foot">
@@ -73,11 +73,11 @@
   document.getElementById("serviceName").textContent = serviceName;
   document.getElementById("domain").textContent = `wss://${domain}`;
   document.getElementById("footDomain").textContent = domain;
-  document.getElementById("apiExample").textContent = `https://${domain}/api/v1/sub?vpn=vless&limit=10&format=v2ray`;
+  document.getElementById("apiExample").textContent = `https://${domain}/api/sub?vpn=vless&limit=10&format=v2ray`;
 
   // Fetch myip
   try {
-    const res = await fetch("/api/v1/myip");
+    const res = await fetch("/api/myip");
     const data = await res.json();
     document.getElementById("myip").textContent = `${data.ip || "N/A"} — ${data.city || "Unknown"}, ${data.colo || "Unknown"}`;
   } catch (e) {

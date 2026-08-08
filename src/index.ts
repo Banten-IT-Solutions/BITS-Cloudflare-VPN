@@ -2,7 +2,7 @@
 import { Hono } from "hono";
 import { websocketHandler, setPrxIP } from "./core/relay";
 import { getKVPrxList } from "./core/lists";
-import { createApiRoutes, createCheckRoute } from "./routes/api";
+import { createApiRoutes } from "./routes/api";
 import { CORS_HEADER_OPTIONS } from "./core/constants";
 
 interface Env {
@@ -13,9 +13,8 @@ interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Mount API routes
-app.route("/api/v1", createApiRoutes());
-app.route("/", createCheckRoute());
+// Mount API routes (tanpa /v1, langsung /api/*)
+app.route("/api", createApiRoutes());
 
 // Serve static assets untuk halaman frontend
 const serveAsset = (filename: string) => async (c: any) => {
@@ -26,7 +25,6 @@ const serveAsset = (filename: string) => async (c: any) => {
 
 app.get("/", serveAsset("index.html"));
 app.get("/build", serveAsset("build.html"));
-app.get("/sub", serveAsset("build.html")); // Legacy /sub → build
 app.get("/convert", serveAsset("convert.html"));
 app.get("/shared.css", serveAsset("shared.css"));
 

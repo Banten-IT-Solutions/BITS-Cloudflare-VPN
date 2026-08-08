@@ -21,6 +21,17 @@ interface Env {
 export function createApiRoutes() {
   const app = new Hono<{ Bindings: Env }>();
 
+  // GET /check - health check proxy
+  app.get("/check", async (c) => {
+    const target = c.req.query("target");
+    if (!target) {
+      return c.json({ error: "Missing target parameter" }, 400, CORS_HEADER_OPTIONS);
+    }
+    const [ip, port] = target.split(":");
+    const result = await checkPrxHealth(ip, port || "443");
+    return c.json(result, 200, CORS_HEADER_OPTIONS);
+  });
+
   // GET /sub - subscription generator (raw, v2ray, json)
   app.get("/sub", async (c) => {
     const url = new URL(c.req.url);
@@ -155,23 +166,6 @@ export function createApiRoutes() {
       200,
       CORS_HEADER_OPTIONS,
     );
-  });
-
-  return app;
-}
-
-// Toplevel /check endpoint (di luar /api/v1)
-export function createCheckRoute() {
-  const app = new Hono();
-
-  app.get("/check", async (c) => {
-    const target = c.req.query("target");
-    if (!target) {
-      return c.json({ error: "Missing target parameter" }, 400, CORS_HEADER_OPTIONS);
-    }
-    const [ip, port] = target.split(":");
-    const result = await checkPrxHealth(ip, port || "443");
-    return c.json(result, 200, CORS_HEADER_OPTIONS);
   });
 
   return app;

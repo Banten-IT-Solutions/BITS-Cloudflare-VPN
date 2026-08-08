@@ -120,7 +120,7 @@ let selectedProxies = [];
 document.getElementById("loadProxies").addEventListener("click", async () => {
   const cc = document.getElementById("filterCC").value.trim();
   const q = document.getElementById("filterQ").value.trim();
-  const url = `/api/v1/proxies?limit=50&cc=${cc}&q=${q}`;
+  const url = `/api/proxies?limit=50&cc=${cc}&q=${q}`;
   
   try {
     const res = await fetch(url);
