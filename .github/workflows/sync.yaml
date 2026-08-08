@@ -1,4 +1,4 @@
-name: 🔄 Sync bun.lockb
+name: Sync Bun
 
 on:
   workflow_dispatch:
