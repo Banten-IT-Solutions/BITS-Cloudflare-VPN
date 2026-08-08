@@ -82,7 +82,8 @@ dengan nama berikut (sudah distandarkan):
 |---|---|---|
 | `CLOUDFLARE_API_TOKEN` | ✅ | Token API Cloudflare (scope: *Account → Cloudflare Workers Scripts → Edit*) untuk deploy `cf.yml` |
 | `CLOUDFLARE_ACCOUNT_ID` | ✅ | Account ID Cloudflare untuk deploy `cf.yml` |
-| `GITHUB_PAT` | ⚠️ Opsional | Personal Access Token (scope `repo`) untuk push hasil `scan.yaml` & `obfuscate.yaml`; jika kosong akan memakai `github.token` otomatis |
+
+> Push dari workflow `scan.yaml` & `obfuscate.yaml` memakai token bawaan `github.token` + permission `contents: write` — tidak perlu secret tambahan.
 
 ## Cara Aktivasi API
 

@@ -8,26 +8,39 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: proxy-scan
+  cancel-in-progress: false
+
 jobs:
   scanner:
-    runs-on: ubuntu-latest
-    concurrency:
-      group: proxy-scan
+    name: Scan & update proxy list
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v7.0.1
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
         with:
-          token: ${{ secrets.GITHUB_PAT || github.token }}
+          token: ${{ github.token }}
+
       - name: Use Bun
         uses: oven-sh/setup-bun@v2.2.0
+
       - name: Start Scan
         run: |
-          bun install && bun run ./helper/proxyip.ts
+          bun install --frozen-lockfile
+          bun run ./helper/proxyip.ts
+
       - name: Publish Result
         if: ${{ success() }}
         run: |
-          git config --global user.name "Github Actions"
-          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
           git commit -m "Update proxyip"
-          git push origin main --force
+          git push origin main --force-with-lease
