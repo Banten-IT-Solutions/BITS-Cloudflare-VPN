@@ -15,7 +15,6 @@
       animation: {
         'fade-in': 'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
         'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
-        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'float': 'float 6s ease-in-out infinite',
       },
       keyframes: {
@@ -45,12 +44,6 @@
     color: white;
     overflow-x: hidden;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  }
-  .gradient-text {
-    background: linear-gradient(135deg, #a78bfa 0%, #e879f9 50%, #fcd34d 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
   .gradient-bg {
     background: linear-gradient(135deg, #4f46e5 0%, #d946ef 100%);
@@ -508,43 +501,62 @@
           setTimeout(() => {
             const hostname = location.hostname;
             const { mode, bug, wildcard, port } = this.config;
+            
+            // Validate & sanitize input bug domain
+            const cleanBug = bug.replace(/[^a-zA-Z0-9.-]/g, '').trim();
+            if (!cleanBug) {
+              alert('Invalid Bug Domain!');
+              this.building = false;
+              return;
+            }
+            
+            // Validate port
+            const cleanPort = port === '80' ? '80' : '443';
+            
             let server, servername, host;
 
             if (mode === 'sni') {
               if (wildcard === 'yes') {
-                server = `${bug}.${hostname}`;
-                servername = bug;
-                host = bug;
+                server = `${cleanBug}.${hostname}`;
+                servername = cleanBug;
+                host = cleanBug;
               } else {
                 server = hostname;
-                servername = bug;
-                host = bug;
+                servername = cleanBug;
+                host = cleanBug;
               }
             } else {
               if (wildcard === 'yes') {
-                server = bug;
-                servername = `${bug}.${hostname}`;
-                host = `${bug}.${hostname}`;
+                server = cleanBug;
+                servername = `${cleanBug}.${hostname}`;
+                host = `${cleanBug}.${hostname}`;
               } else {
-                server = bug;
+                server = cleanBug;
                 servername = hostname;
                 host = hostname;
               }
             }
 
-            const tls = port === '443';
+            const tls = cleanPort === '443';
             const uris = [];
             const proxiesYaml = [];
+            
+            const yamlEscape = (str) => str.replace(/"/g, '\\"');
 
             this.selectedProxies.forEach(proxy => {
               const uuid = this.generateUUID();
               const flag = this.getFlagEmoji(proxy.country);
-              const uri = `vless://${uuid}@${server}:${port}?encryption=none&security=${tls ? 'tls' : 'none'}${tls ? `&sni=${servername}` : ''}&type=ws&host=${host}&path=%2F%3Fed%3D2560#${flag} ${proxy.org}`;
+              const orgName = `${flag} ${proxy.org}`;
+              
+              // Safe URI configuration
+              const safeHash = encodeURIComponent(`${orgName} WS ${tls ? 'TLS' : 'NTLS'} [BITS Cloudflare VPN]`);
+              const uri = `vless://${uuid}@${server}:${cleanPort}?encryption=none&security=${tls ? 'tls' : 'none'}${tls ? `&sni=${servername}` : ''}&type=ws&host=${host}&path=%2F%3Fed%3D2560#${safeHash}`;
               uris.push(uri);
-              proxiesYaml.push(`  - name: "${flag} ${proxy.org}"
+              
+              proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
     type: vless
     server: ${server}
-    port: ${port}
+    port: ${cleanPort}
     uuid: ${uuid}
     udp: false
     tls: ${tls}
