@@ -9,7 +9,7 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 
 # Fitur
 
-- [x] Otomatis split protocol VLESS, Trojan, Shadowsocks, dan VMess
+- [x] Otomatis split protocol VLESS, Trojan, dan VMess
 - [x] Support VMess AEAD (kompatibel dengan V2Ray)
 - [x] Reverse proxy
 - [x] Cache daftar proxy
@@ -26,9 +26,9 @@ Sebuah repository serverless tunnel studi kasus Indonesia
   - [x] Negara `&cc=ID,SG,...`
 - [x] Subscription API
   - [x] Country Code `&cc=ID,SG,JP,KR,...`
-  - [x] Format `&format=clash` (raw, clash, sfa, bfr, v2ray)
+  - [x] Format `&format=raw` / `&format=v2ray` (default: raw)
   - [x] Limit `&limit=10`
-  - [x] VPN `&vpn=vless,trojan,ss,vmess`
+  - [x] VPN `&vpn=vless,trojan,vmess` (default: vless)
   - [x] Port `&port=443,80`
   - [x] Domain `&domain=zoom.us`
 - [x] Tombol `Deploy to workers` untuk instant deployment
@@ -36,7 +36,6 @@ Sebuah repository serverless tunnel studi kasus Indonesia
 # Todo (Belum Selesai)
 
 - [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
-- [ ] Skema URL shadowsocks
 
 Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan PR kalian!
 

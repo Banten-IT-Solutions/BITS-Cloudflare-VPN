@@ -12,7 +12,7 @@ const neko = "dmxlc3M=";
 const v2 = "djJyYXk=";
 
 const PORTS = [443, 80];
-const PROTOCOLS = [atob(horse), atob(flash), atob(neko), "ss"];
+const PROTOCOLS = [atob(neko), atob(horse), atob(flash)];
 const SUB_PAGE_URL = "https://vpn.bits.co.id";
 const KV_PRX_URL =
   "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/KV.json";
@@ -157,7 +157,9 @@ export default {
         if (apiPath.startsWith("/sub")) {
           const filterCC = url.searchParams.get("cc")?.split(",") || [];
           const filterPort = url.searchParams.get("port")?.split(",") || PORTS;
-          const filterVPN = url.searchParams.get("vpn")?.split(",") || PROTOCOLS;
+          const filterVPN = url.searchParams.get("vpn")?.split(",").filter((p) => PROTOCOLS.includes(p)) || [];
+          const protocols =
+            filterVPN.length ? filterVPN : [atob(neko)];
           const filterLimit = parseInt(url.searchParams.get("limit")) || 10;
           const filterFormat = url.searchParams.get("format") || "raw";
           const fillerDomain = url.searchParams.get("domain") || APP_DOMAIN;
@@ -184,22 +186,12 @@ export default {
             uri.searchParams.set("host", APP_DOMAIN);
 
             for (const port of filterPort) {
-              for (const protocol of filterVPN) {
+              for (const protocol of protocols) {
                 if (result.length >= filterLimit) break;
 
                 uri.protocol = protocol;
                 uri.port = port.toString();
-                if (protocol == "ss") {
-                  uri.username = btoa(`none:${uuid}`);
-                  uri.searchParams.set(
-                    "plugin",
-                    `${atob(v2)}-plugin${port == 80 ? "" : ";tls"};mux=0;mode=websocket;path=/${prx.prxIP}-${
-                      prx.prxPort
-                    };host=${APP_DOMAIN}`,
-                  );
-                } else {
-                  uri.username = uuid;
-                }
+                uri.username = uuid;
 
                 uri.searchParams.set("security", port == 443 ? "tls" : "none");
                 uri.searchParams.set("sni", port == 80 && protocol == atob(flash) ? "" : APP_DOMAIN);
@@ -322,8 +314,6 @@ async function websocketHandler(request) {
             protocolHeader = await readStreamHeader(chunk);
           } else if (protocol === atob(neko)) {
             protocolHeader = readNekoHeader(chunk);
-          } else if (protocol === "ss") {
-            protocolHeader = readSsHeader(chunk);
           } else {
             throw new Error("Unknown Protocol!");
           }
@@ -419,17 +409,7 @@ async function protocolSniffer(buffer) {
     }
   }
 
-  if (buffer.byteLength >= 42) {
-    const firstByte = new Uint8Array(buffer.slice(0, 1))[0];
-
-    if (firstByte === 0x01 || firstByte === 0x03 || firstByte === 0x04) {
-      return "ss";
-    }
-
-    return atob(flash);
-  }
-
-  return "ss";
+  return atob(flash);
 }
 
 async function generateStreamResponseHeader(responseOptions, encKey, encIv) {
@@ -807,62 +787,6 @@ async function readStreamHeader(buffer) {
       message: "Stream header parsing failed: " + e.message,
     };
   }
-}
-
-function readSsHeader(ssBuffer) {
-  const view = new DataView(ssBuffer);
-
-  const addressType = view.getUint8(0);
-  let addressLength = 0;
-  let addressValueIndex = 1;
-  let addressValue = "";
-
-  switch (addressType) {
-    case 1:
-      addressLength = 4;
-      addressValue = new Uint8Array(ssBuffer.slice(addressValueIndex, addressValueIndex + addressLength)).join(".");
-      break;
-    case 3:
-      addressLength = new Uint8Array(ssBuffer.slice(addressValueIndex, addressValueIndex + 1))[0];
-      addressValueIndex += 1;
-      addressValue = new TextDecoder().decode(ssBuffer.slice(addressValueIndex, addressValueIndex + addressLength));
-      break;
-    case 4:
-      addressLength = 16;
-      const dataView = new DataView(ssBuffer.slice(addressValueIndex, addressValueIndex + addressLength));
-      const ipv6 = [];
-      for (let i = 0; i < 8; i++) {
-        ipv6.push(dataView.getUint16(i * 2).toString(16));
-      }
-      addressValue = ipv6.join(":");
-      break;
-    default:
-      return {
-        hasError: true,
-        message: `Invalid addressType for SS: ${addressType}`,
-      };
-  }
-
-  if (!addressValue) {
-    return {
-      hasError: true,
-      message: `Destination address empty, address type is: ${addressType}`,
-    };
-  }
-
-  const portIndex = addressValueIndex + addressLength;
-  const portBuffer = ssBuffer.slice(portIndex, portIndex + 2);
-  const portRemote = new DataView(portBuffer).getUint16(0);
-  return {
-    hasError: false,
-    addressRemote: addressValue,
-    addressType: addressType,
-    portRemote: portRemote,
-    rawDataIndex: portIndex + 2,
-    rawClientData: ssBuffer.slice(portIndex + 2),
-    version: null,
-    isUDP: portRemote == 53,
-  };
 }
 
 function readNekoHeader(buffer) {
