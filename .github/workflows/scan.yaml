@@ -30,7 +30,7 @@ jobs:
       - name: Start Scan
         run: |
           bun install --frozen-lockfile
-          bun run ./helper/proxyip.ts
+          bun run ./scan.ts
 
       - name: Publish Result
         if: ${{ success() }}
@@ -42,5 +42,5 @@ jobs:
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "Update proxyip"
+          git commit -m "Update proxy list"
           git push origin main --force-with-lease
