@@ -5,15 +5,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
-    groups:
-      actions-deps:
-        name: "🤖 GitHub Actions Updates"
+    commit-message:
+      prefix: "🤖 ci"
 
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-    groups:
-      npm-deps:
-        name: "📦 Bun Updates"
+    commit-message:
+      prefix: "📦 deps"
