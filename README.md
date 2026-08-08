@@ -1,116 +1,158 @@
-# Welcome to vpn
+# BITS-Cloudflare-VPN
 
-Sebuah repository serverless tunnel studi kasus Indonesia
+VPN serverless (VLESS / VMess / Trojan via WebSocket) berjalan di Cloudflare Workers — IP negara (colocation) gratis melalui CDN Cloudflare, disediakan oleh [Banten IT Solutions](https://bitsco.id).
 
-> ## NOTES.md
->
-> Kamu tidak perlu membayar untuk menggunakan kode dalam repository/layanan ini.  
-> Kalau kamu membayar kepada siapapun, berarti kamu terkena scam.
+> **Catatan penting:** Worker ini sekarang **self-contained** — tidak lagi reverse-proxy ke bits.co.id.
+> Halaman `https://<domain>/` dan `https://<domain>/sub` adalah UI yang dibungkus langsung di dalam
+> worker; tidak ada ketergantungan ke host eksternal mana pun.
 
-# Fitur
+## Fitur
 
-- [x] Otomatis split protocol VLESS, Trojan, dan VMess
-- [x] Support VMess AEAD (kompatibel dengan V2Ray)
-- [x] Reverse proxy
-- [x] Cache daftar proxy
-- [x] Support TCP dan DoH
-- [x] Transport Websocket CDN dan SNI
-- [x] KV proxy key (proxy berdasarkan country)
-- [x] Pagination
-- [x] Tampilan web bagus dan minimalis (Menurut saya)
-- [x] Dark mode
-- [x] Auto check (ping) akun
-- [x] Ambil akun dalam beberapa format (link, clash, sing-box, dll)
-- [x] Registrasi wildcard
-- [x] Menambahkan filter
-  - [x] Negara `&cc=ID,SG,...`
-- [x] Subscription API
-  - [x] Country Code `&cc=ID,SG,JP,KR,...`
-  - [x] Format `&format=raw` / `&format=v2ray` (default: raw)
-  - [x] Limit `&limit=10`
-  - [x] VPN `&vpn=vless,trojan,vmess` (default: vless)
-  - [x] Port `&port=443,80`
-  - [x] Domain `&domain=zoom.us`
-- [x] Tombol `Deploy to workers` untuk instant deployment
+- 🚀 Endpoint Worker: `wss://yuliana.my.id` (tanpa subfolder)
+- 🧩 Protokol **VLESS** (default), **VMess**, dan **Trojan** — dipilih lewat parameter `vpn`
+- 📍 Filter negara (colo) dengan `cc` (mis. `ID`, `SG`, `US`)
+- 🔌 Port `443`/`80`
+- 🖥️ Format `raw` (teks) atau `v2ray` (base64) — default `v2ray`
+- 🧹 Auto-ganti DNS per-request (header `x-real-ip` aman)
+- 🗃️ IP pool up-to-date dari `KV.json` dan `proxy.txt` di repo ini, di-refresh otomatis oleh workflow CI (setiap 30 menit)
+- 📄 Halaman UI `https://yuliana.my.id/sub` (generator link) & `https://yuliana.my.id/api/v1` (API)
+- 🛸 Wildcard `*.yuliana.my.id` juga meneruskan tunnel (semua subdomain langsung berfungsi)
 
-# Todo (Belum Selesai)
+## Instalasi
 
-- [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
+1. **Deploy as worker**
 
-Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan PR kalian!
+   ```sh
+   npm i -g wrangler
+   git clone https://github.com/bitscoid/BITS-Cloudflare-VPN
+   cd BITS-Cloudflare-VPN
+   wrangler deploy
+   ```
 
-# Catatan
+2. **(Opsional) Production Domain** — ganti `yuliana.my.id` dengan domain kamu sendiri, lalu tambahkan route:
 
-- Harus UUID v4 Variant 2
-- Gunakan security `none`
-- Gunakan DoH di aplikasi VPN kalian jika tidak bisa browsing atau membuka website
-  - Contoh DoH `https://8.8.8.8/dns-query`
-- **VMess Protocol:**
-  - Mendukung VMess AEAD sesuai spesifikasi V2Ray
-  - Enkripsi menggunakan AES-128-GCM
-  - UUID default untuk testing: `00000000-0000-0000-0000-000000000000`
-  - AlterID harus `0` (AEAD mode)
-  - Security: `zero`
+   ```toml
+   [[routes]]
+   pattern = "yuliana.my.id"          # custom domain -> sertifikat otomatis
+   custom_domain = true
 
-# Cara Deploy
+   [[routes]]
+   pattern = "*.yuliana.my.id/*"      # wildcard
+   zone_name = "yuliana.my.id"
+   ```
 
-## Instant
+   Semua protokol & API otomatis bekerja di subdomain mana pun, mis. `tes.yuliana.my.id`.
 
-Klik tombol di bawah  
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/bitscoid/BITS-Cloudflare-VPN)
+3. Gunakan tools lain seperti [Docker deploy](https://github.com/bitscoid/BITS-Cloudflare-VPN/blob/master/README-docker.md) jika tidak ingin install npm.
 
-## Manual
+## Quick Deployment (Docker)
 
-1. Buat akun cloudflare
-2. Buat worker
-3. Copy kode dari `worker.js` ke editor cloudflare worker
-4. (Optional) Masukkan link daftar proxy kalian ke dalam environment variable `PRX_BANK_URL`
-5. (Optional) Masukkan link target reverse proxy ke environment variable `REVERSE_PRX_TARGET` (default: `https://bits.co.id`)
-6. Deploy
-7. Buka `https://DOMAIN_WORKER_KALIAN/sub`
+```bash
+docker run --rm -e CLOUDFLARE_API_TOKEN=xxxx wrangler-action deploy
+```
 
-- Contoh daftar proxy [proxy.txt](https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt)
-- Contoh reverse proxy [bits.co.id](https://bits.co.id)
+Memakai [worker-template](https://github.com/bitscoid/Cloudflare-Workers-VPN), tapi cukup satu file `worker.js`.
 
-## GitHub Actions (Secret yang diperlukan)
+## Penggunaan
 
-Untuk menjalankan deploy otomatis, isi **Settings → Secrets and variables → Actions**
-dengan nama berikut (sudah distandarkan):
+### Coba langsung
 
-| Secret | Wajib? | Gunanya |
-|---|---|---|
-| `CLOUDFLARE_API_TOKEN` | ✅ | Token API Cloudflare (scope: *Account → Cloudflare Workers Scripts → Edit*) untuk deploy `deploy.yml` |
-| `CLOUDFLARE_ACCOUNT_ID` | ✅ | Account ID Cloudflare untuk deploy `deploy.yml` |
+Halaman subscription: [yuliana.my.id](/sub)
 
-> Push dari workflow `scan.yaml` memakai token bawaan `github.token` + permission `contents: write` — tidak perlu secret tambahan.
+Default endpoint:
 
-## Cara Aktivasi API
+```bash
+# VLESS (default) — 10 akun, semua negara
+curl "https://tes.yuliana.my.id/api/v1/sub?vpn=vless&limit=10"
 
-Salah satu fungsi API adalah agar kalian bisa melihat dan menambahkan subdomain wildcards ke workers.
+# VMess
+curl "https://tes.yuliana.my.id/api/v1/sub?vpn=vmess&limit=10"
 
-Berikut cara aktivasinya:
+# Trojan
+curl "https://tes.yuliana.my.id/api/v1/sub?vpn=trojan&limit=10"
 
-1. Masuk ke halaman editor workers yang sudah kalian buat
-2. Isi `variable` dari baris ke 4-9 sesuai dengan key yang kalian miliki
-3. Deploy
+# Filter negara
+curl "https://tes.yuliana.my.id/api/v1/sub?cc=SG&limit=10"
 
-### Aktivasi Wildcard (Custom Domain)
+# Port 80
+curl "https://tes.yuliana.my.id/api/v1/sub?port=80&limit=10"
+```
 
-1. Selesaikan langkah [Aktivasi API](#cara-aktivasi-api)
-2. Isi variable `rootDomain` dengan domain utama kalian
-   - Contoh: Domain workers `vpn.bits.co.id`, berarti domain utamanya adalah `bits.co.id`
-3. Isi variable `serviceName` dengan nama workers kalian
-   - Contoh: Domain workers `vpn.bits.co.id`, berarti nama workersnya adalah `vpn`
-4. Buat custom domain di pengaturan workers dengan kombinasi `serviceName`.`rootDomain`
-   - Contoh: `vpn.bits.co.id`
+### Parameter API `/api/v1/sub`
 
-# Endpoint
+`GET https://<domain>/api/v1/sub`
 
-- `/` -> Halaman utama reverse proxy
-- `/sub/:page` -> Halaman sub/list akun
-- `/api/v1/sub` -> Subscription link, [Queries](#fitur)
+| Query   | Nilai                                                                | Default          |
+| ------- | -------------------------------------------------------------------- | ---------------- |
+| `vpn`   | `vless`, `vmess`, `trojan` (bisa dipisah koma)                        | `vless`          |
+| `cc`    | kode negara (mis. `ID,SG`) — kosong = semua                           | semua            |
+| `port`  | `443`, `80`                                                           | `443`            |
+| `limit` | jumlah akun                                                           | `10`             |
+| `format`| `raw` atau `v2ray` (base64)                                           | `v2ray`          |
+| `domain`| SNI/domain yang diisi ke config (default: hostname request)           | hostname         |
 
-# Footnote
+**Response:** teks biasa `text/plain`. Semua endpoint API mengembalikan CORS `*` jadi bisa dipakai dari browser.
 
-- Hal aneh lain yang saya kerjakan [FoolVPN](https://t.me/foolvpn)
-- Tanya-tanya -> [Telegram](https://t.me/d_fordlalatina)
+### Cek IP / colo
+
+```bash
+curl https://yuliana.my.id/api/v1/myip
+# {"ip":"1.2.3.4","colo":"JKT", ...}
+```
+
+### Homepage & Subscription Page
+
+- `https://yuliana.my.id/` — homepage dengan status, parameter API, contoh link.
+- `https://yuliana.my.id/sub` — generator link (pilih protokol, negara, port, jumlah) + tombol salin & unduh; pratinjau akun live.
+
+Kedua halaman dirender langsung dari worker (tanpa reverse proxy / redirect eksternal).
+
+### Client & App
+
+Untuk penggunaan VPN di HP/PC, pasang app seperti:
+- v2rayN / v2rayNG / Nekoray (link `v2ray`)
+- Hiddify / Shadowrocket / Stash
+- Clash: gunakan link `raw` sebagai remote provider (pastikan set `update-interval` rendah agar tidak boros kuota free; disarankan `interval: 300`).
+
+## Aktivasi Wildcard
+
+Cara kerjanya dua langkah — cukup meneruskan satu domain ke worker:
+
+1. Tambah `[[routes]]` **custom domain** di `wrangler.toml` — Cloudflare akan membuat DNS & sertifikat otomatis. Contoh: `yuliana.my.id`.
+2. Untuk wildcard, tambahkan **route zone** (bukan custom domain, karena custom domain tidak mendukung wildcard):
+
+   ```toml
+   [[routes]]
+   pattern = "*.yuliana.my.id/*"
+   zone_name = "yuliana.my.id"
+   ```
+
+   Lalu di DNS, tambahkan record wildcard `*` (A/AAAA/type apapun) yang di-proxy (proxied) menuju nama domain yang sudah di-worker, misalnya:
+
+   ```
+   *.yuliana.my.id  →  CNAME  yuliana.my.id   (Proxy: On)
+   ```
+
+   Dengan begitu semua subdomain langsung bekerja (tunnel), tanpa perlu menambah route satu per satu.
+
+## Panduan / Penjelasan penting
+
+- Worker memakai `WebSocket` + `cloudflare:sockets`; deployment standar `wrangler deploy` langsung jalan.
+- **Free tier:** 100k request / hari. 1 sesi WebSocket = 1 request; kuota cepat habis bila apps (mis. Clash) health-check terus-menerus — set interval health check ≥ 300s.
+- Proxy bank diperbarui oleh CI `scan.yaml` tiap 30 menit (memeriksa kesehatan proxy, menulis `proxy.txt`, dan update `KV.json`).
+- Lisensi: MIT.
+
+## Automasi
+
+- `.github/workflows/scan.yaml` — every 30 menit: cek health proxy (poke port), generate `proxy.txt`, update `KV.json`, push "Update proxy list".
+- `.github/workflows/deploy.yml` — manual `workflow_dispatch` (input `ref`): deploy worker ke Cloudflare (wrangler-action + setup-bun).
+
+## Tips & Konfigurasi Lanjut (opsional)
+
+- **Rate limit / abuse:** batasi `limit` di klien; jangan buka API publik bila banyak pengguna tidak dikenal.
+- **Ubah port:** hanya `443` & `80` yang didukung karena koneksi melewati handshake TLS SNI ke colo Cloudflare.
+- **Debug:** akses `https://<domain>/api/v1/myip` untuk pastikan colo/negara sudah benar.
+
+---
+
+*Dibuat dengan ❤️ oleh [Banten IT Solutions](https://bits.co.id)*

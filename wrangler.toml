@@ -5,7 +5,6 @@ compatibility_flags = ["nodejs_compat_v2"]
 
 [vars]
 PRX_BANK_URL = "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt"
-REVERSE_PRX_TARGET = "https://bits.co.id"
 
 # Domain utama (custom domain) -> DNS + sertifikat dibuat otomatis oleh Cloudflare
 [[routes]]

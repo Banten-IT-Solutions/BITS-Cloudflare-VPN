@@ -13,12 +13,10 @@ const v2 = "djJyYXk=";
 
 const PORTS = [443, 80];
 const PROTOCOLS = [atob(neko), atob(horse), atob(flash)];
-const SUB_PAGE_URL = "https://vpn.bits.co.id";
 const KV_PRX_URL =
   "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/KV.json";
 const PRX_BANK_URL =
   "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt";
-const REVERSE_PRX_TARGET = "https://bits.co.id";
 const DNS_SERVER_ADDRESS = "8.8.8.8";
 const DNS_SERVER_PORT = 53;
 const RELAY_SERVER_UDP = {
@@ -89,28 +87,170 @@ async function getPrxList(prxBankUrl = PRX_BANK_URL) {
   return cachedPrxList;
 }
 
-async function reverseWeb(request, target, targetPath) {
-  const targetUrl = new URL(request.url);
-  const parsedTarget = new URL(target);
+function htmlPage(title, body, domain) {
+  const safeTitle = title.replace(/</g, "&lt;");
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${safeTitle}</title>
+<style>
+  :root { --bg:#0b1020; --card:#131a2e; --line:#223052; --txt:#e6ecff; --mut:#8fa3cc; --acc:#5b8cff; --ok:#37d67a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--txt); font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:40px 16px; }
+  .wrap { width:100%; max-width:720px; }
+  h1 { font-size:26px; margin-bottom:4px; letter-spacing:.3px; }
+  .sub { color:var(--mut); margin-bottom:24px; font-size:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:16px; }
+  .card h2 { font-size:16px; margin-bottom:12px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+  label { display:block; font-size:12px; color:var(--mut); margin-bottom:4px; }
+  select, input { width:100%; background:#0d1426; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:14px; }
+  .btn { background:var(--acc); color:#fff; border:0; border-radius:8px; padding:10px 18px; font-size:14px; cursor:pointer; font-weight:600; }
+  .btn:hover { filter:brightness(1.1); }
+  .btn.ghost { background:transparent; border:1px solid var(--line); color:var(--txt); }
+  textarea { width:100%; background:#0d1426; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:10px; font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; min-height:180px; resize:vertical; }
+  .url { background:#0d1426; border:1px solid var(--line); border-radius:8px; padding:10px; font:12px ui-monospace,Menlo,monospace; color:var(--acc); word-break:break-all; margin-bottom:12px; }
+  code { background:#0d1426; border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-size:13px; }
+  .ok { color:var(--ok); }
+  a { color:var(--acc); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .pill { display:inline-block; background:#0d1426; border:1px solid var(--line); border-radius:999px; padding:3px 12px; font-size:12px; color:var(--mut); margin:0 6px 8px 0; }
+  .foot { color:var(--mut); font-size:12px; text-align:center; margin-top:24px; }
+  .flex2 { flex:1 1 160px; }
+  .note { font-size:13px; color:var(--mut); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  ${body}
+  <div class="foot">${domain} &middot; Banten IT Solutions &middot; gratis, tidak perlu bayar</div>
+</div>
+</body>
+</html>`;
+}
 
-  targetUrl.protocol = parsedTarget.protocol;
-  targetUrl.hostname = parsedTarget.hostname;
-  targetUrl.port = parsedTarget.port || (parsedTarget.protocol === "http:" ? "80" : "443");
-  targetUrl.pathname = targetPath || targetUrl.pathname;
+function renderHomePage(domain, service) {
+  const subUrl = `${domain}/sub`;
+  const apiUrl = `${domain}/api/v1/sub`;
+  const body = `
+  <h1>${service}</h1>
+  <div class="sub">Tunnel VPN serverless di Cloudflare Workers &mdash; VLESS / VMess / Trojan via WebSocket (CDN)</div>
 
-  const modifiedRequest = new Request(targetUrl, request);
+  <div class="card">
+    <h2>Status</h2>
+    <div><span class="pill">✅ Worker aktif</span><span class="pill">Endpoint: <code>wss://${domain}</code></span><span class="pill">Proto: VLESS &middot; VMess &middot; Trojan</span></div>
+    <p class="note" style="margin-top:8px">Semua subdomain wildcard (<code>*.${domain.split(".").slice(1).join(".")}</code>) juga melayani tunnel ini.</p>
+  </div>
 
-  modifiedRequest.headers.set("X-Forwarded-Host", request.headers.get("Host"));
+  <div class="card">
+    <h2>Mulai cepat</h2>
+    <ol style="padding-left:20px; margin-bottom:10px">
+      <li>Buka <a href="${subUrl}">halaman subscription</a> di browser.</li>
+      <li>Atur protokol &amp; jumlah akun, lalu salin URL subscription (format <code>v2ray</code>).</li>
+      <li>Import URL tersebut di aplikasi VPN (v2rayN, v2rayNG, Nekoray, dsb.).</li>
+    </ol>
+    <div class="url">${apiUrl}?vpn=vless&limit=10&format=v2ray</div>
+  </div>
 
-  const response = await fetch(modifiedRequest);
+  <div class="card">
+    <h2>Parameter API</h2>
+    <div class="grid">
+      <div><label>vpn</label><code>vless</code>, <code>vmess</code>, <code>trojan</code> (default <code>vless</code>)</div>
+      <div><label>cc</label>kode negara <code>ID</code>,<code>SG</code>,&hellip;</div>
+      <div><label>port</label><code>443</code>,<code>80</code></div>
+      <div><label>limit</label>jumlah akun (default <code>10</code>)</div>
+      <div><label>format</label><code>raw</code> atau <code>v2ray</code></div>
+      <div><label>domain</label>SNI/domain isian</div>
+    </div>
+  </div>
 
-  const newResponse = new Response(response.body, response);
-  for (const [key, value] of Object.entries(CORS_HEADER_OPTIONS)) {
-    newResponse.headers.set(key, value);
+  <div class="card">
+    <h2>Lainnya</h2>
+    <p class="note"><a href="/api/v1/myip">/api/v1/myip</a> &mdash; cek IP &amp; colo kamu saat ini.</p>
+  </div>
+  `;
+  return htmlPage(`${service} &mdash; VPN`, body, domain);
+}
+
+function renderSubPage(domain, service) {
+  const body = `
+  <h1>Subscription</h1>
+  <div class="sub">Generate link akun VPN di <code>${domain}</code> &mdash; default: <b>VLESS</b></div>
+
+  <div class="card">
+    <h2>Pengaturan</h2>
+    <div class="row">
+      <div class="flex2"><label>Protokol (vpn)</label>
+        <select id="vpn" multiple size="3">
+          <option value="vless" selected>vless</option>
+          <option value="vmess">vmess</option>
+          <option value="trojan">trojan</option>
+        </select>
+      </div>
+      <div class="flex2"><label>Negara (cc, kosong = semua)</label><input id="cc" placeholder="ID,SG,JP"></div>
+    </div>
+    <div class="row">
+      <div class="flex2"><label>Port</label>
+        <select id="port"><option>443</option><option>80</option></select>
+      </div>
+      <div class="flex2"><label>Jumlah akun (limit)</label><input id="limit" type="number" value="10" min="1" max="200"></div>
+    </div>
+    <div class="row">
+      <div class="flex2"><label>Format</label>
+        <select id="format"><option value="v2ray">v2ray (base64)</option><option value="raw">raw</option></select>
+      </div>
+    </div>
+    <button class="btn" id="gen">Generate</button>
+  </div>
+
+  <div class="card" id="result" style="display:none">
+    <h2>URL Subscription <span class="ok">&#10003;</span></h2>
+    <div class="url" id="suburl"></div>
+    <div class="row">
+      <button class="btn" id="copy">Salin URL</button>
+      <button class="btn ghost" id="dl">Unduh file</button>
+    </div>
+    <h2 style="margin-top:8px">Pratinjau akun</h2>
+    <textarea id="preview" readonly></textarea>
+  </div>
+
+<script>
+const base = "https://${domain}";
+const el = (id) => document.getElementById(id);
+el("gen").addEventListener("click", gen);
+el("copy").addEventListener("click", () => { navigator.clipboard.writeText(el("suburl").textContent); el("copy").textContent = "Tersalin!"; setTimeout(()=>el("copy").textContent="Salin URL",1500); });
+el("dl").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = el("suburl").textContent;
+  a.download = "sub.txt";
+  a.click();
+});
+async function gen() {
+  const p = new URLSearchParams();
+  const vpns = [...el("vpn").selectedOptions].map(o=>o.value);
+  if (vpns.length) p.set("vpn", vpns.join(","));
+  if (el("cc").value.trim()) p.set("cc", el("cc").value.trim());
+  p.set("port", el("port").value);
+  p.set("limit", el("limit").value || "10");
+  p.set("format", el("format").value);
+  const url = base + "/api/v1/sub?" + p.toString();
+  el("suburl").textContent = url;
+  el("preview").value = "Memuat...";
+  el("result").style.display = "";
+  try {
+    const r = await fetch(url);
+    const t = await r.text();
+    el("preview").value = r.ok ? t : ("Error " + r.status + "\\n" + t);
+  } catch (e) {
+    el("preview").value = "Gagal: " + e;
   }
-  newResponse.headers.set("X-Proxied-By", "Cloudflare Worker");
-
-  return newResponse;
+}
+</script>
+  `;
+  return htmlPage("Subscription", body, domain);
 }
 
 export default {
@@ -140,7 +280,13 @@ export default {
       }
 
       if (url.pathname.startsWith("/sub")) {
-        return Response.redirect(SUB_PAGE_URL + `?host=${APP_DOMAIN}`, 301);
+        return new Response(renderSubPage(APP_DOMAIN, serviceName), {
+          status: 200,
+          headers: {
+            ...CORS_HEADER_OPTIONS,
+            "Content-Type": "text/html; charset=utf-8",
+          },
+        });
       } else if (url.pathname.startsWith("/check")) {
         const target = url.searchParams.get("target").split(":");
         const result = await checkPrxHealth(target[0], target[1] || "443");
@@ -251,8 +397,13 @@ export default {
         }
       }
 
-      const targetReversePrx = env.REVERSE_PRX_TARGET || REVERSE_PRX_TARGET;
-      return await reverseWeb(request, targetReversePrx);
+      return new Response(renderHomePage(APP_DOMAIN, serviceName), {
+        status: 200,
+        headers: {
+          ...CORS_HEADER_OPTIONS,
+          "Content-Type": "text/html; charset=utf-8",
+        },
+      });
     } catch (err) {
       return new Response(`An error occurred: ${err.toString()}`, {
         status: 500,
