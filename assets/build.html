@@ -5,234 +5,159 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Build VPN Config — Cloudflare Workers</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{animation:{'fade-in':'fadeIn 0.6s ease-out','slide-up':'slideUp 0.6s ease-out'},keyframes:{fadeIn:{'0%':{opacity:'0'},'100%':{opacity:'1'}},slideUp:{'0%':{transform:'translateY(10px)',opacity:'0'},'100%':{transform:'translateY(0)',opacity:'1'}}}}}}</script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.30.0"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/motion@11.x/dist/motion.min.js"></script>
-<script>
-tailwind.config = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        dark: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617',
-        }
-      },
-      animation: {
-        'fade-in': 'fadeIn 0.5s ease-out',
-        'slide-up': 'slideUp 0.5s ease-out',
-        'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
-        'spin-slow': 'spin 3s linear infinite',
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' },
-          '50%': { boxShadow: '0 0 40px rgba(99, 102, 241, 0.6)' },
-        }
-      }
-    }
-  }
-}
-</script>
 <style>
-  body { 
-    background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
-    min-height: 100vh;
-  }
-  .glass {
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(148, 163, 184, 0.1);
-  }
-  .glow-border {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
-  }
-  .gradient-text {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  input[type="checkbox"]:checked {
-    background-color: #6366f1;
-    border-color: #6366f1;
-  }
-  @keyframes shimmer {
-    0% { background-position: -1000px 0; }
-    100% { background-position: 1000px 0; }
-  }
-  .skeleton {
-    background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
-    background-size: 1000px 100%;
-    animation: shimmer 2s infinite;
-  }
+body{background:linear-gradient(135deg,#020617 0%,#0f172a 100%);min-height:100vh}
+.glass{background:rgba(15,23,42,0.6);backdrop-filter:blur(16px);border:1px solid rgba(148,163,184,0.08)}
+.glass:hover{border-color:rgba(148,163,184,0.15)}
+.gradient-text{background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.glow{box-shadow:0 0 24px rgba(99,102,241,0.25)}
+input[type="checkbox"]:checked{background-color:#6366f1;border-color:#6366f1}
+@keyframes shimmer{0%{background-position:-1000px 0}100%{background-position:1000px 0}}
+.skeleton{background:linear-gradient(90deg,#1e293b 0%,#334155 50%,#1e293b 100%);background-size:1000px 100%;animation:shimmer 2s infinite}
+[x-cloak]{display:none}
 </style>
 </head>
 <body class="text-slate-50 antialiased">
-<div class="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-  <!-- Nav -->
-  <nav class="flex gap-6 mb-12 pb-6 border-b border-slate-800">
-    <a href="/" class="flex items-center gap-2 text-slate-400 hover:text-slate-50 transition">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
+  <nav class="flex gap-6 mb-10 pb-5 border-b border-slate-800/50">
+    <a href="/" class="flex items-center gap-2 text-slate-400 transition hover:text-slate-200">
       <i data-lucide="home" class="w-5 h-5"></i>
-      Home
+      <span>Home</span>
     </a>
-    <a href="/build" class="flex items-center gap-2 text-indigo-400 font-semibold">
+    <a href="/build" class="flex items-center gap-2 text-indigo-400 font-semibold transition hover:text-indigo-300">
       <i data-lucide="hammer" class="w-5 h-5"></i>
-      Build
+      <span>Build</span>
     </a>
   </nav>
 
-  <!-- Alpine Component -->
   <div x-data="buildApp()" x-init="init()">
-    <!-- Header -->
-    <div class="text-center mb-12 animate-slide-up">
-      <h1 class="text-5xl font-bold mb-4 gradient-text">Build VPN Config</h1>
+    <header class="text-center mb-12 animate-slide-up">
+      <h1 class="text-5xl font-bold mb-3 gradient-text">Build VPN Config</h1>
       <p class="text-slate-400 text-lg">Pilih proxy + konfigurasi SNI/CDN → generate vless:// + Clash YAML</p>
-    </div>
+    </header>
 
-    <!-- Filter & Load -->
-    <div class="glass rounded-2xl p-8 mb-6 glow-border animate-slide-up" style="animation-delay: 0.1s">
+    <!-- Filter -->
+    <section class="glass rounded-2xl p-6 sm:p-8 mb-6 glow animate-slide-up">
       <div class="flex items-center gap-3 mb-6">
-        <i data-lucide="filter" class="w-6 h-6 text-cyan-500"></i>
+        <i data-lucide="filter" class="w-6 h-6 text-cyan-400"></i>
         <h2 class="text-2xl font-semibold">Filter Proxy</h2>
       </div>
       
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="grid sm:grid-cols-3 gap-4 mb-6">
         <div>
-          <label class="block text-sm text-slate-400 mb-2">
-            <i data-lucide="flag" class="w-4 h-4 inline"></i> Country Code
+          <label class="flex items-center gap-2 text-sm text-slate-400 mb-2">
+            <i data-lucide="flag" class="w-4 h-4"></i> Country Code
           </label>
           <input x-model="filters.cc" type="text" placeholder="ID, SG, US..." 
-            class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition">
+            class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition">
         </div>
         <div>
-          <label class="block text-sm text-slate-400 mb-2">
-            <i data-lucide="search" class="w-4 h-4 inline"></i> Search
+          <label class="flex items-center gap-2 text-sm text-slate-400 mb-2">
+            <i data-lucide="search" class="w-4 h-4"></i> Search
           </label>
           <input x-model="filters.q" type="text" placeholder="keyword..." 
-            class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition">
+            class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition">
         </div>
         <div>
-          <label class="block text-sm text-slate-400 mb-2">
-            <i data-lucide="plug" class="w-4 h-4 inline"></i> Port
+          <label class="flex items-center gap-2 text-sm text-slate-400 mb-2">
+            <i data-lucide="plug" class="w-4 h-4"></i> Port
           </label>
           <input x-model="filters.port" type="text" placeholder="443, 80..." 
-            class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition">
+            class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition">
         </div>
       </div>
 
       <button @click="loadProxies()" :disabled="loading"
-        class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl font-semibold transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-        <i data-lucide="download-cloud" class="w-5 h-5" :class="{'animate-bounce': loading}"></i>
-        <span x-text="loading ? 'Loading...' : 'Load Proxy List'"></span>
+        class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl font-semibold transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        <i data-lucide="download-cloud" class="w-5 h-5" :class="{'animate-bounce':loading}"></i>
+        <span x-text="loading?'Loading...':'Load Proxy List'"></span>
       </button>
 
-      <div x-show="totalCount > 0" class="mt-4 text-center text-sm text-slate-400">
+      <div x-show="totalCount>0" class="mt-4 text-center text-sm text-slate-400">
         <i data-lucide="database" class="w-4 h-4 inline"></i>
         Found <span class="text-indigo-400 font-semibold" x-text="totalCount"></span> proxies
       </div>
-    </div>
+    </section>
 
     <!-- Proxy List -->
-    <div x-show="proxies.length > 0" class="glass rounded-2xl p-8 mb-6 animate-slide-up" style="animation-delay: 0.2s">
+    <section x-show="proxies.length>0" x-cloak class="glass rounded-2xl p-6 sm:p-8 mb-6 animate-slide-up">
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
-          <i data-lucide="list" class="w-6 h-6 text-green-500"></i>
+          <i data-lucide="list" class="w-6 h-6 text-green-400"></i>
           <h2 class="text-2xl font-semibold">Select Proxies</h2>
         </div>
-        <div class="flex items-center gap-4">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-5 h-5 rounded border-slate-700">
-            <span class="text-sm text-slate-400">Select All (<span x-text="selectedProxies.length"></span>)</span>
-          </label>
-        </div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" class="w-5 h-5 rounded border-slate-700">
+          <span class="text-sm text-slate-400">Select All (<span x-text="selectedProxies.length"></span>)</span>
+        </label>
       </div>
 
-      <!-- Skeleton Loading -->
       <div x-show="loading" class="space-y-2">
         <div class="skeleton h-16 rounded-xl"></div>
         <div class="skeleton h-16 rounded-xl"></div>
         <div class="skeleton h-16 rounded-xl"></div>
       </div>
 
-      <!-- Proxy Items -->
       <div x-show="!loading" class="space-y-2 max-h-96 overflow-y-auto">
         <template x-for="prx in proxies" :key="prx.ip">
-          <label class="flex items-center gap-4 p-4 glass rounded-xl border border-slate-700 hover:border-indigo-500/50 cursor-pointer transition group">
+          <label class="flex items-center gap-4 p-4 glass rounded-xl cursor-pointer transition hover:scale-[1.01]">
             <input type="checkbox" :value="prx" x-model="selectedProxies" class="w-5 h-5 rounded border-slate-700">
-            <div class="flex-1 grid grid-cols-3 gap-4">
+            <div class="flex-1 grid sm:grid-cols-3 gap-4 text-sm">
               <div>
-                <div class="text-sm text-slate-500">IP</div>
+                <div class="text-xs text-slate-500 mb-1">IP</div>
                 <div class="font-mono text-indigo-400" x-text="prx.ip"></div>
               </div>
               <div>
-                <div class="text-sm text-slate-500">Country</div>
-                <div x-text="`${prx.country} ${prx.city || ''}`"></div>
+                <div class="text-xs text-slate-500 mb-1">Country</div>
+                <div x-text="`${prx.country} ${prx.city||''}`"></div>
               </div>
               <div>
-                <div class="text-sm text-slate-500">Org</div>
-                <div class="text-sm truncate" x-text="prx.org"></div>
+                <div class="text-xs text-slate-500 mb-1">Org</div>
+                <div class="truncate" x-text="prx.org"></div>
               </div>
             </div>
-            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-500 opacity-0 group-hover:opacity-100 transition"></i>
           </label>
         </template>
       </div>
 
-      <!-- Pagination -->
-      <div x-show="totalPages > 1" class="flex items-center justify-between mt-6 pt-6 border-t border-slate-800">
-        <button @click="page > 1 && (page--, loadProxies())" :disabled="page === 1"
-          class="px-4 py-2 glass rounded-lg border border-slate-700 hover:border-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2">
+      <div x-show="totalPages>1" class="flex items-center justify-between mt-6 pt-6 border-t border-slate-800/50">
+        <button @click="page>1&&(page--,loadProxies())" :disabled="page===1"
+          class="px-4 py-2 glass rounded-lg hover:border-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2">
           <i data-lucide="chevron-left" class="w-4 h-4"></i>
           Previous
         </button>
         <div class="text-sm text-slate-400">
           Page <span class="text-indigo-400 font-semibold" x-text="page"></span> of <span x-text="totalPages"></span>
         </div>
-        <button @click="page < totalPages && (page++, loadProxies())" :disabled="page >= totalPages"
-          class="px-4 py-2 glass rounded-lg border border-slate-700 hover:border-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2">
+        <button @click="page<totalPages&&(page++,loadProxies())" :disabled="page>=totalPages"
+          class="px-4 py-2 glass rounded-lg hover:border-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2">
           Next
           <i data-lucide="chevron-right" class="w-4 h-4"></i>
         </button>
       </div>
-    </div>
+    </section>
 
     <!-- Build Button -->
-    <div x-show="selectedProxies.length > 0" class="text-center animate-slide-up">
-      <button @click="showDialog = true"
-        class="px-12 py-4 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 rounded-xl font-bold text-lg transition-all transform hover:scale-[1.05] active:scale-[0.95] flex items-center justify-center gap-3 mx-auto shadow-lg shadow-emerald-500/50">
+    <div x-show="selectedProxies.length>0" x-cloak class="text-center animate-slide-up">
+      <button @click="showDialog=true"
+        class="px-12 py-4 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 rounded-xl font-bold text-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 mx-auto shadow-lg shadow-emerald-500/30">
         <i data-lucide="settings" class="w-6 h-6"></i>
         Build Config (<span x-text="selectedProxies.length"></span> proxies)
       </button>
     </div>
 
     <!-- Config Dialog -->
-    <div x-show="showDialog" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" style="background: rgba(0,0,0,0.8);">
-      <div @click.away="showDialog = false" class="glass rounded-2xl p-8 max-w-2xl w-full glow-border animate-slide-up">
+    <div x-show="showDialog" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" style="background:rgba(0,0,0,0.8)">
+      <div @click.away="showDialog=false" class="glass rounded-2xl p-6 sm:p-8 max-w-2xl w-full glow animate-slide-up">
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <i data-lucide="sliders" class="w-6 h-6 text-purple-500"></i>
+            <i data-lucide="sliders" class="w-6 h-6 text-purple-400"></i>
             <h3 class="text-2xl font-semibold">Configuration</h3>
           </div>
-          <button @click="showDialog = false" class="text-slate-400 hover:text-slate-50 transition">
+          <button @click="showDialog=false" class="text-slate-400 hover:text-slate-50 transition">
             <i data-lucide="x" class="w-6 h-6"></i>
           </button>
         </div>
@@ -240,18 +165,18 @@ tailwind.config = {
         <div class="space-y-6">
           <!-- Mode -->
           <div>
-            <label class="block text-sm text-slate-400 mb-2">
-              <i data-lucide="radio" class="w-4 h-4 inline"></i> Mode
+            <label class="flex items-center gap-2 text-sm text-slate-400 mb-3">
+              <i data-lucide="radio" class="w-4 h-4"></i> Mode
             </label>
             <div class="grid grid-cols-2 gap-3">
-              <label class="flex items-center justify-center gap-2 p-4 glass rounded-xl border cursor-pointer transition"
-                :class="config.mode === 'sni' ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'">
+              <label class="flex items-center justify-center gap-2 p-4 glass rounded-xl cursor-pointer transition"
+                :class="config.mode==='sni'?'border-indigo-500 bg-indigo-500/10':'border-transparent hover:border-slate-600'">
                 <input type="radio" x-model="config.mode" value="sni" class="sr-only">
                 <i data-lucide="shield-check" class="w-5 h-5"></i>
                 <span class="font-semibold">SNI</span>
               </label>
-              <label class="flex items-center justify-center gap-2 p-4 glass rounded-xl border cursor-pointer transition"
-                :class="config.mode === 'cdn' ? 'border-purple-500 bg-purple-500/10' : 'border-slate-700 hover:border-slate-600'">
+              <label class="flex items-center justify-center gap-2 p-4 glass rounded-xl cursor-pointer transition"
+                :class="config.mode==='cdn'?'border-purple-500 bg-purple-500/10':'border-transparent hover:border-slate-600'">
                 <input type="radio" x-model="config.mode" value="cdn" class="sr-only">
                 <i data-lucide="cloud" class="w-5 h-5"></i>
                 <span class="font-semibold">CDN</span>
@@ -261,17 +186,17 @@ tailwind.config = {
 
           <!-- Bug -->
           <div>
-            <label class="block text-sm text-slate-400 mb-2">
-              <i data-lucide="bug" class="w-4 h-4 inline"></i> Bug (target domain)
+            <label class="flex items-center gap-2 text-sm text-slate-400 mb-2">
+              <i data-lucide="bug" class="w-4 h-4"></i> Bug (target domain)
             </label>
             <input x-model="config.bug" type="text" placeholder="e.g. academy.dcloud.id"
-              class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition">
+              class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition">
           </div>
 
           <!-- Wildcard -->
           <div>
-            <label class="block text-sm text-slate-400 mb-3">
-              <i data-lucide="globe" class="w-4 h-4 inline"></i> Wildcard Subdomain
+            <label class="flex items-center gap-2 text-sm text-slate-400 mb-3">
+              <i data-lucide="globe" class="w-4 h-4"></i> Wildcard Subdomain
             </label>
             <div class="flex items-center gap-4 mb-3">
               <label class="flex items-center gap-2 cursor-pointer">
@@ -283,24 +208,24 @@ tailwind.config = {
                 <span>Yes</span>
               </label>
             </div>
-            <input x-show="config.wildcard === 'yes'" x-model="config.subdomain" type="text" placeholder="subdomain (e.g. abc)"
-              class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 outline-none transition">
+            <input x-show="config.wildcard==='yes'" x-model="config.subdomain" type="text" placeholder="subdomain (e.g. abc)"
+              class="w-full px-4 py-3 glass rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none transition">
           </div>
 
-          <!-- SSL Port -->
+          <!-- Port -->
           <div>
-            <label class="block text-sm text-slate-400 mb-2">
-              <i data-lucide="lock" class="w-4 h-4 inline"></i> Port
+            <label class="flex items-center gap-2 text-sm text-slate-400 mb-3">
+              <i data-lucide="lock" class="w-4 h-4"></i> Port
             </label>
             <div class="grid grid-cols-2 gap-3">
-              <label class="flex items-center justify-center gap-2 p-4 glass rounded-xl border cursor-pointer transition"
-                :class="config.port === '443' ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 hover:border-slate-600'">
+              <label class="flex items-center justify-center gap-2 p-4 glass rounded-xl cursor-pointer transition"
+                :class="config.port==='443'?'border-emerald-500 bg-emerald-500/10':'border-transparent hover:border-slate-600'">
                 <input type="radio" x-model="config.port" value="443" class="sr-only">
                 <i data-lucide="shield" class="w-5 h-5"></i>
                 <span class="font-semibold">443 (TLS)</span>
               </label>
-              <label class="flex items-center justify-center gap-2 p-4 glass rounded-xl border cursor-pointer transition"
-                :class="config.port === '80' ? 'border-orange-500 bg-orange-500/10' : 'border-slate-700 hover:border-slate-600'">
+              <label class="flex items-center justify-center gap-2 p-4 glass rounded-xl cursor-pointer transition"
+                :class="config.port==='80'?'border-orange-500 bg-orange-500/10':'border-transparent hover:border-slate-600'">
                 <input type="radio" x-model="config.port" value="80" class="sr-only">
                 <i data-lucide="unlock" class="w-5 h-5"></i>
                 <span class="font-semibold">80 (Plain)</span>
@@ -309,9 +234,8 @@ tailwind.config = {
           </div>
         </div>
 
-        <!-- Build Button -->
         <button @click="buildConfig()" :disabled="!config.bug"
-          class="w-full mt-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl font-semibold transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          class="w-full mt-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl font-semibold transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
           <i data-lucide="rocket" class="w-5 h-5"></i>
           Generate Config
         </button>
@@ -319,20 +243,19 @@ tailwind.config = {
     </div>
 
     <!-- Results -->
-    <div x-show="result.uri" x-cloak class="glass rounded-2xl p-8 mt-6 glow-border animate-slide-up">
+    <section x-show="result.uri" x-cloak class="glass rounded-2xl p-6 sm:p-8 mt-6 glow animate-slide-up">
       <div class="flex items-center gap-3 mb-6">
-        <i data-lucide="check-circle" class="w-6 h-6 text-emerald-500"></i>
+        <i data-lucide="check-circle" class="w-6 h-6 text-emerald-400"></i>
         <h2 class="text-2xl font-semibold">Build Results</h2>
       </div>
 
-      <!-- URI Output -->
       <div class="mb-6">
         <div class="flex items-center justify-between mb-2">
-          <label class="text-sm text-slate-400">
-            <i data-lucide="link" class="w-4 h-4 inline"></i> vless:// URIs
+          <label class="flex items-center gap-2 text-sm text-slate-400">
+            <i data-lucide="link" class="w-4 h-4"></i> vless:// URIs
           </label>
           <button @click="copyText(result.uri)" 
-            class="px-3 py-1 text-sm glass rounded-lg border border-slate-700 hover:border-indigo-500 transition flex items-center gap-2">
+            class="px-3 py-1 text-sm glass rounded-lg hover:border-indigo-500 transition flex items-center gap-2">
             <i data-lucide="copy" class="w-4 h-4"></i>
             Copy
           </button>
@@ -341,14 +264,13 @@ tailwind.config = {
           class="w-full px-4 py-3 glass rounded-xl border border-slate-700 font-mono text-sm resize-none"></textarea>
       </div>
 
-      <!-- YAML Output -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="text-sm text-slate-400">
-            <i data-lucide="file-code" class="w-4 h-4 inline"></i> Clash YAML
+          <label class="flex items-center gap-2 text-sm text-slate-400">
+            <i data-lucide="file-code" class="w-4 h-4"></i> Clash YAML
           </label>
           <button @click="copyText(result.yaml)" 
-            class="px-3 py-1 text-sm glass rounded-lg border border-slate-700 hover:border-indigo-500 transition flex items-center gap-2">
+            class="px-3 py-1 text-sm glass rounded-lg hover:border-indigo-500 transition flex items-center gap-2">
             <i data-lucide="copy" class="w-4 h-4"></i>
             Copy
           </button>
@@ -356,117 +278,59 @@ tailwind.config = {
         <textarea readonly x-model="result.yaml" rows="12"
           class="w-full px-4 py-3 glass rounded-xl border border-slate-700 font-mono text-sm resize-none"></textarea>
       </div>
-    </div>
+    </section>
   </div>
 
-  <!-- Footer -->
-  <div class="text-center text-sm text-slate-500 mt-12">
+  <footer class="text-center text-sm text-slate-500 mt-12 pb-4">
     <span id="footDomain">...</span> · Banten IT Solutions
-  </div>
+  </footer>
 </div>
 
 <script>
-function buildApp() {
-  return {
-    filters: { cc: '', q: '', port: '' },
-    loading: false,
-    proxies: [],
-    selectedProxies: [],
-    selectAll: false,
-    page: 1,
-    limit: 50,
-    totalCount: 0,
-    totalPages: 0,
-    showDialog: false,
-    config: {
-      mode: 'sni',
-      bug: '',
-      wildcard: 'no',
-      subdomain: '',
-      port: '443'
-    },
-    result: {
-      uri: '',
-      yaml: ''
-    },
-
-    init() {
-      document.getElementById('footDomain').textContent = location.hostname;
-      lucide.createIcons();
-    },
-
-    async loadProxies() {
-      this.loading = true;
-      try {
-        const params = new URLSearchParams({
-          cc: this.filters.cc,
-          q: this.filters.q,
-          port: this.filters.port,
-          page: this.page,
-          limit: this.limit
-        });
-        const res = await fetch(`/api/proxies?${params}`);
-        const data = await res.json();
-        this.proxies = data.items || [];
-        this.totalCount = data.count || 0;
-        this.totalPages = data.pages || 1;
-        
-        setTimeout(() => lucide.createIcons(), 100);
-      } catch (e) {
-        console.error(e);
-        alert('Failed to load proxies');
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    toggleSelectAll() {
-      if (this.selectAll) {
-        this.selectedProxies = [...this.proxies];
-      } else {
-        this.selectedProxies = [];
-      }
-    },
-
-    buildConfig() {
-      const baseDomain = location.hostname;
-      const { mode, bug, wildcard, subdomain, port } = this.config;
-
-      let server, servername, host;
-      
-      if (mode === 'sni') {
-        if (wildcard === 'yes') {
-          server = `${subdomain}.${baseDomain}`;
-          servername = bug;
-          host = bug;
-        } else {
-          server = baseDomain;
-          servername = bug;
-          host = bug;
-        }
-      } else {
-        if (wildcard === 'yes') {
-          server = bug;
-          servername = `${subdomain}.${baseDomain}`;
-          host = `${subdomain}.${baseDomain}`;
-        } else {
-          server = bug;
-          servername = baseDomain;
-          host = baseDomain;
-        }
-      }
-
-      const tls = port === '443';
-      const uris = [];
-      const proxiesYaml = [];
-
-      this.selectedProxies.forEach(prx => {
-        const uuid = this.generateUUID();
-        const flag = this.getFlagEmoji(prx.country);
-        const uri = `vless://${uuid}@${server}:${port}?encryption=none&security=${tls ? 'tls' : 'none'}${tls ? `&sni=${servername}` : ''}&type=ws&host=${host}&path=%2F%3Fed%3D2560#${flag} ${prx.org}`;
-        uris.push(uri);
-
-        proxiesYaml.push(`  - name: "${flag} ${prx.org}"
+function buildApp(){return{
+filters:{cc:'',q:'',port:''},loading:!1,proxies:[],selectedProxies:[],selectAll:!1,page:1,limit:50,totalCount:0,totalPages:0,showDialog:!1,
+config:{mode:'sni',bug:'',wildcard:'no',subdomain:'',port:'443'},
+result:{uri:'',yaml:''},
+init(){document.getElementById('footDomain').textContent=location.hostname;lucide.createIcons()},
+async loadProxies(){
+this.loading=!0;
+try{
+const p=new URLSearchParams({cc:this.filters.cc,q:this.filters.q,port:this.filters.port,page:this.page,limit:this.limit}),
+r=await fetch(`/api/proxies?${p}`),d=await r.json();
+this.proxies=d.items||[];
+this.totalCount=d.count||0;
+this.totalPages=d.pages||1;
+setTimeout(()=>lucide.createIcons(),100);
+}catch(e){
+console.error(e);
+alert('Failed to load proxies');
+}finally{
+this.loading=!1;
+}
+},
+toggleSelectAll(){this.selectAll?this.selectedProxies=[...this.proxies]:this.selectedProxies=[]},
+buildConfig(){
+const b=location.hostname,{mode,bug,wildcard,subdomain,port}=this.config;
+let server,servername,host;
+if(mode==='sni'){
+if(wildcard==='yes'){
+server=`${subdomain}.${b}`;servername=bug;host=bug;
+}else{
+server=b;servername=bug;host=bug;
+}
+}else{
+if(wildcard==='yes'){
+server=bug;servername=`${subdomain}.${b}`;host=`${subdomain}.${b}`;
+}else{
+server=bug;servername=b;host=b;
+}
+}
+const tls=port==='443',uris=[],proxiesYaml=[];
+this.selectedProxies.forEach(prx=>{
+const uuid=this.generateUUID(),flag=this.getFlagEmoji(prx.country),
+uri=`vless://${uuid}@${server}:${port}?encryption=none&security=${tls?'tls':'none'}${tls?`&sni=${servername}`:''}&type=ws&host=${host}&path=%2F%3Fed%3D2560#${flag} ${prx.org}`;
+uris.push(uri);
+proxiesYaml.push(`  - name: "${flag} ${prx.org}"
     type: vless
     server: ${server}
     port: ${port}
@@ -479,63 +343,44 @@ function buildApp() {
       path: /?ed=2560
       headers:
         Host: ${host}`);
-      });
-
-      this.result.uri = uris.join('\n');
-      this.result.yaml = `proxies:\n${proxiesYaml.join('\n')}`;
-      this.showDialog = false;
-
-      setTimeout(() => {
-        document.querySelector('textarea[readonly]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
-    },
-
-    generateUUID() {
-      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return crypto.randomUUID();
-      }
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-    },
-
-    getFlagEmoji(countryCode) {
-      if (!countryCode || countryCode.length !== 2) return '🌐';
-      const cc = countryCode.toUpperCase();
-      return String.fromCodePoint(...[...cc].map(c => 0x1F1E6 - 65 + c.charCodeAt(0)));
-    },
-
-    copyText(text) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => {
-          alert('✅ Copied to clipboard!');
-        }).catch(() => {
-          this.fallbackCopy(text);
-        });
-      } else {
-        this.fallbackCopy(text);
-      }
-    },
-
-    fallbackCopy(text) {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        document.execCommand('copy');
-        alert('✅ Copied to clipboard!');
-      } catch (e) {
-        alert('❌ Failed to copy');
-      }
-      document.body.removeChild(textarea);
-    }
-  }
+});
+this.result.uri=uris.join('\n');
+this.result.yaml=`proxies:\n${proxiesYaml.join('\n')}`;
+this.showDialog=!1;
+setTimeout(()=>document.querySelector('textarea[readonly]')?.scrollIntoView({behavior:'smooth',block:'center'}),300);
+},
+generateUUID(){
+if(typeof crypto!=='undefined'&&crypto.randomUUID)return crypto.randomUUID();
+return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);
+return v.toString(16);
+});
+},
+getFlagEmoji(cc){
+if(!cc||cc.length!==2)return'🌐';
+const c=cc.toUpperCase();
+return String.fromCodePoint(...[...c].map(ch=>0x1F1E6-65+ch.charCodeAt(0)));
+},
+copyText(text){
+if(navigator.clipboard&&navigator.clipboard.writeText){
+navigator.clipboard.writeText(text).then(()=>alert('✅ Copied to clipboard!')).catch(()=>this.fallbackCopy(text));
+}else{
+this.fallbackCopy(text);
 }
+},
+fallbackCopy(text){
+const t=document.createElement('textarea');
+t.value=text;t.style.position='fixed';t.style.opacity='0';
+document.body.appendChild(t);t.select();
+try{
+document.execCommand('copy');
+alert('✅ Copied to clipboard!');
+}catch{
+alert('❌ Failed to copy');
+}
+document.body.removeChild(t);
+}
+}}
 </script>
 </body>
 </html>
