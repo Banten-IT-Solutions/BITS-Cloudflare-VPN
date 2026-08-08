@@ -77,7 +77,7 @@ export function createApiRoutes() {
 
           uri.hash = `${result.length + 1} ${getFlagEmoji(prx.country)} ${prx.org} WS ${
             port == 443 ? "TLS" : "NTLS"
-          } [${serviceName}]`;
+          } [BITS Cloudflare VPN]`;
           result.push(uri.toString());
         }
       }
@@ -148,10 +148,15 @@ export function createApiRoutes() {
       items = items.filter((prx) => prx.prxPort === port);
     }
 
-    // Filter by search query (ip or org)
+    // Filter by search query (ip, country, or org)
     if (q) {
       const query = q.toLowerCase();
-      items = items.filter((prx) => prx.prxIP.toLowerCase().includes(query) || prx.org.toLowerCase().includes(query));
+      items = items.filter(
+        (prx) =>
+          prx.prxIP.toLowerCase().includes(query) ||
+          prx.country.toLowerCase().includes(query) ||
+          prx.org.toLowerCase().includes(query),
+      );
     }
 
     const count = items.length;
@@ -159,12 +164,22 @@ export function createApiRoutes() {
     const offset = (page - 1) * limit;
     const paginatedItems = items.slice(offset, offset + limit);
 
+    // Daftar negara unik (dari data sebelum hasil filter) untuk chips filter
+    const countryCounts = new Map<string, number>();
+    for (const prx of items) {
+      countryCounts.set(prx.country, (countryCounts.get(prx.country) || 0) + 1);
+    }
+    const countries = Array.from(countryCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([code, count]) => ({ code, count }));
+
     return c.json(
       {
         count,
         page,
         pages,
         items: paginatedItems,
+        countries,
       },
       200,
       CORS_HEADER_OPTIONS,

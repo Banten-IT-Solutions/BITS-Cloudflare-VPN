@@ -727,14 +727,15 @@ function safeCloseWebSocket(socket: any) {
 
 export async function checkPrxHealth(prxIP: string, prxPort: string) {
   const start = Date.now();
-  const timeoutMs = 5000;
+  const timeoutMs = 3000;
+  let socket: any;
   try {
-    const socket = connect({ hostname: prxIP, port: Number(prxPort) });
+    socket = connect({ hostname: prxIP, port: Number(prxPort) });
 
+    // Ukur latency saat koneksi BERHASIL DIBUKA (socket.opened),
+    // bukan saat koneksi ditutup (socket.closed) yang bisa memakan waktu lama.
     await Promise.race([
-      socket.closed.catch((error) => {
-        throw error;
-      }),
+      socket.opened,
       new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), timeoutMs)),
     ]);
 
@@ -749,6 +750,9 @@ export async function checkPrxHealth(prxIP: string, prxPort: string) {
       latency: Date.now() - start,
     };
   } catch (error: any) {
+    try {
+      socket?.close();
+    } catch (_) {}
     return {
       ip: prxIP,
       port: prxPort,

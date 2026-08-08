@@ -1,453 +1,116 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id" class="dark scroll-smooth">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VPN Serverless — Cloudflare Workers</title>
+<title>BITS Cloudflare VPN</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={darkMode:'class',theme:{extend:{animation:{'fade-in':'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)','slide-up':'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)','pulse-slow':'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite','spin-slow':'spin 20s linear infinite'},keyframes:{fadeIn:{'0%':{opacity:'0'},'100%':{opacity:'1'}},slideUp:{'0%':{transform:'translateY(20px)',opacity:'0'},'100%':{transform:'translateY(0)',opacity:'1'}}}}}}</script>
-<script src="https://cdn.jsdelivr.net/npm/lucide@1.30.0"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
+<script>tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        bg: '#050014',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 6s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0) scale(1)' },
+          '50%': { transform: 'translateY(-20px) scale(1.05)' }
+        }
+      }
+    }
+  }
+}
+</script>
 <style>
-body {
-  background-color: #030014;
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-    radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 0);
-  background-size: 100% 100%, 24px 24px;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-canvas#particles {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-}
-.glass {
-  background: rgba(10, 10, 20, 0.6);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
-}
-.glass:hover {
-  border-color: rgba(99, 102, 241, 0.2);
-  box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.03);
-}
-.gradient-text {
-  background: linear-gradient(135deg, #ffffff 10%, #a5b4fc 60%, #6366f1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.glow-spot {
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
-  filter: blur(40px);
-  pointer-events: none;
-  z-index: 1;
-}
-::-webkit-scrollbar {
-  width: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #1e1b4b;
-  border-radius: 99px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #312e81;
-}
-[x-cloak] { display: none; }
+  body {
+    background-color: #050014;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+    background-size: 32px 32px;
+    color: white;
+    overflow-x: hidden;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #a78bfa 0%, #e879f9 50%, #fcd34d 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .gradient-bg {
+    background: linear-gradient(135deg, #4f46e5 0%, #d946ef 100%);
+  }
+  .blob {
+    position: absolute;
+    filter: blur(80px);
+    opacity: 0.4;
+    z-index: -1;
+    border-radius: 50%;
+  }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #050014; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #475569; }
 </style>
 </head>
-<body class="text-slate-200 antialiased font-sans relative">
-<canvas id="particles"></canvas>
+<body class="antialiased relative">
 
-<!-- Decor Blobs -->
-<div class="glow-spot top-[-50px] right-[-50px]"></div>
-<div class="glow-spot bottom-[10%] left-[-100px]"></div>
+  <!-- Background Blobs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="blob bg-indigo-600/40 w-[600px] h-[600px] -top-[200px] -left-[100px] animate-float"></div>
+    <div class="blob bg-fuchsia-600/30 w-[500px] h-[500px] top-[20%] -right-[150px] animate-float" style="animation-delay: -2s;"></div>
+    <div class="blob bg-amber-500/20 w-[400px] h-[400px] bottom-0 left-[20%] animate-float" style="animation-delay: -4s;"></div>
+  </div>
 
-<div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-12 flex flex-col min-h-screen justify-between animate-fade-in">
-  
-  <!-- Hero Section -->
-  <header class="text-center mb-10 animate-slide-up">
-    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-950/40 border border-indigo-500/20 text-[10px] sm:text-xs text-indigo-300 font-semibold tracking-wider uppercase mb-5">
-      <span class="relative flex h-2 w-2">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-      </span>
-      <span>Cloudflare Workers Engine</span>
-    </div>
-    <h1 class="text-5xl sm:text-7xl font-extrabold tracking-tight mb-4">
-      <span class="gradient-text" id="serviceName">VPN Serverless</span>
-    </h1>
-    <p class="text-slate-400 text-base sm:text-lg max-w-md mx-auto font-medium">VLESS · VMess · Trojan</p>
-  </header>
+  <div class="relative z-10">
 
-  <!-- Main Content -->
-  <main class="space-y-6 flex-1">
-    
-    <!-- Status Panel -->
-    <section class="glass rounded-3xl p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.05s">
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-2.5">
-          <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-            <i data-lucide="activity" class="w-4 h-4"></i>
-          </div>
-          <h2 class="text-sm font-bold tracking-wider uppercase text-slate-400">Active Node Status</h2>
-        </div>
-      </div>
-      
-      <div class="grid sm:grid-cols-3 gap-4">
-        <!-- Endpoint -->
-        <div class="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex flex-col justify-between">
-          <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">WebSocket Endpoint</span>
-          <code class="text-indigo-400 text-xs font-mono break-all mt-2" id="domain">wss://...</code>
-        </div>
-        <!-- Protocols -->
-        <div class="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex flex-col justify-between">
-          <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Relay Protocols</span>
-          <div class="text-xs font-bold text-slate-300 mt-2">VLESS, VMess, Trojan WS</div>
-        </div>
-        <!-- My IP -->
-        <div class="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex flex-col justify-between" 
-             x-data="{ ip: 'Loading...', city: '', cc: '' }" 
-             x-init="
-              try {
-                const r = await fetch('/api/myip');
-                const j = await r.json();
-                ip = j.ip || 'N/A';
-                city = j.city || '';
-                cc = j.country || '';
-              } catch(e) { ip = 'Failed' }
-             ">
-          <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">My Client IP</span>
-          <div class="text-xs font-bold text-slate-300 truncate mt-2" x-text="ip + (city ? ` (${city}, ${cc})` : '')"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Subdomain Notification Bar (Full Width) -->
-    <div class="glass rounded-2xl p-4 sm:p-5 animate-slide-up text-xs text-slate-400 flex items-center gap-3 border-l-4 border-l-indigo-500" style="animation-delay: 0.1s">
-      <div class="p-1.5 rounded bg-indigo-500/10 text-indigo-400">
-        <i data-lucide="globe" class="w-4 h-4 animate-spin-slow"></i>
-      </div>
-      <span>Mendukung wildcard subdomain secara dinamis untuk melayani tunnel vless VPN otomatis.</span>
-    </div>
-
-    <!-- Build VPN Config (Full Width Link - Custom Design) -->
-    <a href="/build" class="glass rounded-2xl p-4 sm:p-5 animate-slide-up flex items-center justify-between border border-indigo-500/10 hover:border-indigo-500/40 transition group" style="animation-delay: 0.15s">
-      <div class="flex items-center gap-3">
-        <div class="p-2 bg-indigo-500/10 rounded-xl text-indigo-400 group-hover:rotate-12 transition">
-          <i data-lucide="hammer" class="w-5 h-5"></i>
-        </div>
-        <div class="text-left">
-          <h3 class="text-sm font-bold text-slate-200">Build VPN Config</h3>
-          <p class="text-[11px] text-slate-400">Pilih proxy, setting SNI/CDN, generate vless:// & Clash YAML</p>
-        </div>
-      </div>
-      <i data-lucide="arrow-right" class="w-5 h-5 text-slate-400 group-hover:translate-x-1.5 transition"></i>
-    </a>
-
-    <!-- API /api/sub (Full Width & Accordion Parameters 2 Columns) -->
-    <section class="glass rounded-3xl p-6 sm:p-7 animate-slide-up" style="animation-delay: 0.2s" x-data="{ copyText(text) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => alert('✅ Copied to clipboard!'));
-      } else {
-        const t = document.createElement('textarea');
-        t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
-        document.body.appendChild(t); t.select();
-        document.execCommand('copy');
-        document.body.removeChild(t);
-        alert('✅ Copied to clipboard!');
-      }
-    }}">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="p-2 rounded-xl bg-pink-500/10 text-pink-400">
-          <i data-lucide="code" class="w-4 h-4"></i>
-        </div>
-        <h2 class="text-sm font-bold tracking-wider uppercase text-slate-400">Subscription API</h2>
-      </div>
-
-      <!-- Endpoint API dengan Copy Icon -->
-      <div class="flex items-center gap-2 mb-5">
-        <code class="flex-1 text-[11px] text-slate-300 font-mono block p-3 bg-slate-950/60 rounded-xl border border-slate-900 break-all select-all" id="apiExample">
-          https://.../api/sub?vpn=vless&limit=10&format=v2ray
-        </code>
-        <button @click="copyText(document.getElementById('apiExample').textContent.trim())" 
-          class="p-3 bg-indigo-600/10 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 hover:text-indigo-300 rounded-xl transition flex items-center justify-center">
-          <i data-lucide="copy" class="w-4.5 h-4.5"></i>
-        </button>
-      </div>
-
-      <!-- Parameter List 2 Column Grid (Directly Open) -->
-      <div class="grid sm:grid-cols-2 gap-2">
-        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
-          <span class="font-mono text-indigo-400">vpn</span>
-          <span class="text-slate-400">vless, vmess, trojan</span>
-        </div>
-        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
-          <span class="font-mono text-indigo-400">cc</span>
-          <span class="text-slate-400">kode negara (e.g. ID, SG)</span>
-        </div>
-        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
-          <span class="font-mono text-indigo-400">port</span>
-          <span class="text-slate-400">443, 80</span>
-        </div>
-        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
-          <span class="font-mono text-indigo-400">limit</span>
-          <span class="text-slate-400">jumlah akun output</span>
-        </div>
-        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
-          <span class="font-mono text-indigo-400">format</span>
-          <span class="text-slate-400">raw, v2ray, json</span>
-        </div>
-        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
-          <span class="font-mono text-indigo-400">domain</span>
-          <span class="text-slate-400">SNI / domain custom</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- VPN Connection Checker -->
-    <section class="glass rounded-3xl p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.25s" x-data="vlessChecker()">
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-3">
-          <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 animate-pulse-slow">
-            <i data-lucide="check-square" class="w-4 h-4"></i>
-          </div>
-          <h2 class="text-sm font-bold tracking-wider uppercase text-slate-400">Tunnel Checker</h2>
-        </div>
-        <div class="flex gap-2">
-          <button @click="copyOnline()" x-show="results.length > 0" 
-            class="px-3 py-1.5 text-xs bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-xl transition flex items-center gap-1.5">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Online
-          </button>
-          <button @click="clear()" x-show="results.length > 0"
-            class="px-3 py-1.5 text-xs bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 rounded-xl transition flex items-center gap-1.5">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear
-          </button>
-        </div>
-      </div>
-
-      <div class="space-y-4">
-        <div>
-          <textarea x-model="inputRaw" placeholder="Tempel URI VPN VLESS/Trojan/VMess di sini... (satu baris satu config)" 
-            rows="5" class="w-full px-4 py-3 bg-slate-950/40 rounded-2xl border border-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none font-mono text-xs transition resize-none"></textarea>
-        </div>
-
-        <button @click="checkAll()" :disabled="checking || !inputRaw.trim()"
-          class="w-full py-3.5 bg-gradient-to-r from-indigo-650 to-indigo-550 hover:from-indigo-600 hover:to-indigo-500 rounded-2xl font-bold text-xs tracking-wider uppercase transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/10">
-          <i data-lucide="play-circle" class="w-4.5 h-4.5" :class="{'animate-spin': checking}"></i>
-          <span x-text="checking ? 'Checking Connection...' : 'Check Connect Proxy'"></span>
-        </button>
-
-        <!-- Checker Results -->
-        <div x-show="results.length > 0" class="mt-4 border-t border-slate-900 pt-4 space-y-2 max-h-56 overflow-y-auto pr-1">
-          <template x-for="r in results" :key="r.uri">
-            <div class="p-3 bg-slate-950/30 border border-slate-900 rounded-xl flex items-center justify-between text-xs transition hover:border-slate-800"
-              :class="r.status === 'online' ? 'border-emerald-500/20 bg-emerald-500/5' : r.status === 'offline' ? 'border-rose-500/20 bg-rose-500/5' : ''">
-              <div class="flex-1 min-w-0 pr-4">
-                <div class="font-semibold text-slate-350 truncate" x-text="r.name || r.host"></div>
-                <div class="font-mono text-[9px] text-slate-500 truncate mt-0.5" x-text="r.uri"></div>
-              </div>
-              <div class="flex items-center gap-2.5">
-                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold"
-                  :class="r.status === 'online' ? 'bg-emerald-500/15 text-emerald-400' : r.status === 'offline' ? 'bg-rose-500/15 text-rose-400' : 'bg-slate-800 text-slate-500'"
-                  x-text="r.status === 'online' ? `${r.ms} ms` : r.status === 'offline' ? 'OFFLINE' : 'CHECKING'"></span>
-                <i :data-lucide="r.status === 'online' ? 'check-circle' : r.status === 'offline' ? 'x-circle' : 'loader-2'" 
-                  class="w-4 h-4" :class="r.status === 'online' ? 'text-emerald-400' : r.status === 'offline' ? 'text-rose-400 animate-pulse' : 'text-indigo-400 animate-spin'"></i>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Footer -->
-  <footer class="text-center text-xs text-slate-600 mt-16 font-medium">
-    Banten IT Solutions · Zero Server Cost · Pure Cloudflare Edge
-  </footer>
-</div>
-
-<!-- Background Particles -->
-<script>
-  const canvas = document.getElementById('particles');
-  const ctx = canvas.getContext('2d');
-  let dots = [];
-  const maxDots = 40;
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  window.addEventListener('resize', resize);
-  resize();
-
-  class Dot {
-    constructor() {
-      this.x = Math.random() * canvas.width;
-      this.y = Math.random() * canvas.height;
-      this.vx = (Math.random() - 0.5) * 0.35;
-      this.vy = (Math.random() - 0.5) * 0.35;
-      this.r = Math.random() * 1.5 + 0.5;
-    }
-    update() {
-      this.x += this.vx;
-      this.y += this.vy;
-      if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-      if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
-    }
-    draw() {
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(99, 102, 241, 0.12)';
-      ctx.fill();
-    }
-  }
-
-  for(let i=0; i<maxDots; i++) dots.push(new Dot());
-
-  function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    dots.forEach(d => { d.update(); d.draw(); });
-    for(let i=0; i<dots.length; i++) {
-      for(let j=i+1; j<dots.length; j++) {
-        const dx = dots[i].x - dots[j].x;
-        const dy = dots[i].y - dots[j].y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        if(dist < 100) {
-          ctx.beginPath();
-          ctx.moveTo(dots[i].x, dots[i].y);
-          ctx.lineTo(dots[j].x, dots[j].y);
-          ctx.strokeStyle = `rgba(99, 102, 241, ${0.05 * (1 - dist/100)})`;
-          ctx.stroke();
-        }
-      }
-    }
-    requestAnimationFrame(animate);
-  }
-  animate();
-</script>
-
-<script>
-(async()=>{
-  const d = location.hostname;
-  const s = d.split(".")[0];
-  document.getElementById("serviceName").textContent = s;
-  document.getElementById("domain").textContent = `wss://${d}`;
-  document.getElementById("apiExample").textContent = `https://${d}/api/sub?vpn=vless&limit=10&format=v2ray`;
-  setTimeout(() => lucide.createIcons(), 200);
-})();
-
-function vlessChecker() {
-  return {
-    inputRaw: '',
-    checking: false,
-    results: [],
-
-    clear() {
-      this.inputRaw = '';
-      this.results = [];
-    },
-
-    parseProxy(uri) {
-      try {
-        const hashIdx = uri.indexOf('#');
-        const name = hashIdx !== -1 ? decodeURIComponent(uri.substring(hashIdx + 1)) : '';
-        const cleanUri = hashIdx !== -1 ? uri.substring(0, hashIdx) : uri;
-
-        if (cleanUri.startsWith('vless://')) {
-          const url = new URL(cleanUri);
-          return { protocol: 'vless', host: url.hostname, port: url.port || '443', name };
-        }
-        if (cleanUri.startsWith('trojan://')) {
-          const url = new URL(cleanUri);
-          return { protocol: 'trojan', host: url.hostname, port: url.port || '443', name };
-        }
-        if (cleanUri.startsWith('vmess://')) {
-          const b64 = cleanUri.replace('vmess://', '');
-          const json = JSON.parse(atob(b64));
-          return { protocol: 'vmess', host: json.add, port: json.port || '80', name: json.ps || name };
-        }
-      } catch (e) {}
-      return null;
-    },
-
-    async checkAll() {
-      const lines = this.inputRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      if (lines.length === 0) return;
-
-      this.checking = true;
-      this.results = lines.map(line => {
-        const parsed = this.parseProxy(line);
-        if (!parsed) return { uri: line, status: 'invalid', name: 'Format Invalid', host: '' };
-        return { uri: line, status: 'checking', name: parsed.name, host: parsed.host, port: parsed.port };
-      });
-
-      setTimeout(() => lucide.createIcons(), 100);
-
-      await Promise.all(this.results.map(async (resItem) => {
-        if (resItem.status === 'invalid') return;
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-        try {
-          const checkUrl = `/api/check?target=${resItem.host}:${resItem.port}`;
-          const res = await fetch(checkUrl, { signal: controller.signal });
-          clearTimeout(timeoutId);
+    <main>
+      <!-- Hero Section -->
+      <section class="pt-40 pb-20 px-6 min-h-[90vh] flex flex-col justify-center items-center text-center">
+        <div class="animate-slide-up">
+          <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.2]">
+            BITS
+            <span class="gradient-text block mt-2">Cloudflare VPN</span>
+          </h1>
           
-          if (res.ok) {
-            const data = await res.json();
-            resItem.status = data.success ? 'online' : 'offline';
-            resItem.ms = data.latency || 0;
-          } else {
-            resItem.status = 'offline';
-          }
-        } catch (e) {
-          resItem.status = 'offline';
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      }));
+          <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Relay WebSocket canggih menggunakan teknologi Serverless Workers. Kecepatan optimal dari server edge terdekat, tanpa biaya server tambahan.
+          </p>
+          
+          <div class="flex justify-center">
+            <a href="/build" class="group relative inline-flex items-center justify-center px-12 py-5 rounded-2xl gradient-bg text-white font-bold text-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_60px_-5px_rgba(167,139,250,0.8)]">
+              <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+              <span class="relative">Coba Sekarang</span>
+            </a>
+          </div>
+          
+          <!-- Credit Footer -->
+          <div class="mt-16 text-center animate-fade-in" style="animation-delay: 0.5s;">
+            <p class="text-sm text-slate-400">
+              Developed with ❤️ by Banten IT Solutions
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
 
-      this.checking = false;
-      setTimeout(() => lucide.createIcons(), 100);
-    },
+  </div>
 
-    copyOnline() {
-      const onlineUris = this.results.filter(r => r.status === 'online').map(r => r.uri).join('\n');
-      if (!onlineUris) {
-        alert('Tidak ada proxy online.');
-        return;
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(onlineUris).then(() => alert('✅ Copied online proxies!'));
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = onlineUris;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        alert('✅ Copied online proxies!');
-      }
-    }
-  }
-}
-</script>
 </body>
 </html>

@@ -346,7 +346,7 @@ export default {
 
                 uri.hash = `${result.length + 1} ${getFlagEmoji(prx.country)} ${prx.org} WS ${
                   port == 443 ? "TLS" : "NTLS"
-                } [${serviceName}]`;
+                } [BITS Cloudflare VPN]`;
                 result.push(uri.toString());
               }
             }
