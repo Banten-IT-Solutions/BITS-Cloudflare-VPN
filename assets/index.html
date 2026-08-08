@@ -5,173 +5,400 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VPN Serverless — Cloudflare Workers</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={darkMode:'class',theme:{extend:{animation:{'fade-in':'fadeIn 0.6s ease-out','slide-up':'slideUp 0.6s ease-out','pulse-slow':'pulse 3s ease-in-out infinite'},keyframes:{fadeIn:{'0%':{opacity:'0'},'100%':{opacity:'1'}},slideUp:{'0%':{transform:'translateY(10px)',opacity:'0'},'100%':{transform:'translateY(0)',opacity:'1'}}}}}}</script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{animation:{'fade-in':'fadeIn 0.8s cubic-bezier(0.16,1,0.3,1)','slide-up':'slideUp 0.8s cubic-bezier(0.16,1,0.3,1)','pulse-slow':'pulse 4s cubic-bezier(0.4,0,0.6,1) infinite','spin-slow':'spin 12s linear infinite'},keyframes:{fadeIn:{'0%':{opacity:'0'},'100%':{opacity:'1'}},slideUp:{'0%':{transform:'translateY(16px)',opacity:'0'},'100%':{transform:'translateY(0)',opacity:'1'}}}}}}</script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.30.0"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
 <style>
-body{background:linear-gradient(135deg,#020617 0%,#0f172a 100%);min-height:100vh}
-.glass{background:rgba(15,23,42,0.6);backdrop-filter:blur(16px);border:1px solid rgba(148,163,184,0.08)}
-.glass:hover{border-color:rgba(148,163,184,0.15)}
-.gradient-text{background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.glow{box-shadow:0 0 24px rgba(99,102,241,0.25)}
+body{background:#020617;min-height:100vh;overflow-x:hidden}
+canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.glass{background:rgba(15,23,42,0.45);backdrop-filter:blur(20px);border:1px solid rgba(99,102,241,0.08);box-shadow:0 8px 32px 0 rgba(0,0,0,0.37)}
+.glass:hover{border-color:rgba(99,102,241,0.18);box-shadow:0 8px 32px 0 rgba(99,102,241,0.05)}
+.gradient-text{background:linear-gradient(135deg,#6366f1 10%,#a855f7 50%,#3b82f6 90%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.glow-indigo{box-shadow:0 0 40px rgba(99,102,241,0.15)}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1e293b;border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:#334155}
+[x-cloak]{display:none}
 </style>
 </head>
-<body class="text-slate-50 antialiased">
-<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
-  <nav class="flex gap-6 mb-10 pb-5 border-b border-slate-800/50">
-    <a href="/" class="flex items-center gap-2 text-indigo-400 font-semibold transition hover:text-indigo-300">
-      <i data-lucide="home" class="w-5 h-5"></i>
-      <span>Home</span>
-    </a>
-    <a href="/build" class="flex items-center gap-2 text-slate-400 transition hover:text-slate-200">
-      <i data-lucide="hammer" class="w-5 h-5"></i>
-      <span>Build</span>
-    </a>
-  </nav>
+<body class="text-slate-100 antialiased font-sans relative">
+<canvas id="particles"></canvas>
 
-  <header class="text-center mb-14 animate-slide-up">
-    <h1 class="text-5xl font-bold mb-3">
+<div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-12 flex flex-col min-h-screen justify-between animate-fade-in">
+  
+  <!-- Header / Brand -->
+  <header class="text-center mb-10 animate-slide-up">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass border border-indigo-500/20 text-xs text-indigo-300 font-mono mb-4 animate-pulse-slow">
+      <span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
+      <span>Cloudflare Workers VPN</span>
+    </div>
+    <h1 class="text-5xl sm:text-6xl font-black tracking-tight mb-3">
       <span class="gradient-text" id="serviceName">VPN Serverless</span>
     </h1>
-    <p class="text-slate-400 text-lg">Tunnel VPN di Cloudflare Workers — VLESS / VMess / Trojan via WebSocket</p>
+    <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">VLESS, VMess, & Trojan via WebSocket CDN</p>
   </header>
 
-  <section class="glass rounded-2xl p-6 sm:p-8 mb-6 glow animate-slide-up">
-    <div class="flex items-center gap-3 mb-6">
-      <i data-lucide="activity" class="w-6 h-6 text-emerald-400"></i>
-      <h2 class="text-2xl font-semibold">Status</h2>
-    </div>
-    <div class="grid sm:grid-cols-3 gap-4 mb-5">
-      <div class="glass rounded-xl p-4">
-        <div class="flex items-center gap-2 mb-2 text-slate-400">
-          <i data-lucide="wifi" class="w-4 h-4 text-emerald-400"></i>
-          <span class="text-sm">Endpoint</span>
+  <!-- Main Content -->
+  <main class="space-y-6 flex-1">
+    
+    <!-- Status Card -->
+    <section class="glass rounded-3xl p-6 sm:p-8 glow-indigo animate-slide-up">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+          <i data-lucide="activity" class="w-5 h-5"></i>
         </div>
-        <code class="text-indigo-400 text-sm" id="domain">wss://...</code>
+        <h2 class="text-xl font-bold tracking-tight">Active Status</h2>
       </div>
-      <div class="glass rounded-xl p-4">
-        <div class="flex items-center gap-2 mb-2 text-slate-400">
-          <i data-lucide="shield" class="w-4 h-4 text-purple-400"></i>
-          <span class="text-sm">Protocols</span>
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div class="glass rounded-2xl p-4 flex flex-col justify-between">
+          <span class="text-xs text-slate-400 font-medium mb-1">ENDPOINT</span>
+          <code class="text-indigo-300 text-xs font-mono break-all mt-1" id="domain">wss://...</code>
         </div>
-        <div class="text-sm">VLESS · VMess · Trojan</div>
-      </div>
-      <div class="glass rounded-xl p-4">
-        <div class="flex items-center gap-2 mb-2 text-slate-400">
-          <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i>
-          <span class="text-sm">My IP</span>
+        <div class="glass rounded-2xl p-4 flex flex-col justify-between">
+          <span class="text-xs text-slate-400 font-medium mb-1">PROTOCOLS</span>
+          <div class="text-sm font-semibold text-slate-200 mt-1">VLESS · VMess · Trojan</div>
         </div>
-        <div class="text-sm" id="myip">Loading...</div>
+        <div class="glass rounded-2xl p-4 flex flex-col justify-between" x-data="{ ip: 'Loading...', city: '', cc: '' }" x-init="
+          try {
+            const r = await fetch('/api/myip');
+            const j = await r.json();
+            ip = j.ip || 'N/A';
+            city = j.city || '';
+            cc = j.country || '';
+          } catch(e) { ip = 'Failed' }
+        ">
+          <span class="text-xs text-slate-400 font-medium mb-1">MY CLIENT IP</span>
+          <div class="text-sm font-semibold text-slate-200 truncate mt-1" x-text="ip + (city ? ` (${city}, ${cc})` : '')"></div>
+        </div>
       </div>
-    </div>
-    <p class="text-sm text-slate-500 flex items-center gap-2">
-      <i data-lucide="info" class="w-4 h-4"></i>
-      Semua subdomain wildcard juga melayani tunnel ini
-    </p>
-  </section>
+    </section>
 
-  <section class="glass rounded-2xl p-6 sm:p-8 mb-6 animate-slide-up" style="animation-delay:0.1s">
-    <div class="flex items-center gap-3 mb-6">
-      <i data-lucide="zap" class="w-6 h-6 text-yellow-400"></i>
-      <h2 class="text-2xl font-semibold">Mulai Cepat</h2>
-    </div>
-    <ol class="space-y-3 mb-6">
-      <li class="flex gap-3">
-        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-semibold">1</span>
-        <span>Buka <a href="/build" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">halaman Build</a> untuk memilih proxy dan konfigurasi.</span>
-      </li>
-      <li class="flex gap-3">
-        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-semibold">2</span>
-        <span>Generate link vless:// dengan config SNI/CDN, wildcard, port.</span>
-      </li>
-      <li class="flex gap-3">
-        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-semibold">3</span>
-        <span>Salin URL atau YAML Clash, lalu import ke aplikasi VPN (v2rayN, Nekoray, Clash, dll.).</span>
-      </li>
-    </ol>
-    <div class="glass rounded-xl p-4">
-      <code class="text-sm text-slate-300 break-all" id="apiExample">https://.../api/sub?vpn=vless&limit=10&format=v2ray</code>
-    </div>
-  </section>
-
-  <section class="glass rounded-2xl p-6 sm:p-8 mb-6 animate-slide-up" style="animation-delay:0.2s">
-    <div class="flex items-center gap-3 mb-6">
-      <i data-lucide="code" class="w-6 h-6 text-pink-400"></i>
-      <h2 class="text-2xl font-semibold">Parameter API /api/sub</h2>
-    </div>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      <div class="glass rounded-lg p-4">
-        <div class="font-semibold text-indigo-400 mb-1 text-sm">vpn</div>
-        <div class="text-xs text-slate-400"><code>vless</code>, <code>vmess</code>, <code>trojan</code></div>
-      </div>
-      <div class="glass rounded-lg p-4">
-        <div class="font-semibold text-indigo-400 mb-1 text-sm">cc</div>
-        <div class="text-xs text-slate-400">kode negara <code>ID</code>, <code>SG</code>, ...</div>
-      </div>
-      <div class="glass rounded-lg p-4">
-        <div class="font-semibold text-indigo-400 mb-1 text-sm">port</div>
-        <div class="text-xs text-slate-400"><code>443</code>, <code>80</code></div>
-      </div>
-      <div class="glass rounded-lg p-4">
-        <div class="font-semibold text-indigo-400 mb-1 text-sm">limit</div>
-        <div class="text-xs text-slate-400">jumlah akun (default <code>10</code>)</div>
-      </div>
-      <div class="glass rounded-lg p-4">
-        <div class="font-semibold text-indigo-400 mb-1 text-sm">format</div>
-        <div class="text-xs text-slate-400"><code>raw</code>, <code>v2ray</code>, <code>json</code></div>
-      </div>
-      <div class="glass rounded-lg p-4">
-        <div class="font-semibold text-indigo-400 mb-1 text-sm">domain</div>
-        <div class="text-xs text-slate-400">SNI/domain isian</div>
-      </div>
-    </div>
-  </section>
-
-  <section class="glass rounded-2xl p-6 sm:p-8 mb-6 animate-slide-up" style="animation-delay:0.3s">
-    <div class="flex items-center gap-3 mb-6">
-      <i data-lucide="wrench" class="w-6 h-6 text-orange-400"></i>
-      <h2 class="text-2xl font-semibold">Tools</h2>
-    </div>
-    <div class="space-y-3">
-      <a href="/build" class="flex items-center gap-3 p-4 glass rounded-xl transition-all hover:scale-[1.01]">
-        <i data-lucide="hammer" class="w-5 h-5 text-indigo-400"></i>
-        <div class="flex-1">
-          <div class="font-semibold">Build</div>
-          <div class="text-sm text-slate-400">Pilih proxy + konfigurasi SNI/CDN → generate vless:// + Clash YAML</div>
+    <!-- Wildcard Info Card -->
+    <section class="glass rounded-3xl p-6 sm:p-7 animate-slide-up" style="animation-delay: 0.1s">
+      <div class="flex items-start gap-4">
+        <div class="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 mt-0.5">
+          <i data-lucide="globe" class="w-5 h-5 animate-spin-slow"></i>
         </div>
-        <i data-lucide="chevron-right" class="w-5 h-5 text-slate-600"></i>
-      </a>
-      <a href="/api/myip" class="flex items-center gap-3 p-4 glass rounded-xl transition-all hover:scale-[1.01]">
-        <i data-lucide="map-pin" class="w-5 h-5 text-blue-400"></i>
-        <div class="flex-1">
-          <div class="font-semibold">/api/myip</div>
-          <div class="text-sm text-slate-400">Cek IP & colo kamu saat ini</div>
+        <div>
+          <h3 class="text-base font-bold text-slate-200 mb-1">Wildcard Subdomain Support</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Web app ini dapat diakses dan digunakan juga di seluruh wildcard subdomain Anda (misalnya <code class="text-indigo-300">any.yuliana.my.id</code>) dan secara otomatis akan berfungsi penuh sebagai worker VPN VLESS.
+          </p>
         </div>
-        <i data-lucide="chevron-right" class="w-5 h-5 text-slate-600"></i>
-      </a>
-    </div>
-  </section>
+      </div>
+    </section>
 
-  <footer class="text-center text-sm text-slate-500 mt-12 pb-4">
-    <span id="footDomain">...</span> · Banten IT Solutions · gratis, tidak perlu bayar
+    <!-- Tools & Accordion parameters -->
+    <section class="grid sm:grid-cols-2 gap-6 animate-slide-up" style="animation-delay: 0.2s" x-data="{ openParams: false }">
+      <!-- Tools Card (compact, di tengah / kiri) -->
+      <div class="glass rounded-3xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="p-2 rounded-xl bg-orange-500/10 text-orange-400">
+              <i data-lucide="wrench" class="w-5 h-5"></i>
+            </div>
+            <h2 class="text-lg font-bold">Quick Tools</h2>
+          </div>
+          <p class="text-xs text-slate-400 mb-4 leading-relaxed">Gunakan tool pembangun config interaktif kami untuk menghasilkan format vless:// dan Clash YAML.</p>
+        </div>
+        <a href="/build" class="flex items-center justify-between p-3.5 glass rounded-2xl border border-indigo-500/20 hover:border-indigo-500/40 transition group">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="hammer" class="w-4 h-4 text-indigo-400 group-hover:rotate-12 transition"></i>
+            <span class="text-sm font-semibold group-hover:text-indigo-300">Build VPN Config</span>
+          </div>
+          <i data-lucide="arrow-right" class="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition"></i>
+        </a>
+      </div>
+
+      <!-- Parameter API & Accordion (kanan) -->
+      <div class="glass rounded-3xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded-xl bg-pink-500/10 text-pink-400">
+                <i data-lucide="code" class="w-5 h-5"></i>
+              </div>
+              <h2 class="text-lg font-bold">API /api/sub</h2>
+            </div>
+            <button @click="openParams = !openParams" class="text-slate-400 hover:text-slate-200 transition">
+              <i :data-lucide="openParams ? 'chevron-up' : 'chevron-down'" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <code class="text-[11px] text-slate-300 font-mono block p-2.5 glass rounded-xl break-all select-all mb-4" id="apiExample">
+            https://.../api/sub?vpn=vless&limit=10&format=v2ray
+          </code>
+        </div>
+        
+        <!-- Accordion Parameter -->
+        <div x-show="openParams" x-collapse x-cloak class="space-y-2 mt-2 mb-4 max-h-48 overflow-y-auto pr-1">
+          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
+            <span class="font-mono text-indigo-300">vpn</span>
+            <span class="text-slate-400">vless, vmess, trojan</span>
+          </div>
+          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
+            <span class="font-mono text-indigo-300">cc</span>
+            <span class="text-slate-400">kode negara ID, SG...</span>
+          </div>
+          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
+            <span class="font-mono text-indigo-300">port</span>
+            <span class="text-slate-400">443, 80</span>
+          </div>
+          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
+            <span class="font-mono text-indigo-300">limit</span>
+            <span class="text-slate-400">default 10</span>
+          </div>
+          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
+            <span class="font-mono text-indigo-300">format</span>
+            <span class="text-slate-400">raw, v2ray, json</span>
+          </div>
+          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
+            <span class="font-mono text-indigo-300">domain</span>
+            <span class="text-slate-400">SNI / domain</span>
+          </div>
+        </div>
+
+        <div class="text-[10px] text-slate-500 flex items-center gap-1.5">
+          <i data-lucide="info" class="w-3.5 h-3.5"></i>
+          <span>Parameter /build ditambahkan untuk kustomisasi generator</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- VLESS / Proxy Checker -->
+    <section class="glass rounded-3xl p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.3s" x-data="vlessChecker()">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400">
+            <i data-lucide="check-square" class="w-5 h-5"></i>
+          </div>
+          <h2 class="text-xl font-bold tracking-tight">VLESS / VPN Connection Checker</h2>
+        </div>
+        <div class="flex gap-2">
+          <button @click="copyOnline()" x-show="results.length > 0" 
+            class="px-3 py-1.5 text-xs glass rounded-xl border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 transition flex items-center gap-1.5">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Online Only
+          </button>
+          <button @click="clear()" x-show="results.length > 0"
+            class="px-3 py-1.5 text-xs glass rounded-xl border border-rose-500/20 hover:border-rose-500/40 text-rose-400 transition flex items-center gap-1.5">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-2">Masukkan URI VLESS, VMess, atau Trojan (Satu per baris):</label>
+          <textarea x-model="inputRaw" placeholder="vless://uuid@server:port?encryption=none...&#10;vmess://eyJhZGQiOiIxMjcuMC4wLjEiLCJwb3J0IjoiODAiLCJpZCI6Ii4uLiJ9" 
+            rows="5" class="w-full px-4 py-3 glass rounded-2xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none font-mono text-xs transition resize-none"></textarea>
+        </div>
+
+        <button @click="checkAll()" :disabled="checking || !inputRaw.trim()"
+          class="w-full py-3.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 rounded-2xl font-semibold transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/10">
+          <i data-lucide="play" class="w-4 h-4" :class="{'animate-spin': checking}"></i>
+          <span x-text="checking ? 'Checking Parallelly...' : 'Start Connection Check'"></span>
+        </button>
+
+        <!-- Checker Results -->
+        <div x-show="results.length > 0" class="mt-4 border-t border-slate-800/60 pt-4 space-y-2 max-h-60 overflow-y-auto pr-1">
+          <template x-for="r in results" :key="r.uri">
+            <div class="p-3 glass rounded-xl flex items-center justify-between text-xs border"
+              :class="r.status === 'online' ? 'border-emerald-500/25 bg-emerald-500/5' : r.status === 'offline' ? 'border-rose-500/25 bg-rose-500/5' : 'border-slate-800'">
+              <div class="flex-1 min-w-0 pr-4">
+                <div class="font-semibold text-slate-200 truncate" x-text="r.name || r.host"></div>
+                <div class="font-mono text-[10px] text-slate-500 truncate" x-text="r.uri"></div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                  :class="r.status === 'online' ? 'bg-emerald-500/15 text-emerald-400' : r.status === 'offline' ? 'bg-rose-500/15 text-rose-400' : 'bg-slate-800 text-slate-400'"
+                  x-text="r.status === 'online' ? `${r.ms} ms` : r.status === 'offline' ? 'OFFLINE' : 'INVALID'"></span>
+                <i :data-lucide="r.status === 'online' ? 'check-circle-2' : r.status === 'offline' ? 'alert-circle' : 'help-circle'" 
+                  class="w-4 h-4" :class="r.status === 'online' ? 'text-emerald-400' : r.status === 'offline' ? 'text-rose-400' : 'text-slate-500'"></i>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Clean Minimalist Info Footer -->
+  <footer class="text-center text-xs text-slate-600 mt-12">
+    Banten IT Solutions · Built for speed, efficiency & cleanliness.
   </footer>
 </div>
 
+<!-- Background Particles -->
 <script>
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let dots = [];
+  const maxDots = 60;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  class Dot {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4;
+      this.r = Math.random() * 1.8 + 0.6;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+      if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+      ctx.fill();
+    }
+  }
+
+  for(let i=0; i<maxDots; i++) dots.push(new Dot());
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    dots.forEach(d => { d.update(); d.draw(); });
+    // Connect lines
+    for(let i=0; i<dots.length; i++) {
+      for(let j=i+1; j<dots.length; j++) {
+        const dx = dots[i].x - dots[j].x;
+        const dy = dots[i].y - dots[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < 100) {
+          ctx.beginPath();
+          ctx.moveTo(dots[i].x, dots[i].y);
+          ctx.lineTo(dots[j].x, dots[j].y);
+          ctx.strokeStyle = `rgba(99, 102, 241, ${0.05 * (1 - dist/100)})`;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+
+<script>
+// Main setup & Lucide icon init
 (async()=>{
-const d=location.hostname,s=d.split(".")[0];
-document.getElementById("serviceName").textContent=s;
-document.getElementById("domain").textContent=`wss://${d}`;
-document.getElementById("footDomain").textContent=d;
-document.getElementById("apiExample").textContent=`https://${d}/api/sub?vpn=vless&limit=10&format=v2ray`;
-try{
-const r=await fetch("/api/myip"),j=await r.json();
-document.getElementById("myip").textContent=`${j.ip||"N/A"} — ${j.city||"Unknown"}, ${j.colo||"Unknown"}`;
-}catch{
-document.getElementById("myip").textContent="Failed to load";
-}
-lucide.createIcons();
+  const d = location.hostname;
+  const s = d.split(".")[0];
+  document.getElementById("serviceName").textContent = s;
+  document.getElementById("domain").textContent = `wss://${d}`;
+  document.getElementById("apiExample").textContent = `https://${d}/api/sub?vpn=vless&limit=10&format=v2ray`;
+  setTimeout(() => lucide.createIcons(), 200);
 })();
+
+// Connection Checker Alpine Logic
+function vlessChecker() {
+  return {
+    inputRaw: '',
+    checking: false,
+    results: [],
+
+    clear() {
+      this.inputRaw = '';
+      this.results = [];
+    },
+
+    parseProxy(uri) {
+      try {
+        const hashIdx = uri.indexOf('#');
+        const name = hashIdx !== -1 ? decodeURIComponent(uri.substring(hashIdx + 1)) : '';
+        const cleanUri = hashIdx !== -1 ? uri.substring(0, hashIdx) : uri;
+
+        if (cleanUri.startsWith('vless://')) {
+          const url = new URL(cleanUri);
+          return { protocol: 'vless', host: url.hostname, port: url.port || '443', name };
+        }
+        if (cleanUri.startsWith('trojan://')) {
+          const url = new URL(cleanUri);
+          return { protocol: 'trojan', host: url.hostname, port: url.port || '443', name };
+        }
+        if (cleanUri.startsWith('vmess://')) {
+          const b64 = cleanUri.replace('vmess://', '');
+          const json = JSON.parse(atob(b64));
+          return { protocol: 'vmess', host: json.add, port: json.port || '80', name: json.ps || name };
+        }
+      } catch (e) {}
+      return null;
+    },
+
+    async checkAll() {
+      const lines = this.inputRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length === 0) return;
+
+      this.checking = true;
+      this.results = lines.map(line => {
+        const parsed = this.parseProxy(line);
+        if (!parsed) return { uri: line, status: 'invalid', name: 'Format Invalid', host: '' };
+        return { uri: line, status: 'checking', name: parsed.name, host: parsed.host, port: parsed.port };
+      });
+
+      // Parallel execution with timeout
+      await Promise.all(this.results.map(async (resItem) => {
+        if (resItem.status === 'invalid') return;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
+
+        try {
+          const checkUrl = `/api/check?target=${resItem.host}:${resItem.port}`;
+          const res = await fetch(checkUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          
+          if (res.ok) {
+            const data = await res.json();
+            resItem.status = data.success ? 'online' : 'offline';
+            resItem.ms = data.latency || 0;
+          } else {
+            resItem.status = 'offline';
+          }
+        } catch (e) {
+          resItem.status = 'offline';
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }));
+
+      this.checking = false;
+      setTimeout(() => lucide.createIcons(), 100);
+    },
+
+    copyOnline() {
+      const onlineUris = this.results.filter(r => r.status === 'online').map(r => r.uri).join('\n');
+      if (!onlineUris) {
+        alert('Tidak ada proxy online untuk disalin.');
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(onlineUris).then(() => alert('✅ Copied online proxies!'));
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = onlineUris;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('✅ Copied online proxies!');
+      }
+    }
+  }
+}
 </script>
 </body>
 </html>
