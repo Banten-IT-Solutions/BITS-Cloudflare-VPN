@@ -234,7 +234,12 @@ document.getElementById("buildBtn").addEventListener("click", () => {
   }
 
   const tls = port === "443";
-  const uuid = crypto.randomUUID();
+  // Fallback UUID generator untuk non-secure context
+  const uuid = (crypto.randomUUID && crypto.randomUUID()) || 
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
 
   // Generate vless URLs
   const uriList = selectedProxies.map((prx, i) => {
