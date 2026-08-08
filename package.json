@@ -17,7 +17,11 @@
   "license": "MIT",
   "type": "module",
   "private": true,
-  "author": "BITS - Banyu Mili Server <admin@bits.co.id>",
+  "author": {
+    "name": "Banten IT Solutions",
+    "email": "admin@bits.co.id",
+    "url": "https://bits.co.id"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bitscoid/BITS-Cloudflare-VPN.git"
