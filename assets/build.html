@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build VPN Config</title>
+<link rel="stylesheet" href="/shared.css">
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a href="/">Home</a>
+    <a href="/build" class="active">Build</a>
+    <a href="/convert">Convert</a>
+  </nav>
+
+  <h1>Build VPN Config</h1>
+  <div class="sub">Pilih proxy → konfigurasi SNI/CDN → generate vless:// + Clash YAML</div>
+
+  <!-- Step 1: Pilih Proxy -->
+  <div class="card">
+    <h2>Step 1: Pilih Proxy</h2>
+    <div class="row">
+      <div class="flex2">
+        <label>Filter Negara (cc)</label>
+        <input id="filterCC" placeholder="ID,SG,US (kosong = semua)">
+      </div>
+      <div class="flex2">
+        <label>Cari (IP/Org)</label>
+        <input id="filterQ" placeholder="Cari...">
+      </div>
+    </div>
+    <button class="btn" id="loadProxies">Load Proxy List</button>
+    <div id="proxyList" style="margin-top:16px; max-height:400px; overflow-y:auto"></div>
+    <div style="margin-top:12px">
+      <span id="selectedCount">0 dipilih</span>
+      <button class="btn" id="nextStep" disabled>Lanjut ke Build →</button>
+    </div>
+  </div>
+
+  <!-- Step 2 & 3: Hidden sampai user klik "Lanjut" -->
+  <div id="resultSection" style="display:none">
+    <div class="card">
+      <h2>Step 2: Konfigurasi</h2>
+      <div class="row">
+        <div class="flex2">
+          <label>Mode</label>
+          <div class="checkbox-row">
+            <label><input type="radio" name="mode" value="sni" checked> SNI</label>
+            <label><input type="radio" name="mode" value="cdn"> CDN</label>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="flex2">
+          <label>Bug (domain target untuk SNI/server)</label>
+          <input id="bug" placeholder="support.zoom.us" value="support.zoom.us">
+        </div>
+      </div>
+      <div class="row">
+        <div class="flex2">
+          <label>Wildcard</label>
+          <div class="checkbox-row">
+            <label><input type="radio" name="wildcard" value="no" checked> Tidak</label>
+            <label><input type="radio" name="wildcard" value="yes"> Ya</label>
+          </div>
+        </div>
+      </div>
+      <div id="subdomainRow" class="row" style="display:none">
+        <div class="flex2">
+          <label>Subdomain (jika wildcard)</label>
+          <input id="subdomain" placeholder="xyz">
+          <div class="note">Hasil: <span id="subdomainPreview"></span></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="flex2">
+          <label>SSL/TLS</label>
+          <div class="checkbox-row">
+            <label><input type="radio" name="ssl" value="443" checked> 443 (SSL)</label>
+            <label><input type="radio" name="ssl" value="80"> 80 (tanpa SSL)</label>
+          </div>
+        </div>
+      </div>
+      <button class="btn" id="buildBtn">Build</button>
+    </div>
+
+    <!-- Step 3: Hasil -->
+    <div class="card" id="outputCard" style="display:none">
+      <h2>Step 3: Hasil</h2>
+      <div style="margin-bottom:12px">
+        <button class="btn" id="tabUri">URI vless://</button>
+        <button class="btn ghost" id="tabYaml">YAML Clash</button>
+      </div>
+      <div id="outputUri" style="display:block">
+        <label>vless:// URLs</label>
+        <textarea id="outputUriText" readonly></textarea>
+        <button class="btn" id="copyUri">Copy URI</button>
+      </div>
+      <div id="outputYaml" style="display:none">
+        <label>Clash YAML</label>
+        <textarea id="outputYamlText" readonly></textarea>
+        <button class="btn" id="copyYaml">Copy YAML</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span id="footDomain">...</span> &middot; Banten IT Solutions
+  </div>
+</div>
+
+<script>
+const baseDomain = location.hostname;
+document.getElementById("footDomain").textContent = baseDomain;
+
+let selectedProxies = [];
+
+// Load proxy list
+document.getElementById("loadProxies").addEventListener("click", async () => {
+  const cc = document.getElementById("filterCC").value.trim();
+  const q = document.getElementById("filterQ").value.trim();
+  const url = `/api/v1/proxies?limit=50&cc=${cc}&q=${q}`;
+  
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const list = document.getElementById("proxyList");
+    list.innerHTML = "";
+    
+    if (data.items.length === 0) {
+      list.innerHTML = "<p class='note'>Tidak ada proxy ditemukan.</p>";
+      return;
+    }
+    
+    data.items.forEach((prx, i) => {
+      const div = document.createElement("div");
+      div.className = "proxy-item";
+      div.innerHTML = `
+        <input type="checkbox" id="prx${i}" data-ip="${prx.prxIP}" data-port="${prx.prxPort}" data-country="${prx.country}" data-org="${prx.org}">
+        <label for="prx${i}" class="proxy-info">
+          <span>${getFlag(prx.country)} ${prx.country}</span> ${prx.prxIP}:${prx.prxPort} — ${prx.org}
+        </label>
+      `;
+      list.appendChild(div);
+    });
+    
+    // Update selected count
+    list.querySelectorAll("input[type=checkbox]").forEach(cb => {
+      cb.addEventListener("change", updateSelectedCount);
+    });
+  } catch (e) {
+    document.getElementById("proxyList").innerHTML = `<p class='note'>Error: ${e.message}</p>`;
+  }
+});
+
+function updateSelectedCount() {
+  const checked = document.querySelectorAll("#proxyList input[type=checkbox]:checked");
+  selectedProxies = Array.from(checked).map(cb => ({
+    ip: cb.dataset.ip,
+    port: cb.dataset.port,
+    country: cb.dataset.country,
+    org: cb.dataset.org,
+  }));
+  document.getElementById("selectedCount").textContent = `${selectedProxies.length} dipilih`;
+  document.getElementById("nextStep").disabled = selectedProxies.length === 0;
+}
+
+document.getElementById("nextStep").addEventListener("click", () => {
+  document.getElementById("resultSection").style.display = "block";
+  document.getElementById("resultSection").scrollIntoView({ behavior: "smooth" });
+});
+
+// Wildcard toggle
+document.querySelectorAll("input[name=wildcard]").forEach(radio => {
+  radio.addEventListener("change", () => {
+    const isWildcard = document.querySelector("input[name=wildcard]:checked").value === "yes";
+    document.getElementById("subdomainRow").style.display = isWildcard ? "flex" : "none";
+    updateSubdomainPreview();
+  });
+});
+
+document.getElementById("subdomain").addEventListener("input", updateSubdomainPreview);
+
+function updateSubdomainPreview() {
+  const sub = document.getElementById("subdomain").value.trim();
+  const isWildcard = document.querySelector("input[name=wildcard]:checked").value === "yes";
+  if (isWildcard && sub) {
+    document.getElementById("subdomainPreview").textContent = `${sub}.${baseDomain}`;
+  } else {
+    document.getElementById("subdomainPreview").textContent = baseDomain;
+  }
+}
+
+// Build button
+document.getElementById("buildBtn").addEventListener("click", () => {
+  const mode = document.querySelector("input[name=mode]:checked").value;
+  const bug = document.getElementById("bug").value.trim() || "support.zoom.us";
+  const wildcard = document.querySelector("input[name=wildcard]:checked").value === "yes";
+  const subdomain = document.getElementById("subdomain").value.trim();
+  const port = document.querySelector("input[name=ssl]:checked").value;
+
+  // Mapping sesuai spec user:
+  // SNI tidak wildcard: server=baseDomain, servername+host=bug
+  // SNI wildcard: server=subdomain.baseDomain, servername+host=bug
+  // CDN tidak wildcard: server=bug, servername+host=baseDomain
+  // CDN wildcard: server=bug, servername+host=subdomain.baseDomain
+
+  let server, sni, host;
+  if (mode === "sni") {
+    if (wildcard && subdomain) {
+      server = `${subdomain}.${baseDomain}`;
+      sni = bug;
+      host = bug;
+    } else {
+      server = baseDomain;
+      sni = bug;
+      host = bug;
+    }
+  } else { // cdn
+    if (wildcard && subdomain) {
+      server = bug;
+      sni = `${subdomain}.${baseDomain}`;
+      host = `${subdomain}.${baseDomain}`;
+    } else {
+      server = bug;
+      sni = baseDomain;
+      host = baseDomain;
+    }
+  }
+
+  const tls = port === "443";
+  const uuid = crypto.randomUUID();
+
+  // Generate vless URLs
+  const uriList = selectedProxies.map((prx, i) => {
+    const uri = new URL(`vless://${server}:${port}`);
+    uri.username = uuid;
+    uri.searchParams.set("encryption", "none");
+    uri.searchParams.set("type", "ws");
+    uri.searchParams.set("security", tls ? "tls" : "none");
+    uri.searchParams.set("sni", sni);
+    uri.searchParams.set("host", host);
+    uri.searchParams.set("path", `/${prx.ip}-${prx.port}`);
+    uri.hash = `${i+1} ${getFlag(prx.country)} ${prx.org}`;
+    return uri.toString();
+  });
+
+  // Generate Clash YAML
+  const yamlProxies = selectedProxies.map((prx, i) => {
+    return `  - name: ${i+1} ${getFlag(prx.country)} ${prx.org}
+    server: ${server}
+    port: ${port}
+    type: vless
+    uuid: ${uuid}
+    cipher: auto
+    tls: ${tls}
+    skip-cert-verify: true
+    servername: ${sni}
+    network: ws
+    ws-opts:
+      path: /${prx.ip}-${prx.port}
+      headers:
+        Host: ${host}
+    udp: true`;
+  }).join("\n");
+
+  document.getElementById("outputUriText").value = uriList.join("\n");
+  document.getElementById("outputYamlText").value = `proxies:\n${yamlProxies}`;
+  document.getElementById("outputCard").style.display = "block";
+  document.getElementById("outputCard").scrollIntoView({ behavior: "smooth" });
+});
+
+// Tab switching
+document.getElementById("tabUri").addEventListener("click", () => {
+  document.getElementById("outputUri").style.display = "block";
+  document.getElementById("outputYaml").style.display = "none";
+  document.getElementById("tabUri").className = "btn";
+  document.getElementById("tabYaml").className = "btn ghost";
+});
+
+document.getElementById("tabYaml").addEventListener("click", () => {
+  document.getElementById("outputUri").style.display = "none";
+  document.getElementById("outputYaml").style.display = "block";
+  document.getElementById("tabUri").className = "btn ghost";
+  document.getElementById("tabYaml").className = "btn";
+});
+
+// Copy buttons
+document.getElementById("copyUri").addEventListener("click", () => {
+  navigator.clipboard.writeText(document.getElementById("outputUriText").value);
+  document.getElementById("copyUri").textContent = "Tersalin!";
+  setTimeout(() => document.getElementById("copyUri").textContent = "Copy URI", 1500);
+});
+
+document.getElementById("copyYaml").addEventListener("click", () => {
+  navigator.clipboard.writeText(document.getElementById("outputYamlText").value);
+  document.getElementById("copyYaml").textContent = "Tersalin!";
+  setTimeout(() => document.getElementById("copyYaml").textContent = "Copy YAML", 1500);
+});
+
+function getFlag(cc) {
+  return cc.toUpperCase().split("").map(c => String.fromCodePoint(127397 + c.charCodeAt(0))).join("");
+}
+</script>
+</body>
+</html>

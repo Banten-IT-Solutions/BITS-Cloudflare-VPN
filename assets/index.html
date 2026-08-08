@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VPN Serverless — Cloudflare Workers</title>
+<link rel="stylesheet" href="/shared.css">
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a href="/" class="active">Home</a>
+    <a href="/build">Build</a>
+    <a href="/convert">Convert</a>
+  </nav>
+
+  <h1 id="serviceName">VPN Serverless</h1>
+  <div class="sub">Tunnel VPN di Cloudflare Workers — VLESS / VMess / Trojan via WebSocket (CDN)</div>
+
+  <div class="card">
+    <h2>Status</h2>
+    <div>
+      <span class="pill">✅ Worker aktif</span>
+      <span class="pill">Endpoint: <code id="domain">wss://...</code></span>
+      <span class="pill">Proto: VLESS · VMess · Trojan</span>
+    </div>
+    <p class="note" style="margin-top:8px">Semua subdomain wildcard juga melayani tunnel ini.</p>
+    <div style="margin-top:12px">
+      <label>My IP:</label>
+      <div id="myip" class="url">Loading...</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Mulai cepat</h2>
+    <ol style="padding-left:20px; margin-bottom:10px">
+      <li>Buka <a href="/build">halaman Build</a> untuk memilih proxy dan konfigurasi.</li>
+      <li>Generate link vless:// dengan config SNI/CDN, wildcard, port.</li>
+      <li>Salin URL atau YAML Clash, lalu import ke aplikasi VPN (v2rayN, Nekoray, Clash, dll.).</li>
+    </ol>
+    <div class="url" id="apiExample">https://.../api/v1/sub?vpn=vless&limit=10&format=v2ray</div>
+  </div>
+
+  <div class="card">
+    <h2>Parameter API /api/v1/sub</h2>
+    <div class="grid">
+      <div><label>vpn</label><code>vless</code>, <code>vmess</code>, <code>trojan</code></div>
+      <div><label>cc</label>kode negara <code>ID</code>, <code>SG</code>, ...</div>
+      <div><label>port</label><code>443</code>, <code>80</code></div>
+      <div><label>limit</label>jumlah akun (default <code>10</code>)</div>
+      <div><label>format</label><code>raw</code>, <code>v2ray</code>, <code>json</code></div>
+      <div><label>domain</label>SNI/domain isian</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Tools</h2>
+    <p class="note"><a href="/build">🔨 Build</a> — Pilih proxy + konfigurasi SNI/CDN → generate vless:// + Clash YAML</p>
+    <p class="note"><a href="/convert">🔄 Convert</a> — Convert vless:// URL ke Clash YAML format</p>
+    <p class="note"><a href="/api/v1/myip">📍 /api/v1/myip</a> — Cek IP & colo kamu saat ini</p>
+  </div>
+
+  <div class="foot">
+    <span id="footDomain">...</span> &middot; Banten IT Solutions &middot; gratis, tidak perlu bayar
+  </div>
+</div>
+
+<script>
+(async () => {
+  const domain = location.hostname;
+  const serviceName = domain.split(".")[0];
+  
+  document.getElementById("serviceName").textContent = serviceName;
+  document.getElementById("domain").textContent = `wss://${domain}`;
+  document.getElementById("footDomain").textContent = domain;
+  document.getElementById("apiExample").textContent = `https://${domain}/api/v1/sub?vpn=vless&limit=10&format=v2ray`;
+
+  // Fetch myip
+  try {
+    const res = await fetch("/api/v1/myip");
+    const data = await res.json();
+    document.getElementById("myip").textContent = `${data.ip || "N/A"} — ${data.city || "Unknown"}, ${data.colo || "Unknown"}`;
+  } catch (e) {
+    document.getElementById("myip").textContent = "Failed to load";
+  }
+})();
+</script>
+</body>
+</html>

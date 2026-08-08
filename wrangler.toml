@@ -1,10 +1,14 @@
 name = "vpn"
-main = "worker.js"
+main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat_v2"]
 
 [vars]
 PRX_BANK_URL = "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt"
+
+[assets]
+directory = "./assets"
+binding = "ASSETS"
 
 # Domain utama (custom domain) -> DNS + sertifikat dibuat otomatis oleh Cloudflare
 [[routes]]
