@@ -8,17 +8,37 @@ export interface ProxyEntry {
   org: string;
 }
 
-let cachedPrxList: ProxyEntry[] = [];
+// TTL cache: Map<url, {data, expiresAt}>
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const kvPrxCache = new Map<string, CacheEntry<Record<string, string[]>>>();
+const prxListCache = new Map<string, CacheEntry<ProxyEntry[]>>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function getKVPrxList(kvPrxUrl: string = KV_PRX_URL): Promise<Record<string, string[]>> {
   if (!kvPrxUrl) {
     throw new Error("No URL Provided!");
   }
 
+  // Check cache
+  const cached = kvPrxCache.get(kvPrxUrl);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
   const kvPrx = await fetch(kvPrxUrl);
   if (kvPrx.status == 200) {
-    return await kvPrx.json();
+    const data = await kvPrx.json() as Record<string, string[]>;
+    kvPrxCache.set(kvPrxUrl, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+    return data;
   } else {
+    // Return cached data if available (stale-while-revalidate pattern)
+    if (cached) {
+      return cached.data;
+    }
     return {};
   }
 }
@@ -35,12 +55,18 @@ export async function getPrxList(prxBankUrl: string = PRX_BANK_URL): Promise<Pro
     throw new Error("No URL Provided!");
   }
 
+  // Check cache
+  const cached = prxListCache.get(prxBankUrl);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
   const prxBank = await fetch(prxBankUrl);
   if (prxBank.status == 200) {
     const text = (await prxBank.text()) || "";
 
     const prxString = text.split("\n").filter(Boolean);
-    cachedPrxList = prxString
+    const data = prxString
       .map((entry) => {
         const [prxIP, prxPort, country, org] = entry.split(",");
         return {
@@ -51,7 +77,15 @@ export async function getPrxList(prxBankUrl: string = PRX_BANK_URL): Promise<Pro
         };
       })
       .filter(Boolean);
+
+    prxListCache.set(prxBankUrl, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+    return data;
   }
 
-  return cachedPrxList;
+  // Return stale cache if available
+  if (cached) {
+    return cached.data;
+  }
+
+  return [];
 }

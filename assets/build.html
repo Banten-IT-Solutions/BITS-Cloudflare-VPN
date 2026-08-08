@@ -398,7 +398,7 @@
   <script>
     function buildApp() {
       return {
-        filters: { cc: '', q: '', port: '' },
+        filters: { cc: '', q: '' },
         loading: false,
         building: false,
         proxies: [],
@@ -411,6 +411,7 @@
         countries: [],
         pings: {},
         searchTimer: null,
+        abortController: null,
         showDialog: false,
         config: { mode: 'sni', bug: 'support.zoom.us', wildcard: 'no', port: '443' },
         result: { uri: '', yaml: '' },
@@ -426,16 +427,26 @@
         },
 
         async loadProxies() {
+          // Cancel previous request if still pending
+          if (this.abortController) {
+            this.abortController.abort();
+          }
+          this.abortController = new AbortController();
+
           this.loading = true;
           try {
             const params = new URLSearchParams({
               cc: this.filters.cc,
               q: this.filters.q,
-              port: this.filters.port,
               page: this.page,
               limit: this.limit
             });
-            const response = await fetch(`/api/proxies?${params}`);
+            const response = await fetch(`/api/proxies?${params}`, { signal: this.abortController.signal });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
             const data = await response.json();
             this.proxies = data.items || [];
             this.totalCount = data.count || 0;
@@ -443,6 +454,10 @@
             this.countries = data.countries || [];
             this.checkPings();
           } catch (error) {
+            if (error.name === 'AbortError') {
+              // Request was cancelled, ignore
+              return;
+            }
             console.error(error);
             alert('Failed to load proxies');
           } finally {

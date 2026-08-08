@@ -45,6 +45,11 @@ export default {
           const prxKey = prxKeys[Math.floor(Math.random() * prxKeys.length)];
           const kvPrx = await getKVPrxList(env.KV_PRX_URL);
 
+          // Validate KV key exists and has proxies
+          if (!kvPrx[prxKey] || !Array.isArray(kvPrx[prxKey]) || kvPrx[prxKey].length === 0) {
+            return new Response("Invalid proxy key or no proxies available", { status: 404 });
+          }
+
           const prxIP = kvPrx[prxKey][Math.floor(Math.random() * kvPrx[prxKey].length)];
           setPrxIP(prxIP);
 

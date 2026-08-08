@@ -23,31 +23,66 @@ export function createApiRoutes() {
 
   // GET /check - health check proxy
   app.get("/check", async (c) => {
-    const target = c.req.query("target");
-    if (!target) {
-      return c.json({ error: "Missing target parameter" }, 400, CORS_HEADER_OPTIONS);
+    try {
+      const target = c.req.query("target");
+      if (!target) {
+        return c.json({ error: "Missing target parameter" }, 400, CORS_HEADER_OPTIONS);
+      }
+
+      // Parse IP:Port dengan validasi
+      const parts = target.split(":");
+      if (parts.length !== 2) {
+        return c.json({ error: "Invalid target format. Expected IP:PORT" }, 400, CORS_HEADER_OPTIONS);
+      }
+
+      const [ip, portStr] = parts;
+      const port = parseInt(portStr, 10);
+
+      // Validasi IP format (basic IPv4 check)
+      const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+      if (!ipv4Regex.test(ip)) {
+        return c.json({ error: "Invalid IP address format" }, 400, CORS_HEADER_OPTIONS);
+      }
+
+      // Validasi port range
+      if (isNaN(port) || port < 1 || port > 65535) {
+        return c.json({ error: "Invalid port number" }, 400, CORS_HEADER_OPTIONS);
+      }
+
+      // Restrict to known proxy list only (prevent arbitrary probing)
+      const prxBankUrl = c.env.PRX_BANK_URL;
+      const proxyList = await getPrxList(prxBankUrl);
+      const isAllowed = proxyList.some(prx => prx.prxIP === ip && prx.prxPort === portStr);
+
+      if (!isAllowed) {
+        return c.json({ error: "Target not in allowed proxy list" }, 403, CORS_HEADER_OPTIONS);
+      }
+
+      const result = await checkPrxHealth(ip, portStr);
+      return c.json(result, 200, CORS_HEADER_OPTIONS);
+    } catch (error: any) {
+      console.error("Error in /check:", error);
+      return c.json({ error: "Internal server error", message: error.message }, 500, CORS_HEADER_OPTIONS);
     }
-    const [ip, port] = target.split(":");
-    const result = await checkPrxHealth(ip, port || "443");
-    return c.json(result, 200, CORS_HEADER_OPTIONS);
   });
 
   // GET /sub - subscription generator (raw, v2ray, json)
   const subHandler = async (c: any) => {
-    const url = new URL(c.req.url);
-    const domain = url.hostname;
-    const serviceName = domain.split(".")[0];
+    try {
+      const url = new URL(c.req.url);
+      const domain = url.hostname;
+      const serviceName = domain.split(".")[0];
 
-    const filterCC = c.req.query("cc")?.split(",") || [];
-    const filterPort = c.req.query("port")?.split(",").map((p: string) => parseInt(p)) || PORTS;
-    const filterVPN = c.req.query("vpn")?.split(",").filter((p: string) => PROTOCOLS.includes(p)) || [];
-    const protocols = filterVPN.length ? filterVPN : [atob(neko)];
-    const filterLimit = parseInt(c.req.query("limit") || "10") || 10;
-    const filterFormat = c.req.query("format") || "raw";
-    const fillerDomain = c.req.query("domain") || domain;
+      const filterCC = c.req.query("cc")?.split(",") || [];
+      const filterPort = c.req.query("port")?.split(",").map((p: string) => parseInt(p)) || PORTS;
+      const filterVPN = c.req.query("vpn")?.split(",").filter((p: string) => PROTOCOLS.includes(p)) || [];
+      const protocols = filterVPN.length ? filterVPN : [atob(neko)];
+      const filterLimit = parseInt(c.req.query("limit") || "10") || 10;
+      const filterFormat = c.req.query("format") || "raw";
+      const fillerDomain = c.req.query("domain") || domain;
 
-    const prxBankUrl = c.req.query("prx-list") || c.env.PRX_BANK_URL;
-    let prxList = await getPrxList(prxBankUrl);
+      const prxBankUrl = c.req.query("prx-list") || c.env.PRX_BANK_URL;
+      let prxList = await getPrxList(prxBankUrl);
 
     if (filterCC.length) {
       prxList = prxList.filter((prx) => filterCC.includes(prx.country));
@@ -105,6 +140,10 @@ export function createApiRoutes() {
     }
 
     return c.text(finalResult, 200, CORS_HEADER_OPTIONS);
+    } catch (error: any) {
+      console.error("Error in /sub:", error);
+      return c.json({ error: "Failed to generate subscription", message: error.message }, 500, CORS_HEADER_OPTIONS);
+    }
   };
 
   app.get("/sub", subHandler);
@@ -128,62 +167,69 @@ export function createApiRoutes() {
 
   // GET /proxies - list proxies with filter & pagination (untuk /build page)
   app.get("/proxies", async (c) => {
-    const q = c.req.query("q") || "";
-    const ccParam = c.req.query("cc") || "";
-    const cc = ccParam ? ccParam.split(",").filter(Boolean) : [];
-    const port = c.req.query("port");
-    const page = parseInt(c.req.query("page") || "1") || 1;
-    const limit = Math.min(parseInt(c.req.query("limit") || "20") || 20, 100);
+    try {
+      const q = c.req.query("q") || "";
+      const ccParam = c.req.query("cc") || "";
+      const cc = ccParam ? ccParam.split(",").filter(Boolean) : [];
+      const port = c.req.query("port");
+      const pageRaw = parseInt(c.req.query("page") || "1") || 1;
+      const page = Math.max(1, pageRaw); // Clamp to >= 1
+      const limitRaw = parseInt(c.req.query("limit") || "20") || 20;
+      const limit = Math.min(Math.max(1, limitRaw), 100); // Clamp 1-100
 
-    const prxBankUrl = c.env.PRX_BANK_URL;
-    let items = await getPrxList(prxBankUrl);
+      const prxBankUrl = c.env.PRX_BANK_URL;
+      let items = await getPrxList(prxBankUrl);
 
-    // Filter by country (hanya jika cc tidak kosong)
-    if (cc.length > 0 && cc[0] !== "") {
-      items = items.filter((prx) => cc.includes(prx.country));
-    }
+      // Filter by country (hanya jika cc tidak kosong)
+      if (cc.length > 0 && cc[0] !== "") {
+        items = items.filter((prx) => cc.includes(prx.country));
+      }
 
-    // Filter by port
-    if (port) {
-      items = items.filter((prx) => prx.prxPort === port);
-    }
+      // Filter by port
+      if (port) {
+        items = items.filter((prx) => prx.prxPort === port);
+      }
 
-    // Filter by search query (ip, country, or org)
-    if (q) {
-      const query = q.toLowerCase();
-      items = items.filter(
-        (prx) =>
-          prx.prxIP.toLowerCase().includes(query) ||
-          prx.country.toLowerCase().includes(query) ||
-          prx.org.toLowerCase().includes(query),
+      // Filter by search query (ip, country, or org)
+      if (q) {
+        const query = q.toLowerCase();
+        items = items.filter(
+          (prx) =>
+            prx.prxIP.toLowerCase().includes(query) ||
+            prx.country.toLowerCase().includes(query) ||
+            prx.org.toLowerCase().includes(query),
+        );
+      }
+
+      const count = items.length;
+      const pages = Math.ceil(count / limit);
+      const offset = (page - 1) * limit;
+      const paginatedItems = items.slice(offset, offset + limit);
+
+      // Daftar negara unik (dari data sebelum hasil filter) untuk chips filter
+      const countryCounts = new Map<string, number>();
+      for (const prx of items) {
+        countryCounts.set(prx.country, (countryCounts.get(prx.country) || 0) + 1);
+      }
+      const countries = Array.from(countryCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([code, count]) => ({ code, count }));
+
+      return c.json(
+        {
+          count,
+          page,
+          pages,
+          items: paginatedItems,
+          countries,
+        },
+        200,
+        CORS_HEADER_OPTIONS,
       );
+    } catch (error: any) {
+      console.error("Error in /proxies:", error);
+      return c.json({ error: "Failed to fetch proxy list", message: error.message }, 500, CORS_HEADER_OPTIONS);
     }
-
-    const count = items.length;
-    const pages = Math.ceil(count / limit);
-    const offset = (page - 1) * limit;
-    const paginatedItems = items.slice(offset, offset + limit);
-
-    // Daftar negara unik (dari data sebelum hasil filter) untuk chips filter
-    const countryCounts = new Map<string, number>();
-    for (const prx of items) {
-      countryCounts.set(prx.country, (countryCounts.get(prx.country) || 0) + 1);
-    }
-    const countries = Array.from(countryCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([code, count]) => ({ code, count }));
-
-    return c.json(
-      {
-        count,
-        page,
-        pages,
-        items: paginatedItems,
-        countries,
-      },
-      200,
-      CORS_HEADER_OPTIONS,
-    );
   });
 
   return app;
