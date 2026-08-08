@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
         with:
-          token: ${{ secrets.GIT_TOKEN || github.token }}
+          token: ${{ secrets.GITHUB_PAT || github.token }}
       - name: Use Bun
         uses: oven-sh/setup-bun@v2.2.0
       - name: Obfuscate

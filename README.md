@@ -73,6 +73,17 @@ Klik tombol di bawah
 - Contoh daftar proxy [proxyList.txt](https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxyList.txt)
 - Contoh reverse proxy [example.com](https://example.com)
 
+## GitHub Actions (Secret yang diperlukan)
+
+Untuk menjalankan deploy otomatis, isi **Settings → Secrets and variables → Actions**
+dengan nama berikut (sudah distandarkan):
+
+| Secret | Wajib? | Gunanya |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | ✅ | Token API Cloudflare (scope: *Account → Cloudflare Workers Scripts → Edit*) untuk deploy `cf.yml` |
+| `CLOUDFLARE_ACCOUNT_ID` | ✅ | Account ID Cloudflare untuk deploy `cf.yml` |
+| `GITHUB_PAT` | ⚠️ Opsional | Personal Access Token (scope `repo`) untuk push hasil `scan.yaml` & `obfuscate.yaml`; jika kosong akan memakai `github.token` otomatis |
+
 ## Cara Aktivasi API
 
 Salah satu fungsi API adalah agar kalian bisa melihat dan menambahkan subdomain wildcards ke workers.
