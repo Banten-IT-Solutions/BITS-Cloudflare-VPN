@@ -1,4 +1,4 @@
-# Welcome to Nautica
+# Welcome to vpn
 
 Sebuah repository serverless tunnel studi kasus Indonesia
 
@@ -99,11 +99,11 @@ Berikut cara aktivasinya:
 
 1. Selesaikan langkah [Aktivasi API](#cara-aktivasi-api)
 2. Isi variable `rootDomain` dengan domain utama kalian
-   - Contoh: Domain workers `nautica.bits.co.id`, berarti domain utamanya adalah `bits.co.id`
+   - Contoh: Domain workers `vpn.bits.co.id`, berarti domain utamanya adalah `bits.co.id`
 3. Isi variable `serviceName` dengan nama workers kalian
-   - Contoh: Domain workers `nautica.bits.co.id`, berarti nama workersnya adalah `nautica`
+   - Contoh: Domain workers `vpn.bits.co.id`, berarti nama workersnya adalah `vpn`
 4. Buat custom domain di pengaturan workers dengan kombinasi `serviceName`.`rootDomain`
-   - Contoh: `nautica.bits.co.id`
+   - Contoh: `vpn.bits.co.id`
 
 # Endpoint
 
