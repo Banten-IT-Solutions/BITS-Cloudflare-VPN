@@ -5,16 +5,20 @@ on:
   push:
     paths:
       - "_worker.js"
+
+permissions:
+  contents: write
+
 jobs:
   scanner:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7.0.1
         with:
-          token: ${{ secrets.GIT_TOKEN }}
+          token: ${{ secrets.GIT_TOKEN || github.token }}
       - name: Use Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@v2.2.0
       - name: Obfuscate
         run: |
           bun install

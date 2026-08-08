@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: "0 */6 * * *"
 
+permissions:
+  contents: write
+
 jobs:
   scanner:
     runs-on: ubuntu-latest
@@ -12,11 +15,11 @@ jobs:
       group: proxy-scan
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7.0.1
         with:
-          token: ${{ secrets.GIT_TOKEN }}
+          token: ${{ secrets.GIT_TOKEN || github.token }}
       - name: Use Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@v2.2.0
       - name: Start Scan
         run: |
           bun install && bun run ./helper/proxyip.ts
