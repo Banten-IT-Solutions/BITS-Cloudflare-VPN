@@ -34,6 +34,13 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
       const url = new URL(request.url);
+      
+      // Redirect HTTP to HTTPS (except for local development)
+      if (url.protocol === "http:" && !url.hostname.includes("localhost") && !url.hostname.includes("127.0.0.1")) {
+        url.protocol = "https:";
+        return Response.redirect(url.toString(), 301);
+      }
+
       const upgradeHeader = request.headers.get("Upgrade");
 
       // Handle WebSocket upgrade untuk relay

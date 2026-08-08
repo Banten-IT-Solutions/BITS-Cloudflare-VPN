@@ -18,12 +18,30 @@ interface Env {
   KV_PRX_URL?: string;
 }
 
+// IP Rate Limiter: Map<ip_client, array_of_timestamps>
+const rateLimitCache = new Map<string, number[]>();
+const LIMIT_WINDOW_MS = 10 * 1000; // 10 seconds
+const MAX_REQUESTS = 12;           // Max 12 requests per window
+
 export function createApiRoutes() {
   const app = new Hono<{ Bindings: Env }>();
 
   // GET /check - health check proxy
   app.get("/check", async (c) => {
     try {
+      const clientIP = c.req.header("cf-connecting-ip") || "unknown";
+      const now = Date.now();
+      let timestamps = rateLimitCache.get(clientIP) || [];
+      
+      // Clean up stale timestamps
+      timestamps = timestamps.filter(t => now - t < LIMIT_WINDOW_MS);
+      
+      if (timestamps.length >= MAX_REQUESTS) {
+        return c.json({ error: "Too many requests. Please slow down." }, 429, CORS_HEADER_OPTIONS);
+      }
+      timestamps.push(now);
+      rateLimitCache.set(clientIP, timestamps);
+
       const target = c.req.query("target");
       if (!target) {
         return c.json({ error: "Missing target parameter" }, 400, CORS_HEADER_OPTIONS);
