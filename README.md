@@ -2,157 +2,295 @@
 
 VPN serverless (VLESS / VMess / Trojan via WebSocket) berjalan di Cloudflare Workers — IP negara (colocation) gratis melalui CDN Cloudflare, disediakan oleh [Banten IT Solutions](https://bitsco.id).
 
-> **Catatan penting:** Worker ini sekarang **self-contained** — tidak lagi reverse-proxy ke bits.co.id.
-> Halaman `https://<domain>/` dan `https://<domain>/sub` adalah UI yang dibungkus langsung di dalam
-> worker; tidak ada ketergantungan ke host eksternal mana pun.
+> **Arsitektur:** Backend menggunakan [Hono](https://hono.dev) framework, frontend Alpine.js (static HTML), relay WebSocket vanilla untuk maksimum performa.
 
 ## Fitur
 
-- 🚀 Endpoint Worker: `wss://yuliana.my.id` (tanpa subfolder)
-- 🧩 Protokol **VLESS** (default), **VMess**, dan **Trojan** — dipilih lewat parameter `vpn`
-- 📍 Filter negara (colo) dengan `cc` (mis. `ID`, `SG`, `US`)
-- 🔌 Port `443`/`80`
-- 🖥️ Format `raw` (teks) atau `v2ray` (base64) — default `v2ray`
-- 🧹 Auto-ganti DNS per-request (header `x-real-ip` aman)
-- 🗃️ IP pool up-to-date dari `KV.json` dan `proxy.txt` di repo ini, di-refresh otomatis oleh workflow CI (setiap 30 menit)
-- 📄 Halaman UI `https://yuliana.my.id/sub` (generator link) & `https://yuliana.my.id/api/v1` (API)
-- 🛸 Wildcard `*.yuliana.my.id` juga meneruskan tunnel (semua subdomain langsung berfungsi)
+- 🚀 **3 halaman frontend interaktif** — Landing, Build config VPN, Convert URL
+- 🧩 Protokol **VLESS** (default), **VMess**, dan **Trojan** via WebSocket
+- 📍 Filter proxy berdasarkan negara (colo)
+- 🔌 Port `443` (TLS) / `80` (plain)
+- 🖥️ Format subscription: `raw`, `v2ray` (base64), `json`
+- 🔨 **Build page** — Pilih proxy + config SNI/CDN/Wildcard → generate vless:// + Clash YAML
+- 🔄 **Convert page** — vless:// → Clash YAML (client-side, no server)
+- 🗃️ IP pool auto-update dari GitHub via CI workflow (setiap 30 menit)
+- 🛸 Wildcard subdomain `*.yuliana.my.id` mendukung tunnel
 
-## Instalasi
+## Quick Start
 
-1. **Deploy as worker**
+### 1. Deploy Worker
 
-   ```sh
-   npm i -g wrangler
-   git clone https://github.com/bitscoid/BITS-Cloudflare-VPN
-   cd BITS-Cloudflare-VPN
-   wrangler deploy
-   ```
-
-2. **(Opsional) Production Domain** — ganti `yuliana.my.id` dengan domain kamu sendiri, lalu tambahkan route:
-
-   ```toml
-   [[routes]]
-   pattern = "yuliana.my.id"          # custom domain -> sertifikat otomatis
-   custom_domain = true
-
-   [[routes]]
-   pattern = "*.yuliana.my.id/*"      # wildcard
-   zone_name = "yuliana.my.id"
-   ```
-
-   Semua protokol & API otomatis bekerja di subdomain mana pun, mis. `tes.yuliana.my.id`.
-
-3. Gunakan tools lain seperti [Docker deploy](https://github.com/bitscoid/BITS-Cloudflare-VPN/blob/master/README-docker.md) jika tidak ingin install npm.
-
-## Quick Deployment (Docker)
-
-```bash
-docker run --rm -e CLOUDFLARE_API_TOKEN=xxxx wrangler-action deploy
+```sh
+npm i -g wrangler
+git clone https://github.com/bitscoid/BITS-Cloudflare-VPN
+cd BITS-Cloudflare-VPN
+wrangler deploy
 ```
 
-Memakai [worker-template](https://github.com/bitscoid/Cloudflare-Workers-VPN), tapi cukup satu file `worker.js`.
+### 2. Setup Custom Domain (Opsional)
 
-## Penggunaan
+Edit `wrangler.toml`:
 
-### Coba langsung
+```toml
+[[routes]]
+pattern = "yuliana.my.id"          # custom domain
+custom_domain = true
 
-Halaman subscription: [yuliana.my.id](/sub)
+[[routes]]
+pattern = "*.yuliana.my.id/*"      # wildcard subdomain
+zone_name = "yuliana.my.id"
 
-Default endpoint:
-
-```bash
-# VLESS (default) — 10 akun, semua negara
-curl "https://tes.yuliana.my.id/api/v1/sub?vpn=vless&limit=10"
-
-# VMess
-curl "https://tes.yuliana.my.id/api/v1/sub?vpn=vmess&limit=10"
-
-# Trojan
-curl "https://tes.yuliana.my.id/api/v1/sub?vpn=trojan&limit=10"
-
-# Filter negara
-curl "https://tes.yuliana.my.id/api/v1/sub?cc=SG&limit=10"
-
-# Port 80
-curl "https://tes.yuliana.my.id/api/v1/sub?port=80&limit=10"
+[assets]
+directory = "./assets"              # static frontend files
+binding = "ASSETS"
 ```
 
-### Parameter API `/api/v1/sub`
-
-`GET https://<domain>/api/v1/sub`
-
-| Query   | Nilai                                                                | Default          |
-| ------- | -------------------------------------------------------------------- | ---------------- |
-| `vpn`   | `vless`, `vmess`, `trojan` (bisa dipisah koma)                        | `vless`          |
-| `cc`    | kode negara (mis. `ID,SG`) — kosong = semua                           | semua            |
-| `port`  | `443`, `80`                                                           | `443`            |
-| `limit` | jumlah akun                                                           | `10`             |
-| `format`| `raw` atau `v2ray` (base64)                                           | `v2ray`          |
-| `domain`| SNI/domain yang diisi ke config (default: hostname request)           | hostname         |
-
-**Response:** teks biasa `text/plain`. Semua endpoint API mengembalikan CORS `*` jadi bisa dipakai dari browser.
-
-### Cek IP / colo
-
-```bash
-curl https://yuliana.my.id/api/v1/myip
-# {"ip":"1.2.3.4","colo":"JKT", ...}
+Tambahkan DNS wildcard record di Cloudflare dashboard:
+```
+*.yuliana.my.id  →  A/AAAA  (proxied)
 ```
 
-### Homepage & Subscription Page
+### 3. Gunakan
 
-- `https://yuliana.my.id/` — homepage dengan status, parameter API, contoh link.
-- `https://yuliana.my.id/sub` — generator link (pilih protokol, negara, port, jumlah) + tombol salin & unduh; pratinjau akun live.
+Buka `https://yuliana.my.id/build` di browser:
+1. Load proxy list → pilih proxy
+2. Konfigurasi: Mode (SNI/CDN), Bug domain, Wildcard, SSL
+3. Generate → Copy vless:// URLs atau Clash YAML
+4. Import ke v2rayN, Nekoray, Clash, atau app VPN lainnya
 
-Kedua halaman dirender langsung dari worker (tanpa reverse proxy / redirect eksternal).
+## Frontend Pages
 
-### Client & App
+| URL | Fungsi |
+|---|---|
+| `/` | **Landing** — Status worker, myip, dokumentasi API |
+| `/build` | **Build VPN** — Pilih proxy + dialog config (SNI/CDN, Bug, Wildcard, SSL) → generate vless:// + Clash YAML |
+| `/convert` | **Convert** — Paste vless:// URLs → Clash YAML format (pure client-side) |
 
-Untuk penggunaan VPN di HP/PC, pasang app seperti:
-- v2rayN / v2rayNG / Nekoray (link `v2ray`)
-- Hiddify / Shadowrocket / Stash
-- Clash: gunakan link `raw` sebagai remote provider (pastikan set `update-interval` rendah agar tidak boros kuota free; disarankan `interval: 300`).
+## API Endpoints
 
-## Aktivasi Wildcard
+Base URL: `https://yuliana.my.id/api`
 
-Cara kerjanya dua langkah — cukup meneruskan satu domain ke worker:
+### `GET /api/sub` — Subscription Generator
 
-1. Tambah `[[routes]]` **custom domain** di `wrangler.toml` — Cloudflare akan membuat DNS & sertifikat otomatis. Contoh: `yuliana.my.id`.
-2. Untuk wildcard, tambahkan **route zone** (bukan custom domain, karena custom domain tidak mendukung wildcard):
+Generate vless/vmess/trojan URLs untuk import ke aplikasi VPN.
 
-   ```toml
-   [[routes]]
-   pattern = "*.yuliana.my.id/*"
-   zone_name = "yuliana.my.id"
-   ```
+**Query Parameters:**
 
-   Lalu di DNS, tambahkan record wildcard `*` (A/AAAA/type apapun) yang di-proxy (proxied) menuju nama domain yang sudah di-worker, misalnya:
+| Parameter | Nilai | Default |
+|---|---|---|
+| `vpn` | `vless`, `vmess`, `trojan` (comma separated) | `vless` |
+| `cc` | Kode negara `ID`, `SG`, `US`, ... (comma separated) | semua |
+| `port` | `443`, `80` | `443` |
+| `limit` | Jumlah akun (1-200) | `10` |
+| `format` | `raw`, `v2ray`, `json` | `raw` |
+| `domain` | Custom SNI/domain | hostname request |
 
-   ```
-   *.yuliana.my.id  →  CNAME  yuliana.my.id   (Proxy: On)
-   ```
+**Format Response:**
+- `raw` → plaintext URLs (satu per baris)
+- `v2ray` → base64(URLs) — untuk subscription v2rayN
+- `json` → `[{index, protocol, link, remark}]` — untuk UI
 
-   Dengan begitu semua subdomain langsung bekerja (tunnel), tanpa perlu menambah route satu per satu.
+**Contoh:**
 
-## Panduan / Penjelasan penting
+```bash
+# VLESS, filter Indonesia, 5 akun, format raw
+curl "https://yuliana.my.id/api/sub?vpn=vless&cc=ID&limit=5&format=raw"
 
-- Worker memakai `WebSocket` + `cloudflare:sockets`; deployment standar `wrangler deploy` langsung jalan.
-- **Free tier:** 100k request / hari. 1 sesi WebSocket = 1 request; kuota cepat habis bila apps (mis. Clash) health-check terus-menerus — set interval health check ≥ 300s.
-- Proxy bank diperbarui oleh CI `scan.yaml` tiap 30 menit (memeriksa kesehatan proxy, menulis `proxy.txt`, dan update `KV.json`).
-- Lisensi: MIT.
+# VMess + Trojan mix, format v2ray (base64)
+curl "https://yuliana.my.id/api/sub?vpn=vmess,trojan&limit=10&format=v2ray"
 
-## Automasi
+# JSON format (untuk UI/parsing)
+curl "https://yuliana.my.id/api/sub?vpn=vless&limit=3&format=json"
+```
 
-- `.github/workflows/scan.yaml` — every 30 menit: cek health proxy (poke port), generate `proxy.txt`, update `KV.json`, push "Update proxy list".
-- `.github/workflows/deploy.yml` — manual `workflow_dispatch` (input `ref`): deploy worker ke Cloudflare (wrangler-action + setup-bun).
+### `GET /api/myip` — Client IP Info
 
-## Tips & Konfigurasi Lanjut (opsional)
+Cek IP client, Cloudflare colo, country, city.
 
-- **Rate limit / abuse:** batasi `limit` di klien; jangan buka API publik bila banyak pengguna tidak dikenal.
-- **Ubah port:** hanya `443` & `80` yang didukung karena koneksi melewati handshake TLS SNI ke colo Cloudflare.
-- **Debug:** akses `https://<domain>/api/v1/myip` untuk pastikan colo/negara sudah benar.
+**Response:**
+```json
+{
+  "ip": "180.242.129.140",
+  "colo": "SIN",
+  "city": "Bekasi",
+  "country": "ID",
+  "httpProtocol": "HTTP/2",
+  ...
+}
+```
+
+### `GET /api/proxies` — Proxy List
+
+List proxy dengan filter & pagination (digunakan oleh build page).
+
+**Query Parameters:**
+
+| Parameter | Fungsi |
+|---|---|
+| `cc` | Filter country: `ID,SG,US` |
+| `q` | Search IP/org (substring) |
+| `port` | Filter port: `443` atau `80` |
+| `page` | Halaman (default: `1`) |
+| `limit` | Items per page (max: `100`) |
+
+**Response:**
+```json
+{
+  "count": 561,
+  "page": 1,
+  "pages": 29,
+  "items": [
+    {"prxIP": "1.2.3.4", "prxPort": "443", "country": "ID", "org": "PT Telkom Indonesia"}
+  ]
+}
+```
+
+### `GET /api/check` — Health Check
+
+Test koneksi ke proxy (port probe). ⚠️ Rate-limit dianjurkan untuk mencegah abuse.
+
+**Query:**
+- `target` — format `ip:port`
+
+**Response:**
+```json
+{
+  "ip": "1.2.3.4",
+  "port": "443",
+  "success": true,
+  "latency": 123
+}
+```
+
+## Build Page — Config Dialog
+
+Halaman `/build` memungkinkan generate vless:// custom dengan konfigurasi:
+
+| Field | Opsi | Fungsi |
+|---|---|---|
+| **Mode** | SNI / CDN | SNI: server=base domain, servername=Bug; CDN: server=Bug, servername=base |
+| **Bug** | domain target (mis. `support.zoom.us`) | Domain untuk SNI masking atau server CDN |
+| **Wildcard** | Ya / Tidak | Jika Ya, gunakan subdomain wildcard `*.yuliana.my.id` |
+| **Subdomain** | input (jika wildcard) | Prefix subdomain: `xyz` → `xyz.yuliana.my.id` |
+| **SSL** | 443 / 80 | Port & TLS on/off |
+
+**Mapping Config → Output:**
+
+| Mode | Wildcard | `server` | `servername` + Host |
+|---|---|---|---|
+| SNI | Tidak | `yuliana.my.id` | `Bug` |
+| SNI | **Ya** | `subdomain.yuliana.my.id` | `Bug` |
+| CDN | Tidak | `Bug` | `yuliana.my.id` |
+| CDN | **Ya** | `Bug` | `subdomain.yuliana.my.id` |
+
+**Output:**
+- Tab **URI**: daftar vless:// URLs (untuk copy/paste)
+- Tab **YAML**: Clash proxies config (untuk import ke Clash)
+
+## WebSocket Relay
+
+Worker menerima WebSocket upgrade dengan path routing:
+
+| Path Pattern | Behavior |
+|---|---|
+| `/1.2.3.4-443` | Relay ke proxy `1.2.3.4:443` |
+| `/ID,SG` | Random proxy dari KV country code (ID atau SG) |
+| `/ID` | Random proxy dari KV country code ID (path length 3) |
+
+Protokol yang di-support: VLESS, VMess, Trojan (auto-detect via protocol sniffer).
+
+## Development
+
+### Struktur Project
+
+```
+src/
+  index.ts              # Entry: WS upgrade → relay; else Hono app
+  core/
+    relay.ts            # WebSocket handler + protocol parsers (VLESS/VMess/Trojan)
+    lists.ts            # Proxy list fetchers (getKVPrxList, getPrxList)
+    constants.ts        # PORTS, PROTOCOLS, CORS, SALT constants
+  routes/
+    api.ts              # API endpoints (/sub, /myip, /check, /proxies)
+assets/
+  index.html            # Landing page (Alpine.js)
+  build.html            # Build VPN config page
+  convert.html          # Convert vless:// → Clash YAML
+  shared.css            # Dark theme CSS
+```
+
+### Local Development
+
+```bash
+# Install dependencies
+bun install
+
+# Run dev server
+wrangler dev
+
+# Type check
+bun x tsc --noEmit
+
+# Deploy
+wrangler deploy
+```
+
+### CI/CD Workflows
+
+- **`scan.yaml`** — Every 30 menit: health-check proxies, update `proxy.txt` & `KV.json`, commit
+- **`deploy.yml`** — Manual trigger: deploy worker ke Cloudflare (input: `ref` branch)
+
+## Panduan Penting
+
+### Free Tier Limits
+
+- **100k requests / hari** (reset harian)
+- 1 WebSocket session = 1 request
+- ⚠️ **Health-check otomatis (Clash)** dengan `interval: 30s` → ~2.8k request/hari per proxy. Gunakan `interval: 300` (5 menit) atau lebih untuk hemat kuota.
+
+### Clash Config Best Practice
+
+```yaml
+proxy-providers:
+  vpn:
+    type: http
+    url: "https://yuliana.my.id/api/sub?vpn=vless&limit=20&format=raw"
+    interval: 300           # 5 menit (bukan 30 detik!)
+    health-check:
+      enable: true
+      interval: 300         # 5 menit
+      url: http://cp.cloudflare.com/generate_204
+```
+
+### Security Notes
+
+- Endpoint `/api/check` (port probe) terbuka publik — pertimbangkan rate-limit atau hapus jika tidak digunakan
+- UUID subscription di-generate random per request — tidak ada autentikasi
+- `skip-cert-verify: true` pada Clash config — wajar untuk worker CDN, tapi pahami risikonya
+
+## Tech Stack
+
+- **Backend:** Hono v4 (Cloudflare Workers)
+- **Frontend:** Alpine.js v3 (CDN, no build step)
+- **Runtime:** Cloudflare Workers (V8 isolates)
+- **Storage:** GitHub (KV.json, proxy.txt via raw.githubusercontent.com)
+- **CI:** GitHub Actions (scan proxy every 30 min)
+- **Language:** TypeScript 7.0.2
+
+## Contributing
+
+1. Fork repo
+2. Buat branch feature (`git checkout -b feat/amazing-feature`)
+3. Commit (`git commit -m 'feat: add amazing feature'`)
+4. Push (`git push origin feat/amazing-feature`)
+5. Buat Pull Request
+
+## License
+
+MIT License — lihat [LICENSE](LICENSE)
 
 ---
 
-*Dibuat dengan ❤️ oleh [Banten IT Solutions](https://bits.co.id)*
+**Dibuat dengan ❤️ oleh [Banten IT Solutions](https://bitsco.id)**
+
+Worker ini gratis, tidak perlu bayar. Jika bermanfaat, ⭐ star repo ini!
