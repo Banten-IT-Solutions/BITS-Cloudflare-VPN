@@ -91,10 +91,11 @@ async function getPrxList(prxBankUrl = PRX_BANK_URL) {
 
 async function reverseWeb(request, target, targetPath) {
   const targetUrl = new URL(request.url);
-  const targetChunk = target.split(":");
+  const parsedTarget = new URL(target);
 
-  targetUrl.hostname = targetChunk[0];
-  targetUrl.port = targetChunk[1]?.toString() || "443";
+  targetUrl.protocol = parsedTarget.protocol;
+  targetUrl.hostname = parsedTarget.hostname;
+  targetUrl.port = parsedTarget.port || (parsedTarget.protocol === "http:" ? "80" : "443");
   targetUrl.pathname = targetPath || targetUrl.pathname;
 
   const modifiedRequest = new Request(targetUrl, request);
