@@ -17,9 +17,9 @@ const PORTS = [443, 80];
 const PROTOCOLS = [atob(horse), atob(flash), atob(neko), "ss"];
 const SUB_PAGE_URL = "https://vpn.bits.co.id";
 const KV_PRX_URL =
-  "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/kvProxyList.json";
+  "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/KV.json";
 const PRX_BANK_URL =
-  "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxyList.txt";
+  "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt";
 const DNS_SERVER_ADDRESS = "8.8.8.8";
 const DNS_SERVER_PORT = 53;
 const RELAY_SERVER_UDP = {
