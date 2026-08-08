@@ -58,7 +58,7 @@ Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan P
 ## Instant
 
 Klik tombol di bawah  
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/FoolVPN-ID/Nautica)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/bitscoid/BITS-Cloudflare-VPN)
 
 ## Manual
 
@@ -70,7 +70,7 @@ Klik tombol di bawah
 6. Deploy
 7. Buka `https://DOMAIN_WORKER_KALIAN/sub`
 
-- Contoh daftar proxy [proxyList.txt](https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt)
+- Contoh daftar proxy [proxyList.txt](https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxyList.txt)
 - Contoh reverse proxy [example.com](https://example.com)
 
 ## Cara Aktivasi API
@@ -87,11 +87,11 @@ Berikut cara aktivasinya:
 
 1. Selesaikan langkah [Aktivasi API](#cara-aktivasi-api)
 2. Isi variable `rootDomain` dengan domain utama kalian
-   - Contoh: Domain workers `nautica.foolvpn.me`, berarti domain utamanya adalah `foolvpn.me`
+   - Contoh: Domain workers `nautica.bits.co.id`, berarti domain utamanya adalah `bits.co.id`
 3. Isi variable `serviceName` dengan nama workers kalian
-   - Contoh: Domain workers `nautica.foolvpn.me`, berarti nama workersnya adalah `nautica`
+   - Contoh: Domain workers `nautica.bits.co.id`, berarti nama workersnya adalah `nautica`
 4. Buat custom domain di pengaturan workers dengan kombinasi `serviceName`.`rootDomain`
-   - Contoh: `nautica.foolvpn.me`
+   - Contoh: `nautica.bits.co.id`
 
 # Endpoint
 

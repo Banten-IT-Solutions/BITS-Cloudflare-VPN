@@ -15,17 +15,20 @@ const v2 = "djJyYXk=";
 
 const PORTS = [443, 80];
 const PROTOCOLS = [atob(horse), atob(flash), atob(neko), "ss"];
-const SUB_PAGE_URL = "https://foolvpn.web.id/nautica";
-const KV_PRX_URL = "https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json";
-const PRX_BANK_URL = "https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/proxyList.txt";
+const SUB_PAGE_URL = "https://vpn.bits.co.id";
+const KV_PRX_URL =
+  "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/kvProxyList.json";
+const PRX_BANK_URL =
+  "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxyList.txt";
 const DNS_SERVER_ADDRESS = "8.8.8.8";
 const DNS_SERVER_PORT = 53;
 const RELAY_SERVER_UDP = {
   host: "udp-relay.hobihaus.space", // Kontribusi atau cek relay publik disini: https://hub.docker.com/r/kelvinzer0/udp-relay
   port: 7300,
 };
-const PRX_HEALTH_CHECK_API = "https://id1.foolvpn.web.id/api/v1/check";
-const CONVERTER_URL = "https://api.foolvpn.web.id/convert";
+// Self-contained: health check dijalankan langsung dari Worker (TCP probe),
+// dan converter format memakai env CONVERTER_URL (host sendiri). Tidak ada lagi
+// ketergantungan ke service luar (foolvpn.web.id).
 const WS_READY_STATE_OPEN = 1;
 const WS_READY_STATE_CLOSING = 2;
 const CORS_HEADER_OPTIONS = {
@@ -165,7 +168,7 @@ export default {
           const filterFormat = url.searchParams.get("format") || "raw";
           const fillerDomain = url.searchParams.get("domain") || APP_DOMAIN;
 
-          const prxBankUrl = url.searchParams.get("prx-list") || env.PRX_BANK_URL;
+          const prxBankUrl = url.searchParams.get("prx-list") || env.PRX_BANK_URL || PRX_BANK_URL;
           const prxList = await getPrxList(prxBankUrl)
             .then((prxs) => {
               // Filter CC
@@ -229,7 +232,19 @@ export default {
             case atob(neko):
             case "sfa":
             case "bfr":
-              const res = await fetch(CONVERTER_URL, {
+              const converterUrl = env.CONVERTER_URL;
+              if (!converterUrl) {
+                return new Response(
+                  "Converter not configured. Set CONVERTER_URL env var to your own converter service.",
+                  {
+                    status: 503,
+                    headers: {
+                      ...CORS_HEADER_OPTIONS,
+                    },
+                  },
+                );
+              }
+              const res = await fetch(converterUrl, {
                 method: "POST",
                 body: JSON.stringify({
                   url: result.join(","),
@@ -1118,8 +1133,40 @@ function safeCloseWebSocket(socket) {
 }
 
 async function checkPrxHealth(prxIP, prxPort) {
-  const req = await fetch(`${PRX_HEALTH_CHECK_API}?ip=${prxIP}:${prxPort}`);
-  return await req.json();
+  const start = Date.now();
+  const timeoutMs = 5000;
+  try {
+    const socket = connect({ hostname: prxIP, port: Number(prxPort) });
+
+    // Jika koneksi gagal (host unreachable, port tertutup), promise `closed`
+    // akan reject. Jika koneksi sukses, koneksi tetap terbuka hingga timeout,
+    // yang kita anggap sebagai proxy hidup.
+    await Promise.race([
+      socket.closed.catch((error) => {
+        throw error;
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), timeoutMs)),
+    ]);
+
+    try {
+      socket.close();
+    } catch (_) {}
+
+    return {
+      ip: prxIP,
+      port: prxPort,
+      success: true,
+      latency: Date.now() - start,
+    };
+  } catch (error) {
+    return {
+      ip: prxIP,
+      port: prxPort,
+      success: false,
+      latency: Date.now() - start,
+      error: error?.message || String(error),
+    };
+  }
 }
 
 // Helpers
