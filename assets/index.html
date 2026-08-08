@@ -110,14 +110,14 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
               <div class="p-2 rounded-xl bg-pink-500/10 text-pink-400">
                 <i data-lucide="code" class="w-5 h-5"></i>
               </div>
-              <h2 class="text-lg font-bold">API /api/sub/build</h2>
+              <h2 class="text-lg font-bold">API /api/sub</h2>
             </div>
             <button @click="openParams = !openParams" class="text-slate-400 hover:text-slate-200 transition">
               <i :data-lucide="openParams ? 'chevron-up' : 'chevron-down'" class="w-5 h-5"></i>
             </button>
           </div>
           <code class="text-[11px] text-slate-300 font-mono block p-2.5 glass rounded-xl break-all select-all mb-4" id="apiExample">
-            https://.../api/sub/build?vpn=vless&limit=10&format=v2ray
+            https://.../api/sub?vpn=vless&limit=10&format=v2ray
           </code>
         </div>
         
@@ -288,7 +288,7 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
   const s = d.split(".")[0];
   document.getElementById("serviceName").textContent = s;
   document.getElementById("domain").textContent = `wss://${d}`;
-  document.getElementById("apiExample").textContent = `https://${d}/api/sub/build?vpn=vless&limit=10&format=v2ray`;
+  document.getElementById("apiExample").textContent = `https://${d}/api/sub?vpn=vless&limit=10&format=v2ray`;
   setTimeout(() => lucide.createIcons(), 200);
 })();
 

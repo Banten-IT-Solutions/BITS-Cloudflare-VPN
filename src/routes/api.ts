@@ -108,7 +108,6 @@ export function createApiRoutes() {
   };
 
   app.get("/sub", subHandler);
-  app.get("/sub/build", subHandler);
 
   // GET /myip - client IP info
   app.get("/myip", async (c) => {
