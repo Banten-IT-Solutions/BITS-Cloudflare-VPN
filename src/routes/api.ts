@@ -33,14 +33,14 @@ export function createApiRoutes() {
   });
 
   // GET /sub - subscription generator (raw, v2ray, json)
-  app.get("/sub", async (c) => {
+  const subHandler = async (c: any) => {
     const url = new URL(c.req.url);
     const domain = url.hostname;
     const serviceName = domain.split(".")[0];
 
     const filterCC = c.req.query("cc")?.split(",") || [];
-    const filterPort = c.req.query("port")?.split(",").map((p) => parseInt(p)) || PORTS;
-    const filterVPN = c.req.query("vpn")?.split(",").filter((p) => PROTOCOLS.includes(p)) || [];
+    const filterPort = c.req.query("port")?.split(",").map((p: string) => parseInt(p)) || PORTS;
+    const filterVPN = c.req.query("vpn")?.split(",").filter((p: string) => PROTOCOLS.includes(p)) || [];
     const protocols = filterVPN.length ? filterVPN : [atob(neko)];
     const filterLimit = parseInt(c.req.query("limit") || "10") || 10;
     const filterFormat = c.req.query("format") || "raw";
@@ -105,7 +105,10 @@ export function createApiRoutes() {
     }
 
     return c.text(finalResult, 200, CORS_HEADER_OPTIONS);
-  });
+  };
+
+  app.get("/sub", subHandler);
+  app.get("/sub/build", subHandler);
 
   // GET /myip - client IP info
   app.get("/myip", async (c) => {

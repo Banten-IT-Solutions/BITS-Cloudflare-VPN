@@ -3840,7 +3840,7 @@ function createApiRoutes() {
     const result = await checkPrxHealth(ip, port || "443");
     return c.json(result, 200, CORS_HEADER_OPTIONS);
   });
-  app2.get("/sub", async (c) => {
+  const subHandler = /* @__PURE__ */ __name(async (c) => {
     const url = new URL(c.req.url);
     const domain2 = url.hostname;
     const serviceName = domain2.split(".")[0];
@@ -3898,7 +3898,9 @@ function createApiRoutes() {
         return c.text(`Unsupported format "${filterFormat}". Supported formats: raw, ${atob(v2)}, json.`, 400, CORS_HEADER_OPTIONS);
     }
     return c.text(finalResult, 200, CORS_HEADER_OPTIONS);
-  });
+  }, "subHandler");
+  app2.get("/sub", subHandler);
+  app2.get("/sub/build", subHandler);
   app2.get("/myip", async (c) => {
     const req = c.req.raw;
     return c.json(

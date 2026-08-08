@@ -74,33 +74,24 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
       </div>
     </section>
 
-    <!-- Wildcard Info Card -->
-    <section class="glass rounded-3xl p-6 sm:p-7 animate-slide-up" style="animation-delay: 0.1s">
-      <div class="flex items-start gap-4">
-        <div class="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 mt-0.5">
-          <i data-lucide="globe" class="w-5 h-5 animate-spin-slow"></i>
-        </div>
-        <div>
-          <h3 class="text-base font-bold text-slate-200 mb-1">Wildcard Subdomain Support</h3>
-          <p class="text-sm text-slate-400 leading-relaxed">
-            Web app ini dapat diakses dan digunakan juga di seluruh wildcard subdomain Anda (misalnya <code class="text-indigo-300">any.yuliana.my.id</code>) dan secara otomatis akan berfungsi penuh sebagai worker VPN VLESS.
-          </p>
-        </div>
-      </div>
-    </section>
+    <!-- Wildcard info kecil di bawah status -->
+    <div class="glass rounded-2xl p-4 sm:p-5 animate-slide-up text-xs text-slate-400 flex items-center gap-3">
+      <i data-lucide="globe" class="w-4 h-4 text-indigo-400 animate-spin-slow"></i>
+      <span>Dapat digunakan di wildcard subdomain, otomatis menjadi worker vless.</span>
+    </div>
 
     <!-- Tools & Accordion parameters -->
-    <section class="grid sm:grid-cols-2 gap-6 animate-slide-up" style="animation-delay: 0.2s" x-data="{ openParams: false }">
-      <!-- Tools Card (compact, di tengah / kiri) -->
+    <section class="grid sm:grid-cols-2 gap-6 animate-slide-up" x-data="{ openParams: false }">
+      <!-- Tools Card (compact) -->
       <div class="glass rounded-3xl p-6 flex flex-col justify-between">
         <div>
-          <div class="flex items-center gap-3 mb-4">
+          <div class="flex items-center gap-3 mb-3">
             <div class="p-2 rounded-xl bg-orange-500/10 text-orange-400">
               <i data-lucide="wrench" class="w-5 h-5"></i>
             </div>
-            <h2 class="text-lg font-bold">Quick Tools</h2>
+            <h2 class="text-lg font-bold">Tools</h2>
           </div>
-          <p class="text-xs text-slate-400 mb-4 leading-relaxed">Gunakan tool pembangun config interaktif kami untuk menghasilkan format vless:// dan Clash YAML.</p>
+          <p class="text-xs text-slate-400 mb-6 leading-relaxed">Generator config interaktif.</p>
         </div>
         <a href="/build" class="flex items-center justify-between p-3.5 glass rounded-2xl border border-indigo-500/20 hover:border-indigo-500/40 transition group">
           <div class="flex items-center gap-2.5">
@@ -119,14 +110,14 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
               <div class="p-2 rounded-xl bg-pink-500/10 text-pink-400">
                 <i data-lucide="code" class="w-5 h-5"></i>
               </div>
-              <h2 class="text-lg font-bold">API /api/sub</h2>
+              <h2 class="text-lg font-bold">API /api/sub/build</h2>
             </div>
             <button @click="openParams = !openParams" class="text-slate-400 hover:text-slate-200 transition">
               <i :data-lucide="openParams ? 'chevron-up' : 'chevron-down'" class="w-5 h-5"></i>
             </button>
           </div>
           <code class="text-[11px] text-slate-300 font-mono block p-2.5 glass rounded-xl break-all select-all mb-4" id="apiExample">
-            https://.../api/sub?vpn=vless&limit=10&format=v2ray
+            https://.../api/sub/build?vpn=vless&limit=10&format=v2ray
           </code>
         </div>
         
@@ -297,7 +288,7 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
   const s = d.split(".")[0];
   document.getElementById("serviceName").textContent = s;
   document.getElementById("domain").textContent = `wss://${d}`;
-  document.getElementById("apiExample").textContent = `https://${d}/api/sub?vpn=vless&limit=10&format=v2ray`;
+  document.getElementById("apiExample").textContent = `https://${d}/api/sub/build?vpn=vless&limit=10&format=v2ray`;
   setTimeout(() => lucide.createIcons(), 200);
 })();
 
