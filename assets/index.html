@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VPN Serverless — Cloudflare Workers</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={darkMode:'class',theme:{extend:{animation:{'fade-in':'fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1)','slide-up':'slideUp 1s cubic-bezier(0.16, 1, 0.3, 1)','pulse-slow':'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite','spin-slow':'spin 20s linear infinite'},keyframes:{fadeIn:{'0%':{opacity:'0'},'100%':{opacity:'1'}},slideUp:{'0%':{transform:'translateY(24px)',opacity:'0'},'100%':{transform:'translateY(0)',opacity:'1'}}}}}}</script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{animation:{'fade-in':'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)','slide-up':'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)','pulse-slow':'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite','spin-slow':'spin 20s linear infinite'},keyframes:{fadeIn:{'0%':{opacity:'0'},'100%':{opacity:'1'}},slideUp:{'0%':{transform:'translateY(20px)',opacity:'0'},'100%':{transform:'translateY(0)',opacity:'1'}}}}}}</script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.30.0"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
 <style>
@@ -71,15 +71,15 @@ canvas#particles {
 <body class="text-slate-200 antialiased font-sans relative">
 <canvas id="particles"></canvas>
 
-<!-- Decor Blob -->
+<!-- Decor Blobs -->
 <div class="glow-spot top-[-50px] right-[-50px]"></div>
 <div class="glow-spot bottom-[10%] left-[-100px]"></div>
 
-<div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-16 flex flex-col min-h-screen justify-between animate-fade-in">
+<div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-12 flex flex-col min-h-screen justify-between animate-fade-in">
   
   <!-- Hero Section -->
-  <header class="text-center mb-12 animate-slide-up">
-    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-950/40 border border-indigo-500/20 text-[10px] sm:text-xs text-indigo-300 font-semibold tracking-wider uppercase mb-6">
+  <header class="text-center mb-10 animate-slide-up">
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-950/40 border border-indigo-500/20 text-[10px] sm:text-xs text-indigo-300 font-semibold tracking-wider uppercase mb-5">
       <span class="relative flex h-2 w-2">
         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
         <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
@@ -92,7 +92,7 @@ canvas#particles {
     <p class="text-slate-400 text-base sm:text-lg max-w-md mx-auto font-medium">VLESS · VMess · Trojan</p>
   </header>
 
-  <!-- Main Grid -->
+  <!-- Main Content -->
   <main class="space-y-6 flex-1">
     
     <!-- Status Panel -->
@@ -135,99 +135,96 @@ canvas#particles {
       </div>
     </section>
 
-    <!-- Subdomain Notification Bar -->
+    <!-- Subdomain Notification Bar (Full Width) -->
     <div class="glass rounded-2xl p-4 sm:p-5 animate-slide-up text-xs text-slate-400 flex items-center gap-3 border-l-4 border-l-indigo-500" style="animation-delay: 0.1s">
-      <div class="p-1 rounded bg-indigo-500/10 text-indigo-400">
+      <div class="p-1.5 rounded bg-indigo-500/10 text-indigo-400">
         <i data-lucide="globe" class="w-4 h-4 animate-spin-slow"></i>
       </div>
       <span>Mendukung wildcard subdomain secara dinamis untuk melayani tunnel vless VPN otomatis.</span>
     </div>
 
-    <!-- Double Grid (Tools & API Parameters Accordion) -->
-    <section class="grid sm:grid-cols-2 gap-6 animate-slide-up" style="animation-delay: 0.15s" x-data="{ openParams: false }">
-      
-      <!-- Tools Card (Sleek Glassmorphism) -->
-      <div class="glass rounded-3xl p-6 flex flex-col justify-between min-h-[190px]">
-        <div>
-          <div class="flex items-center gap-3 mb-2">
-            <div class="p-2 rounded-xl bg-orange-500/10 text-orange-400">
-              <i data-lucide="wrench" class="w-4 h-4"></i>
-            </div>
-            <h2 class="text-sm font-bold tracking-wider uppercase text-slate-450">Configuration</h2>
-          </div>
-          <p class="text-xs text-slate-450 leading-relaxed mt-2">Builder config untuk menghasilkan vless:// dan Clash YAML.</p>
+    <!-- Build VPN Config (Full Width Link - Custom Design) -->
+    <a href="/build" class="glass rounded-2xl p-4 sm:p-5 animate-slide-up flex items-center justify-between border border-indigo-500/10 hover:border-indigo-500/40 transition group" style="animation-delay: 0.15s">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-indigo-500/10 rounded-xl text-indigo-400 group-hover:rotate-12 transition">
+          <i data-lucide="hammer" class="w-5 h-5"></i>
         </div>
-        <a href="/build" class="w-full mt-4 flex items-center justify-between p-3.5 bg-indigo-600/10 border border-indigo-500/30 hover:border-indigo-500/60 rounded-2xl transition group">
-          <div class="flex items-center gap-2">
-            <i data-lucide="hammer" class="w-4 h-4 text-indigo-400 group-hover:rotate-12 transition"></i>
-            <span class="text-xs font-bold group-hover:text-indigo-300">Build VPN Config</span>
-          </div>
-          <i data-lucide="arrow-right" class="w-4 h-4 text-slate-450 group-hover:translate-x-1 transition"></i>
-        </a>
+        <div class="text-left">
+          <h3 class="text-sm font-bold text-slate-200">Build VPN Config</h3>
+          <p class="text-[11px] text-slate-400">Pilih proxy, setting SNI/CDN, generate vless:// & Clash YAML</p>
+        </div>
+      </div>
+      <i data-lucide="arrow-right" class="w-5 h-5 text-slate-400 group-hover:translate-x-1.5 transition"></i>
+    </a>
+
+    <!-- API /api/sub (Full Width & Accordion Parameters 2 Columns) -->
+    <section class="glass rounded-3xl p-6 sm:p-7 animate-slide-up" style="animation-delay: 0.2s" x-data="{ copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => alert('✅ Copied to clipboard!'));
+      } else {
+        const t = document.createElement('textarea');
+        t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+        document.body.appendChild(t); t.select();
+        document.execCommand('copy');
+        document.body.removeChild(t);
+        alert('✅ Copied to clipboard!');
+      }
+    }}">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="p-2 rounded-xl bg-pink-500/10 text-pink-400">
+          <i data-lucide="code" class="w-4 h-4"></i>
+        </div>
+        <h2 class="text-sm font-bold tracking-wider uppercase text-slate-400">Subscription API</h2>
       </div>
 
-      <!-- API Card (Accordion) -->
-      <div class="glass rounded-3xl p-6 flex flex-col justify-between min-h-[190px]">
-        <div>
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-3">
-              <div class="p-2 rounded-xl bg-pink-500/10 text-pink-400">
-                <i data-lucide="code" class="w-4 h-4"></i>
-              </div>
-              <h2 class="text-sm font-bold tracking-wider uppercase text-slate-450">Subscription API</h2>
-            </div>
-            <button @click="openParams = !openParams" class="p-1 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-slate-100 transition">
-              <i :data-lucide="openParams ? 'chevron-up' : 'chevron-down'" class="w-4.5 h-4.5"></i>
-            </button>
-          </div>
-          <code class="text-[10px] text-slate-350 font-mono block p-3 bg-slate-950/60 rounded-xl border border-slate-900 break-all select-all mt-2" id="apiExample">
-            https://.../api/sub?vpn=vless&limit=10&format=v2ray
-          </code>
-        </div>
-        
-        <!-- Accordion Dropdown -->
-        <div x-show="openParams" x-collapse x-cloak class="space-y-1.5 mt-3 max-h-36 overflow-y-auto pr-1">
-          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
-            <span class="font-mono text-indigo-400">vpn</span>
-            <span class="text-slate-500">vless, vmess, trojan</span>
-          </div>
-          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
-            <span class="font-mono text-indigo-400">cc</span>
-            <span class="text-slate-500">kode negara ID, SG...</span>
-          </div>
-          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
-            <span class="font-mono text-indigo-400">port</span>
-            <span class="text-slate-500">443, 80</span>
-          </div>
-          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
-            <span class="font-mono text-indigo-400">limit</span>
-            <span class="text-slate-500">jumlah akun</span>
-          </div>
-          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
-            <span class="font-mono text-indigo-400">format</span>
-            <span class="text-slate-500">raw, v2ray, json</span>
-          </div>
-          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
-            <span class="font-mono text-indigo-400">domain</span>
-            <span class="text-slate-500">SNI / domain custom</span>
-          </div>
-        </div>
+      <!-- Endpoint API dengan Copy Icon -->
+      <div class="flex items-center gap-2 mb-5">
+        <code class="flex-1 text-[11px] text-slate-300 font-mono block p-3 bg-slate-950/60 rounded-xl border border-slate-900 break-all select-all" id="apiExample">
+          https://.../api/sub?vpn=vless&limit=10&format=v2ray
+        </code>
+        <button @click="copyText(document.getElementById('apiExample').textContent.trim())" 
+          class="p-3 bg-indigo-600/10 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 hover:text-indigo-300 rounded-xl transition flex items-center justify-center">
+          <i data-lucide="copy" class="w-4.5 h-4.5"></i>
+        </button>
+      </div>
 
-        <div class="text-[9px] text-slate-550 flex items-center gap-1.5 mt-2">
-          <i data-lucide="info" class="w-3.5 h-3.5 text-indigo-500"></i>
-          <span>Endpoint API di-generate secara dynamic.</span>
+      <!-- Parameter List 2 Column Grid (Directly Open) -->
+      <div class="grid sm:grid-cols-2 gap-2">
+        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
+          <span class="font-mono text-indigo-400">vpn</span>
+          <span class="text-slate-400">vless, vmess, trojan</span>
+        </div>
+        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
+          <span class="font-mono text-indigo-400">cc</span>
+          <span class="text-slate-400">kode negara (e.g. ID, SG)</span>
+        </div>
+        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
+          <span class="font-mono text-indigo-400">port</span>
+          <span class="text-slate-400">443, 80</span>
+        </div>
+        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
+          <span class="font-mono text-indigo-400">limit</span>
+          <span class="text-slate-400">jumlah akun output</span>
+        </div>
+        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
+          <span class="font-mono text-indigo-400">format</span>
+          <span class="text-slate-400">raw, v2ray, json</span>
+        </div>
+        <div class="p-2 bg-slate-950/40 border border-slate-900 rounded-lg flex items-center justify-between text-[11px]">
+          <span class="font-mono text-indigo-400">domain</span>
+          <span class="text-slate-400">SNI / domain custom</span>
         </div>
       </div>
     </section>
 
     <!-- VPN Connection Checker -->
-    <section class="glass rounded-3xl p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.2s" x-data="vlessChecker()">
+    <section class="glass rounded-3xl p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.25s" x-data="vlessChecker()">
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
           <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 animate-pulse-slow">
             <i data-lucide="check-square" class="w-4 h-4"></i>
           </div>
-          <h2 class="text-sm font-bold tracking-wider uppercase text-slate-405">Tunnel Checker</h2>
+          <h2 class="text-sm font-bold tracking-wider uppercase text-slate-400">Tunnel Checker</h2>
         </div>
         <div class="flex gap-2">
           <button @click="copyOnline()" x-show="results.length > 0" 
