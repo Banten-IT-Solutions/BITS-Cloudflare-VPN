@@ -3900,7 +3900,6 @@ function createApiRoutes() {
     return c.text(finalResult, 200, CORS_HEADER_OPTIONS);
   }, "subHandler");
   app2.get("/sub", subHandler);
-  app2.get("/sub/build", subHandler);
   app2.get("/myip", async (c) => {
     const req = c.req.raw;
     return c.json(

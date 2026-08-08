@@ -5,173 +5,237 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VPN Serverless — Cloudflare Workers</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={darkMode:'class',theme:{extend:{animation:{'fade-in':'fadeIn 0.8s cubic-bezier(0.16,1,0.3,1)','slide-up':'slideUp 0.8s cubic-bezier(0.16,1,0.3,1)','pulse-slow':'pulse 4s cubic-bezier(0.4,0,0.6,1) infinite','spin-slow':'spin 12s linear infinite'},keyframes:{fadeIn:{'0%':{opacity:'0'},'100%':{opacity:'1'}},slideUp:{'0%':{transform:'translateY(16px)',opacity:'0'},'100%':{transform:'translateY(0)',opacity:'1'}}}}}}</script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{animation:{'fade-in':'fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1)','slide-up':'slideUp 1s cubic-bezier(0.16, 1, 0.3, 1)','pulse-slow':'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite','spin-slow':'spin 20s linear infinite'},keyframes:{fadeIn:{'0%':{opacity:'0'},'100%':{opacity:'1'}},slideUp:{'0%':{transform:'translateY(24px)',opacity:'0'},'100%':{transform:'translateY(0)',opacity:'1'}}}}}}</script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.30.0"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
 <style>
-body{background:#020617;min-height:100vh;overflow-x:hidden}
-canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
-.glass{background:rgba(15,23,42,0.45);backdrop-filter:blur(20px);border:1px solid rgba(99,102,241,0.08);box-shadow:0 8px 32px 0 rgba(0,0,0,0.37)}
-.glass:hover{border-color:rgba(99,102,241,0.18);box-shadow:0 8px 32px 0 rgba(99,102,241,0.05)}
-.gradient-text{background:linear-gradient(135deg,#6366f1 10%,#a855f7 50%,#3b82f6 90%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.glow-indigo{box-shadow:0 0 40px rgba(99,102,241,0.15)}
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:#1e293b;border-radius:10px}
-::-webkit-scrollbar-thumb:hover{background:#334155}
-[x-cloak]{display:none}
+body {
+  background-color: #030014;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+    radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 0);
+  background-size: 100% 100%, 24px 24px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+canvas#particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.glass {
+  background: rgba(10, 10, 20, 0.6);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+}
+.glass:hover {
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.03);
+}
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 10%, #a5b4fc 60%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.glow-spot {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 1;
+}
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e1b4b;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #312e81;
+}
+[x-cloak] { display: none; }
 </style>
 </head>
-<body class="text-slate-100 antialiased font-sans relative">
+<body class="text-slate-200 antialiased font-sans relative">
 <canvas id="particles"></canvas>
 
-<div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-12 flex flex-col min-h-screen justify-between animate-fade-in">
+<!-- Decor Blob -->
+<div class="glow-spot top-[-50px] right-[-50px]"></div>
+<div class="glow-spot bottom-[10%] left-[-100px]"></div>
+
+<div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-16 flex flex-col min-h-screen justify-between animate-fade-in">
   
-  <!-- Header / Brand -->
-  <header class="text-center mb-10 animate-slide-up">
-    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass border border-indigo-500/20 text-xs text-indigo-300 font-mono mb-4 animate-pulse-slow">
-      <span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
-      <span>Cloudflare Workers VPN</span>
+  <!-- Hero Section -->
+  <header class="text-center mb-12 animate-slide-up">
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-950/40 border border-indigo-500/20 text-[10px] sm:text-xs text-indigo-300 font-semibold tracking-wider uppercase mb-6">
+      <span class="relative flex h-2 w-2">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+      </span>
+      <span>Cloudflare Workers Engine</span>
     </div>
-    <h1 class="text-5xl sm:text-6xl font-black tracking-tight mb-3">
+    <h1 class="text-5xl sm:text-7xl font-extrabold tracking-tight mb-4">
       <span class="gradient-text" id="serviceName">VPN Serverless</span>
     </h1>
-    <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">VLESS, VMess, & Trojan via WebSocket CDN</p>
+    <p class="text-slate-400 text-base sm:text-lg max-w-md mx-auto font-medium">VLESS · VMess · Trojan</p>
   </header>
 
-  <!-- Main Content -->
+  <!-- Main Grid -->
   <main class="space-y-6 flex-1">
     
-    <!-- Status Card -->
-    <section class="glass rounded-3xl p-6 sm:p-8 glow-indigo animate-slide-up">
-      <div class="flex items-center gap-3 mb-6">
-        <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-          <i data-lucide="activity" class="w-5 h-5"></i>
+    <!-- Status Panel -->
+    <section class="glass rounded-3xl p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.05s">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+            <i data-lucide="activity" class="w-4 h-4"></i>
+          </div>
+          <h2 class="text-sm font-bold tracking-wider uppercase text-slate-400">Active Node Status</h2>
         </div>
-        <h2 class="text-xl font-bold tracking-tight">Active Status</h2>
       </div>
+      
       <div class="grid sm:grid-cols-3 gap-4">
-        <div class="glass rounded-2xl p-4 flex flex-col justify-between">
-          <span class="text-xs text-slate-400 font-medium mb-1">ENDPOINT</span>
-          <code class="text-indigo-300 text-xs font-mono break-all mt-1" id="domain">wss://...</code>
+        <!-- Endpoint -->
+        <div class="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex flex-col justify-between">
+          <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">WebSocket Endpoint</span>
+          <code class="text-indigo-400 text-xs font-mono break-all mt-2" id="domain">wss://...</code>
         </div>
-        <div class="glass rounded-2xl p-4 flex flex-col justify-between">
-          <span class="text-xs text-slate-400 font-medium mb-1">PROTOCOLS</span>
-          <div class="text-sm font-semibold text-slate-200 mt-1">VLESS · VMess · Trojan</div>
+        <!-- Protocols -->
+        <div class="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex flex-col justify-between">
+          <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Relay Protocols</span>
+          <div class="text-xs font-bold text-slate-300 mt-2">VLESS, VMess, Trojan WS</div>
         </div>
-        <div class="glass rounded-2xl p-4 flex flex-col justify-between" x-data="{ ip: 'Loading...', city: '', cc: '' }" x-init="
-          try {
-            const r = await fetch('/api/myip');
-            const j = await r.json();
-            ip = j.ip || 'N/A';
-            city = j.city || '';
-            cc = j.country || '';
-          } catch(e) { ip = 'Failed' }
-        ">
-          <span class="text-xs text-slate-400 font-medium mb-1">MY CLIENT IP</span>
-          <div class="text-sm font-semibold text-slate-200 truncate mt-1" x-text="ip + (city ? ` (${city}, ${cc})` : '')"></div>
+        <!-- My IP -->
+        <div class="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex flex-col justify-between" 
+             x-data="{ ip: 'Loading...', city: '', cc: '' }" 
+             x-init="
+              try {
+                const r = await fetch('/api/myip');
+                const j = await r.json();
+                ip = j.ip || 'N/A';
+                city = j.city || '';
+                cc = j.country || '';
+              } catch(e) { ip = 'Failed' }
+             ">
+          <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">My Client IP</span>
+          <div class="text-xs font-bold text-slate-300 truncate mt-2" x-text="ip + (city ? ` (${city}, ${cc})` : '')"></div>
         </div>
       </div>
     </section>
 
-    <!-- Wildcard info kecil di bawah status -->
-    <div class="glass rounded-2xl p-4 sm:p-5 animate-slide-up text-xs text-slate-400 flex items-center gap-3">
-      <i data-lucide="globe" class="w-4 h-4 text-indigo-400 animate-spin-slow"></i>
-      <span>Dapat digunakan di wildcard subdomain, otomatis menjadi worker vless.</span>
+    <!-- Subdomain Notification Bar -->
+    <div class="glass rounded-2xl p-4 sm:p-5 animate-slide-up text-xs text-slate-400 flex items-center gap-3 border-l-4 border-l-indigo-500" style="animation-delay: 0.1s">
+      <div class="p-1 rounded bg-indigo-500/10 text-indigo-400">
+        <i data-lucide="globe" class="w-4 h-4 animate-spin-slow"></i>
+      </div>
+      <span>Mendukung wildcard subdomain secara dinamis untuk melayani tunnel vless VPN otomatis.</span>
     </div>
 
-    <!-- Tools & Accordion parameters -->
-    <section class="grid sm:grid-cols-2 gap-6 animate-slide-up" x-data="{ openParams: false }">
-      <!-- Tools Card (compact) -->
-      <div class="glass rounded-3xl p-6 flex flex-col justify-between">
+    <!-- Double Grid (Tools & API Parameters Accordion) -->
+    <section class="grid sm:grid-cols-2 gap-6 animate-slide-up" style="animation-delay: 0.15s" x-data="{ openParams: false }">
+      
+      <!-- Tools Card (Sleek Glassmorphism) -->
+      <div class="glass rounded-3xl p-6 flex flex-col justify-between min-h-[190px]">
         <div>
-          <div class="flex items-center gap-3 mb-3">
+          <div class="flex items-center gap-3 mb-2">
             <div class="p-2 rounded-xl bg-orange-500/10 text-orange-400">
-              <i data-lucide="wrench" class="w-5 h-5"></i>
+              <i data-lucide="wrench" class="w-4 h-4"></i>
             </div>
-            <h2 class="text-lg font-bold">Tools</h2>
+            <h2 class="text-sm font-bold tracking-wider uppercase text-slate-450">Configuration</h2>
           </div>
-          <p class="text-xs text-slate-400 mb-6 leading-relaxed">Generator config interaktif.</p>
+          <p class="text-xs text-slate-450 leading-relaxed mt-2">Builder config untuk menghasilkan vless:// dan Clash YAML.</p>
         </div>
-        <a href="/build" class="flex items-center justify-between p-3.5 glass rounded-2xl border border-indigo-500/20 hover:border-indigo-500/40 transition group">
-          <div class="flex items-center gap-2.5">
+        <a href="/build" class="w-full mt-4 flex items-center justify-between p-3.5 bg-indigo-600/10 border border-indigo-500/30 hover:border-indigo-500/60 rounded-2xl transition group">
+          <div class="flex items-center gap-2">
             <i data-lucide="hammer" class="w-4 h-4 text-indigo-400 group-hover:rotate-12 transition"></i>
-            <span class="text-sm font-semibold group-hover:text-indigo-300">Build VPN Config</span>
+            <span class="text-xs font-bold group-hover:text-indigo-300">Build VPN Config</span>
           </div>
-          <i data-lucide="arrow-right" class="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition"></i>
+          <i data-lucide="arrow-right" class="w-4 h-4 text-slate-450 group-hover:translate-x-1 transition"></i>
         </a>
       </div>
 
-      <!-- Parameter API & Accordion (kanan) -->
-      <div class="glass rounded-3xl p-6 flex flex-col justify-between">
+      <!-- API Card (Accordion) -->
+      <div class="glass rounded-3xl p-6 flex flex-col justify-between min-h-[190px]">
         <div>
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-xl bg-pink-500/10 text-pink-400">
-                <i data-lucide="code" class="w-5 h-5"></i>
+                <i data-lucide="code" class="w-4 h-4"></i>
               </div>
-              <h2 class="text-lg font-bold">API /api/sub</h2>
+              <h2 class="text-sm font-bold tracking-wider uppercase text-slate-450">Subscription API</h2>
             </div>
-            <button @click="openParams = !openParams" class="text-slate-400 hover:text-slate-200 transition">
-              <i :data-lucide="openParams ? 'chevron-up' : 'chevron-down'" class="w-5 h-5"></i>
+            <button @click="openParams = !openParams" class="p-1 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-slate-100 transition">
+              <i :data-lucide="openParams ? 'chevron-up' : 'chevron-down'" class="w-4.5 h-4.5"></i>
             </button>
           </div>
-          <code class="text-[11px] text-slate-300 font-mono block p-2.5 glass rounded-xl break-all select-all mb-4" id="apiExample">
+          <code class="text-[10px] text-slate-350 font-mono block p-3 bg-slate-950/60 rounded-xl border border-slate-900 break-all select-all mt-2" id="apiExample">
             https://.../api/sub?vpn=vless&limit=10&format=v2ray
           </code>
         </div>
         
-        <!-- Accordion Parameter -->
-        <div x-show="openParams" x-collapse x-cloak class="space-y-2 mt-2 mb-4 max-h-48 overflow-y-auto pr-1">
-          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
-            <span class="font-mono text-indigo-300">vpn</span>
-            <span class="text-slate-400">vless, vmess, trojan</span>
+        <!-- Accordion Dropdown -->
+        <div x-show="openParams" x-collapse x-cloak class="space-y-1.5 mt-3 max-h-36 overflow-y-auto pr-1">
+          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
+            <span class="font-mono text-indigo-400">vpn</span>
+            <span class="text-slate-500">vless, vmess, trojan</span>
           </div>
-          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
-            <span class="font-mono text-indigo-300">cc</span>
-            <span class="text-slate-400">kode negara ID, SG...</span>
+          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
+            <span class="font-mono text-indigo-400">cc</span>
+            <span class="text-slate-500">kode negara ID, SG...</span>
           </div>
-          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
-            <span class="font-mono text-indigo-300">port</span>
-            <span class="text-slate-400">443, 80</span>
+          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
+            <span class="font-mono text-indigo-400">port</span>
+            <span class="text-slate-500">443, 80</span>
           </div>
-          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
-            <span class="font-mono text-indigo-300">limit</span>
-            <span class="text-slate-400">default 10</span>
+          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
+            <span class="font-mono text-indigo-400">limit</span>
+            <span class="text-slate-500">jumlah akun</span>
           </div>
-          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
-            <span class="font-mono text-indigo-300">format</span>
-            <span class="text-slate-400">raw, v2ray, json</span>
+          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
+            <span class="font-mono text-indigo-400">format</span>
+            <span class="text-slate-500">raw, v2ray, json</span>
           </div>
-          <div class="p-2 glass rounded-xl flex items-center justify-between text-xs">
-            <span class="font-mono text-indigo-300">domain</span>
-            <span class="text-slate-400">SNI / domain</span>
+          <div class="p-2 bg-slate-950/40 rounded-lg flex items-center justify-between text-[11px]">
+            <span class="font-mono text-indigo-400">domain</span>
+            <span class="text-slate-500">SNI / domain custom</span>
           </div>
         </div>
 
-        <div class="text-[10px] text-slate-500 flex items-center gap-1.5">
-          <i data-lucide="info" class="w-3.5 h-3.5"></i>
-          <span>Parameter /build ditambahkan untuk kustomisasi generator</span>
+        <div class="text-[9px] text-slate-550 flex items-center gap-1.5 mt-2">
+          <i data-lucide="info" class="w-3.5 h-3.5 text-indigo-500"></i>
+          <span>Endpoint API di-generate secara dynamic.</span>
         </div>
       </div>
     </section>
 
-    <!-- VLESS / Proxy Checker -->
-    <section class="glass rounded-3xl p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.3s" x-data="vlessChecker()">
+    <!-- VPN Connection Checker -->
+    <section class="glass rounded-3xl p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.2s" x-data="vlessChecker()">
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
-          <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400">
-            <i data-lucide="check-square" class="w-5 h-5"></i>
+          <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 animate-pulse-slow">
+            <i data-lucide="check-square" class="w-4 h-4"></i>
           </div>
-          <h2 class="text-xl font-bold tracking-tight">VLESS / VPN Connection Checker</h2>
+          <h2 class="text-sm font-bold tracking-wider uppercase text-slate-405">Tunnel Checker</h2>
         </div>
         <div class="flex gap-2">
           <button @click="copyOnline()" x-show="results.length > 0" 
-            class="px-3 py-1.5 text-xs glass rounded-xl border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 transition flex items-center gap-1.5">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Online Only
+            class="px-3 py-1.5 text-xs bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-xl transition flex items-center gap-1.5">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Online
           </button>
           <button @click="clear()" x-show="results.length > 0"
-            class="px-3 py-1.5 text-xs glass rounded-xl border border-rose-500/20 hover:border-rose-500/40 text-rose-400 transition flex items-center gap-1.5">
+            class="px-3 py-1.5 text-xs bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 rounded-xl transition flex items-center gap-1.5">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear
           </button>
         </div>
@@ -179,32 +243,31 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 
       <div class="space-y-4">
         <div>
-          <label class="block text-xs text-slate-400 mb-2">Masukkan URI VLESS, VMess, atau Trojan (Satu per baris):</label>
-          <textarea x-model="inputRaw" placeholder="vless://uuid@server:port?encryption=none...&#10;vmess://eyJhZGQiOiIxMjcuMC4wLjEiLCJwb3J0IjoiODAiLCJpZCI6Ii4uLiJ9" 
-            rows="5" class="w-full px-4 py-3 glass rounded-2xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none font-mono text-xs transition resize-none"></textarea>
+          <textarea x-model="inputRaw" placeholder="Tempel URI VPN VLESS/Trojan/VMess di sini... (satu baris satu config)" 
+            rows="5" class="w-full px-4 py-3 bg-slate-950/40 rounded-2xl border border-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none font-mono text-xs transition resize-none"></textarea>
         </div>
 
         <button @click="checkAll()" :disabled="checking || !inputRaw.trim()"
-          class="w-full py-3.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 rounded-2xl font-semibold transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/10">
-          <i data-lucide="play" class="w-4 h-4" :class="{'animate-spin': checking}"></i>
-          <span x-text="checking ? 'Checking Parallelly...' : 'Start Connection Check'"></span>
+          class="w-full py-3.5 bg-gradient-to-r from-indigo-650 to-indigo-550 hover:from-indigo-600 hover:to-indigo-500 rounded-2xl font-bold text-xs tracking-wider uppercase transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/10">
+          <i data-lucide="play-circle" class="w-4.5 h-4.5" :class="{'animate-spin': checking}"></i>
+          <span x-text="checking ? 'Checking Connection...' : 'Check Connect Proxy'"></span>
         </button>
 
         <!-- Checker Results -->
-        <div x-show="results.length > 0" class="mt-4 border-t border-slate-800/60 pt-4 space-y-2 max-h-60 overflow-y-auto pr-1">
+        <div x-show="results.length > 0" class="mt-4 border-t border-slate-900 pt-4 space-y-2 max-h-56 overflow-y-auto pr-1">
           <template x-for="r in results" :key="r.uri">
-            <div class="p-3 glass rounded-xl flex items-center justify-between text-xs border"
-              :class="r.status === 'online' ? 'border-emerald-500/25 bg-emerald-500/5' : r.status === 'offline' ? 'border-rose-500/25 bg-rose-500/5' : 'border-slate-800'">
+            <div class="p-3 bg-slate-950/30 border border-slate-900 rounded-xl flex items-center justify-between text-xs transition hover:border-slate-800"
+              :class="r.status === 'online' ? 'border-emerald-500/20 bg-emerald-500/5' : r.status === 'offline' ? 'border-rose-500/20 bg-rose-500/5' : ''">
               <div class="flex-1 min-w-0 pr-4">
-                <div class="font-semibold text-slate-200 truncate" x-text="r.name || r.host"></div>
-                <div class="font-mono text-[10px] text-slate-500 truncate" x-text="r.uri"></div>
+                <div class="font-semibold text-slate-350 truncate" x-text="r.name || r.host"></div>
+                <div class="font-mono text-[9px] text-slate-500 truncate mt-0.5" x-text="r.uri"></div>
               </div>
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                  :class="r.status === 'online' ? 'bg-emerald-500/15 text-emerald-400' : r.status === 'offline' ? 'bg-rose-500/15 text-rose-400' : 'bg-slate-800 text-slate-400'"
-                  x-text="r.status === 'online' ? `${r.ms} ms` : r.status === 'offline' ? 'OFFLINE' : 'INVALID'"></span>
-                <i :data-lucide="r.status === 'online' ? 'check-circle-2' : r.status === 'offline' ? 'alert-circle' : 'help-circle'" 
-                  class="w-4 h-4" :class="r.status === 'online' ? 'text-emerald-400' : r.status === 'offline' ? 'text-rose-400' : 'text-slate-500'"></i>
+              <div class="flex items-center gap-2.5">
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold"
+                  :class="r.status === 'online' ? 'bg-emerald-500/15 text-emerald-400' : r.status === 'offline' ? 'bg-rose-500/15 text-rose-400' : 'bg-slate-800 text-slate-500'"
+                  x-text="r.status === 'online' ? `${r.ms} ms` : r.status === 'offline' ? 'OFFLINE' : 'CHECKING'"></span>
+                <i :data-lucide="r.status === 'online' ? 'check-circle' : r.status === 'offline' ? 'x-circle' : 'loader-2'" 
+                  class="w-4 h-4" :class="r.status === 'online' ? 'text-emerald-400' : r.status === 'offline' ? 'text-rose-400 animate-pulse' : 'text-indigo-400 animate-spin'"></i>
               </div>
             </div>
           </template>
@@ -214,9 +277,9 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 
   </main>
 
-  <!-- Clean Minimalist Info Footer -->
-  <footer class="text-center text-xs text-slate-600 mt-12">
-    Banten IT Solutions · Built for speed, efficiency & cleanliness.
+  <!-- Footer -->
+  <footer class="text-center text-xs text-slate-600 mt-16 font-medium">
+    Banten IT Solutions · Zero Server Cost · Pure Cloudflare Edge
   </footer>
 </div>
 
@@ -225,7 +288,7 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
   const canvas = document.getElementById('particles');
   const ctx = canvas.getContext('2d');
   let dots = [];
-  const maxDots = 60;
+  const maxDots = 40;
 
   function resize() {
     canvas.width = window.innerWidth;
@@ -238,9 +301,9 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     constructor() {
       this.x = Math.random() * canvas.width;
       this.y = Math.random() * canvas.height;
-      this.vx = (Math.random() - 0.5) * 0.4;
-      this.vy = (Math.random() - 0.5) * 0.4;
-      this.r = Math.random() * 1.8 + 0.6;
+      this.vx = (Math.random() - 0.5) * 0.35;
+      this.vy = (Math.random() - 0.5) * 0.35;
+      this.r = Math.random() * 1.5 + 0.5;
     }
     update() {
       this.x += this.vx;
@@ -251,7 +314,7 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
     draw() {
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.12)';
       ctx.fill();
     }
   }
@@ -261,7 +324,6 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
   function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     dots.forEach(d => { d.update(); d.draw(); });
-    // Connect lines
     for(let i=0; i<dots.length; i++) {
       for(let j=i+1; j<dots.length; j++) {
         const dx = dots[i].x - dots[j].x;
@@ -282,7 +344,6 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
 </script>
 
 <script>
-// Main setup & Lucide icon init
 (async()=>{
   const d = location.hostname;
   const s = d.split(".")[0];
@@ -292,7 +353,6 @@ canvas#particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;po
   setTimeout(() => lucide.createIcons(), 200);
 })();
 
-// Connection Checker Alpine Logic
 function vlessChecker() {
   return {
     inputRaw: '',
@@ -338,12 +398,13 @@ function vlessChecker() {
         return { uri: line, status: 'checking', name: parsed.name, host: parsed.host, port: parsed.port };
       });
 
-      // Parallel execution with timeout
+      setTimeout(() => lucide.createIcons(), 100);
+
       await Promise.all(this.results.map(async (resItem) => {
         if (resItem.status === 'invalid') return;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
 
         try {
           const checkUrl = `/api/check?target=${resItem.host}:${resItem.port}`;
@@ -371,7 +432,7 @@ function vlessChecker() {
     copyOnline() {
       const onlineUris = this.results.filter(r => r.status === 'online').map(r => r.uri).join('\n');
       if (!onlineUris) {
-        alert('Tidak ada proxy online untuk disalin.');
+        alert('Tidak ada proxy online.');
         return;
       }
       if (navigator.clipboard && navigator.clipboard.writeText) {
