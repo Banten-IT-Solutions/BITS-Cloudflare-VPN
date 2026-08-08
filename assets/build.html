@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="id" class="dark scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build VPN Config — BITS Cloudflare VPN</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        bg: '#050014',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+        'float': 'float 6s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0) scale(1)' },
+          '50%': { transform: 'translateY(-20px) scale(1.05)' }
+        }
+      }
+    }
+  }
+}
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
+<style>
+  body {
+    background-color: #050014;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+    background-size: 32px 32px;
+    color: white;
+    overflow-x: hidden;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+  .gradient-bg {
+    background: linear-gradient(135deg, #4f46e5 0%, #d946ef 100%);
+  }
+  .blob {
+    position: absolute;
+    filter: blur(80px);
+    opacity: 0.4;
+    z-index: -1;
+    border-radius: 50%;
+  }
+  .glass-card {
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.4) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  /* Custom checkbox sesuai theme */
+  .cb {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background: rgba(15, 23, 42, 0.6);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    color: transparent;
+    position: relative;
+  }
+  .cb:hover {
+    border-color: #818cf8;
+    background: rgba(79, 70, 229, 0.15);
+  }
+  .cb:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+  .cb:checked {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    border-color: #6366f1;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+  }
+  .cb:checked::after {
+    content: "";
+    position: absolute;
+    top: 20%;
+    left: 35%;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #050014; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  
+  [x-cloak] { display: none; }
+</style>
+</head>
+<body class="antialiased relative" x-data="buildApp()" x-init="init()">
+
+  <!-- Background Blobs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="blob bg-indigo-600/40 w-[600px] h-[600px] -top-[200px] -left-[100px] animate-float"></div>
+    <div class="blob bg-fuchsia-600/30 w-[500px] h-[500px] top-[20%] -right-[150px] animate-float" style="animation-delay: -2s;"></div>
+    <div class="blob bg-amber-500/20 w-[400px] h-[400px] bottom-0 left-[20%] animate-float" style="animation-delay: -4s;"></div>
+  </div>
+
+  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-12 min-h-screen">
+    
+    <main class="space-y-6">
+      
+      <!-- Filter + Proxy List (Single Card) -->
+      <section class="glass-card rounded-3xl p-6 animate-slide-up">
+        <!-- Filter: Satu baris compact -->
+        <div class="mb-5 space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="relative flex-1">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+              <input x-model="filters.q" @input="scheduleSearch()" type="text" placeholder="IP / Negara / Provider" 
+                class="w-full h-10 pl-11 pr-4 glass-card rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none text-xs transition">
+            </div>
+            <!-- Select All -->
+            <label class="flex items-center gap-2 h-10 px-3 glass-card rounded-xl border border-slate-700 cursor-pointer hover:border-indigo-500/50 transition select-none shrink-0">
+              <input type="checkbox" x-model="selectAll" @change="toggleSelectAll()" :checked="selectAll" class="cb w-4 h-4" title="Select all on this page">
+              <span class="text-xs font-medium whitespace-nowrap">
+                <span class="capitalize text-slate-300">Select All</span>
+                <span x-show="selectedProxies.length > 0"
+                  class="ml-1.5 inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">
+                  <span class="text-[10px] leading-none">✅</span>
+                  <span x-text="selectedProxies.length"></span>
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <!-- Country chips (hidden on mobile) -->
+          <div class="hidden sm:flex items-center gap-1.5 flex-wrap">
+            <button @click="filters.cc=''; loadProxies()" title="All countries"
+              :class="filters.cc === '' ? 'bg-indigo-500/20 border-indigo-400/40 text-indigo-300' : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'"
+              class="px-2.5 py-1 text-xs rounded-lg border transition flex items-center gap-1">
+              🌐
+              <span class="text-[10px] text-slate-500" x-text="totalCount"></span>
+            </button>
+            <template x-for="c in countries" :key="c.code">
+              <button @click="filters.cc = filters.cc === c.code ? '' : c.code; loadProxies()"
+                :class="filters.cc === c.code ? 'bg-indigo-500/20 border-indigo-400/40 text-indigo-300' : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'"
+                class="px-2.5 py-1 text-xs rounded-lg border transition flex items-center gap-1">
+                <span x-text="getFlagEmoji(c.code)"></span>
+                <span class="text-[10px] text-slate-500" x-text="c.count"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <!-- Proxy List (2 kolom compact) -->
+        <div x-show="proxies.length > 0" x-cloak>
+          <div x-show="!loading" class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <template x-for="(prx, index) in proxies" :key="prx.prxIP + index">
+              <label class="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-slate-700/40 bg-slate-900/30 cursor-pointer hover:border-indigo-500/40 hover:bg-indigo-500/5 transition">
+                <input type="checkbox" :checked="isSelected(prx)" @change="toggleProxy(prx)" class="cb w-4 h-4 self-center">
+                <span class="min-w-0 flex-1">
+                  <span class="flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-1.5 min-w-0">
+                      <span class="text-base leading-none shrink-0" x-text="getFlagEmoji(prx.country)"></span>
+                      <span class="font-mono text-xs text-indigo-300 font-semibold truncate" x-text="prx.prxIP"></span>
+                    </span>
+                    <span class="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded-md border border-slate-600 bg-slate-800/60"
+                      :class="pings[prx.prxIP] != null ? (pings[prx.prxIP] < 100 ? 'border-emerald-500/40 text-emerald-400' : pings[prx.prxIP] < 200 ? 'border-amber-500/40 text-amber-400' : 'border-rose-500/40 text-rose-400') : 'border-slate-700 text-slate-500'">
+                      <span>⚡</span>
+                      <span x-text="pings[prx.prxIP] != null ? pings[prx.prxIP] + 'ms' : '...'"></span>
+                    </span>
+                  </span>
+                  <span class="flex items-center justify-between gap-2 mt-1">
+                    <span class="text-[10px] text-slate-500 truncate" x-text="prx.org"></span>
+                    <span class="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded-md border border-indigo-500/40 bg-indigo-500/10 text-indigo-400">
+                      <span>🔌</span>
+                      <span x-text="prx.prxPort"></span>
+                    </span>
+                  </span>
+                </span>
+              </label>
+            </template>
+          </div>
+
+          <!-- Loading skeleton -->
+          <div x-show="loading" class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <template x-for="i in 6" :key="i">
+              <div class="flex items-center gap-2.5 px-3 py-2.5 animate-pulse">
+                <span class="w-3.5 h-3.5 rounded bg-slate-800"></span>
+                <span class="w-5 h-3 rounded bg-slate-800"></span>
+                <span class="flex-1 space-y-1">
+                  <span class="block h-2.5 w-3/4 rounded bg-slate-800"></span>
+                  <span class="block h-2 w-1/2 rounded bg-slate-800"></span>
+                </span>
+              </div>
+            </template>
+          </div>
+
+          <!-- Pagination -->
+          <div x-show="totalPages > 1" class="flex items-center justify-between mt-4 pt-4 border-t border-slate-700/50">
+            <button @click="page > 1 && (page--, loadProxies())" :disabled="page === 1"
+              class="w-9 h-9 flex items-center justify-center glass-card rounded-lg border border-slate-700 hover:border-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition">
+              ←
+            </button>
+            <span class="flex items-center gap-2.5">
+              <!-- Count Selected -->
+              <span x-show="selectedProxies.length > 0" x-cloak
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">
+                <span class="text-[11px] leading-none">✅</span>
+                <span x-text="selectedProxies.length"></span>
+                <span class="capitalize">Selected</span>
+              </span>
+              <!-- Page Count -->
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">
+                <span class="capitalize">Page</span>
+                <span x-text="page" class="text-white font-bold"></span>
+                <span class="text-slate-500">/</span>
+                <span x-text="totalPages" class="text-indigo-400"></span>
+              </span>
+            </span>
+            <button @click="page < totalPages && (page++, loadProxies())" :disabled="page >= totalPages"
+              class="w-9 h-9 flex items-center justify-center glass-card rounded-lg border border-slate-700 hover:border-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition">
+              →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Configure Button -->
+      <div x-show="selectedProxies.length > 0" x-cloak class="animate-slide-up">
+        <button @click="showDialog = true"
+          class="w-full py-4 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 hover:scale-[1.02] rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg">
+          <span class="text-lg leading-none">⚙️</span>
+          <span>Configure & Build (<span x-text="selectedProxies.length"></span> Proxies)</span>
+        </button>
+      </div>
+
+      <!-- Config Dialog -->
+      <div x-show="showDialog" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" style="background:rgba(0,0,0,0.8)">
+        <div @click.away="showDialog = false" class="glass-card rounded-3xl p-6 max-w-md w-full animate-slide-up">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <span class="w-5 h-5 text-purple-400">🎛️</span>
+              <h3 class="text-lg font-bold">Config Options</h3>
+            </div>
+            <button @click="showDialog = false" class="text-slate-400 hover:text-slate-100 transition">
+              <span class="w-5 h-5">✕</span>
+            </button>
+          </div>
+
+          <div class="space-y-5">
+            <!-- Mode SNI/CDN -->
+            <div>
+              <label class="block text-xs text-slate-400 font-medium mb-3">Mode Selection</label>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                  :class="config.mode === 'sni' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'">
+                  <input type="radio" x-model="config.mode" value="sni" class="sr-only">
+                  <span class="w-5 h-5 text-indigo-400">🛡️</span>
+                  <span class="text-sm font-semibold">SNI</span>
+                </label>
+                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                  :class="config.mode === 'cdn' ? 'border-purple-500 bg-purple-500/10' : 'hover:border-slate-700'">
+                  <input type="radio" x-model="config.mode" value="cdn" class="sr-only">
+                  <span class="w-5 h-5 text-purple-400">☁️</span>
+                  <span class="text-sm font-semibold">CDN</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Bug Domain -->
+            <div>
+              <label class="block text-xs text-slate-400 font-medium mb-2">Bug Domain</label>
+              <input x-model="config.bug" type="text" placeholder="support.zoom.us"
+                class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none text-sm transition">
+            </div>
+
+            <!-- Wildcard Subdomain -->
+            <div>
+              <label class="block text-xs text-slate-400 font-medium mb-3">Wildcard Subdomain</label>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                  :class="config.wildcard === 'no' ? 'border-slate-500 bg-slate-500/10' : 'hover:border-slate-700'">
+                  <input type="radio" x-model="config.wildcard" value="no" class="sr-only">
+                  <span class="w-5 h-5 text-slate-400">🚫</span>
+                  <span class="text-sm font-semibold">Non Wildcard</span>
+                </label>
+                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                  :class="config.wildcard === 'yes' ? 'border-amber-500 bg-amber-500/10' : 'hover:border-slate-700'">
+                  <input type="radio" x-model="config.wildcard" value="yes" class="sr-only">
+                  <span class="w-5 h-5 text-amber-400">✳️</span>
+                  <span class="text-sm font-semibold">Wildcard</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Port -->
+            <div>
+              <label class="block text-xs text-slate-400 font-medium mb-3">Port Configuration</label>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                  :class="config.port === '443' ? 'border-emerald-500 bg-emerald-500/10' : 'hover:border-slate-700'">
+                  <input type="radio" x-model="config.port" value="443" class="sr-only">
+                  <span class="w-5 h-5 text-emerald-400">🔒</span>
+                  <span class="text-sm font-semibold">443 (TLS)</span>
+                </label>
+                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                  :class="config.port === '80' ? 'border-orange-500 bg-orange-500/10' : 'hover:border-slate-700'">
+                  <input type="radio" x-model="config.port" value="80" class="sr-only">
+                  <span class="w-5 h-5 text-orange-400">🔓</span>
+                  <span class="text-sm font-semibold">80 (Plain)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <button @click="buildConfig()" :disabled="!config.bug || building"
+            class="w-full mt-6 py-4 gradient-bg hover:scale-[1.02] rounded-2xl font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <span class="w-5 h-5" :class="{'animate-spin': building}">🚀</span>
+            <span x-text="building ? 'Building Configurations...' : 'Generate VPN Config'"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Output Results -->
+      <section x-show="result.uri" x-cloak class="glass-card rounded-3xl p-6 animate-slide-up">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+            <span class="w-5 h-5">✅</span>
+          </div>
+          <h2 class="text-lg font-bold">Output Configurations</h2>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm text-slate-400 flex items-center gap-2">
+                <span class="w-4 h-4">🔗</span> VLESS URIs
+              </label>
+              <button @click="copyText(result.uri)" 
+                class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1">
+                <span class="w-4 h-4">📋</span> Copy
+              </button>
+            </div>
+            <textarea readonly x-model="result.uri" rows="5"
+              class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 font-mono text-xs resize-none focus:outline-none"></textarea>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm text-slate-400 flex items-center gap-2">
+                <span class="w-4 h-4">📄</span> Clash YAML
+              </label>
+              <button @click="copyText(result.yaml)" 
+                class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1">
+                <span class="w-4 h-4">📋</span> Copy
+              </button>
+            </div>
+            <textarea readonly x-model="result.yaml" rows="8"
+              class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 font-mono text-xs resize-none focus:outline-none"></textarea>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-6 text-center animate-fade-in" style="animation-delay: 0.3s;">
+      <p class="text-sm text-slate-400">
+        Developed with ❤️ by Banten IT Solutions
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    function buildApp() {
+      return {
+        filters: { cc: '', q: '' },
+        loading: false,
+        building: false,
+        proxies: [],
+        selectedProxies: [],
+        selectAll: false,
+        page: 1,
+        limit: 10,
+        totalCount: 0,
+        totalPages: 0,
+        countries: [],
+        pings: {},
+        searchTimer: null,
+        abortController: null,
+        showDialog: false,
+        config: { mode: 'sni', bug: 'support.zoom.us', wildcard: 'no', port: '443' },
+        result: { uri: '', yaml: '' },
+
+        init() {
+          this.loadProxies();
+        },
+
+        // Debounce: tunggu 400ms setelah user berhenti mengetik sebelum fetch
+        scheduleSearch() {
+          clearTimeout(this.searchTimer);
+          this.searchTimer = setTimeout(() => this.loadProxies(), 400);
+        },
+
+        async loadProxies() {
+          // Cancel previous request if still pending
+          if (this.abortController) {
+            this.abortController.abort();
+          }
+          this.abortController = new AbortController();
+
+          this.loading = true;
+          try {
+            const params = new URLSearchParams({
+              cc: this.filters.cc,
+              q: this.filters.q,
+              page: this.page,
+              limit: this.limit
+            });
+            const response = await fetch(`/api/proxies?${params}`, { signal: this.abortController.signal });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            this.proxies = data.items || [];
+            this.totalCount = data.count || 0;
+            this.totalPages = data.pages || 1;
+            this.countries = data.countries || [];
+            this.checkPings();
+          } catch (error) {
+            if (error.name === 'AbortError') {
+              // Request was cancelled, ignore
+              return;
+            }
+            console.error(error);
+            alert('Failed to load proxies');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        // Check ping dengan CACHE: proxy yang sudah pernah di-check (prxIP sama)
+        // TIDAK di-fetch ulang — hasil diambil dari this.pings.
+        async checkPings() {
+          const missing = this.proxies.filter((prx) => !(prx.prxIP in this.pings));
+          if (missing.length === 0) return;
+
+          await Promise.all(
+            missing.map(async (prx) => {
+              try {
+                const res = await fetch(`/api/check?target=${prx.prxIP}:${prx.prxPort}`, { signal: AbortSignal.timeout(4000) });
+                const data = await res.json();
+                this.pings = { ...this.pings, [prx.prxIP]: data.success ? Math.round(data.latency) : null };
+              } catch (e) {
+                this.pings = { ...this.pings, [prx.prxIP]: null };
+              }
+            }),
+          );
+        },
+
+        isSelected(prx) {
+          return this.selectedProxies.some(p => p.prxIP === prx.prxIP);
+        },
+
+        toggleProxy(prx) {
+          const idx = this.selectedProxies.findIndex(p => p.prxIP === prx.prxIP);
+          if (idx !== -1) {
+            this.selectedProxies.splice(idx, 1);
+          } else {
+            this.selectedProxies.push(prx);
+          }
+          // Sinkronkan checkbox "Select All" dengan jumlah proxy di halaman
+          this.selectAll = this.proxies.length > 0 && this.proxies.every(p => this.isSelected(p));
+        },
+
+        toggleSelectAll() {
+          this.selectedProxies = this.selectAll ? [...this.proxies] : [];
+        },
+
+        buildConfig() {
+          this.building = true;
+          setTimeout(() => {
+            const hostname = location.hostname;
+            const { mode, bug, wildcard, port } = this.config;
+            
+            // Validate & sanitize input bug domain
+            const cleanBug = bug.replace(/[^a-zA-Z0-9.-]/g, '').trim();
+            if (!cleanBug) {
+              alert('Invalid Bug Domain!');
+              this.building = false;
+              return;
+            }
+            
+            // Validate port
+            const cleanPort = port === '80' ? '80' : '443';
+            
+            let server, servername, host;
+
+            if (mode === 'sni') {
+              if (wildcard === 'yes') {
+                server = `${cleanBug}.${hostname}`;
+                servername = cleanBug;
+                host = cleanBug;
+              } else {
+                server = hostname;
+                servername = cleanBug;
+                host = cleanBug;
+              }
+            } else {
+              if (wildcard === 'yes') {
+                server = cleanBug;
+                servername = `${cleanBug}.${hostname}`;
+                host = `${cleanBug}.${hostname}`;
+              } else {
+                server = cleanBug;
+                servername = hostname;
+                host = hostname;
+              }
+            }
+
+            const tls = cleanPort === '443';
+            const uris = [];
+            const proxiesYaml = [];
+            
+            const yamlEscape = (str) => str.replace(/"/g, '\\"');
+
+            this.selectedProxies.forEach(proxy => {
+              const uuid = this.generateUUID();
+              const flag = this.getFlagEmoji(proxy.country);
+              const orgName = `${flag} ${proxy.org}`;
+              
+              // Safe URI configuration
+              const safeHash = encodeURIComponent(`${orgName} WS ${tls ? 'TLS' : 'NTLS'} [BITS Cloudflare VPN]`);
+              const uri = `vless://${uuid}@${server}:${cleanPort}?encryption=none&security=${tls ? 'tls' : 'none'}${tls ? `&sni=${servername}` : ''}&type=ws&host=${host}&path=%2F%3Fed%3D2560#${safeHash}`;
+              uris.push(uri);
+              
+              proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
+    type: vless
+    server: ${server}
+    port: ${cleanPort}
+    uuid: ${uuid}
+    udp: false
+    tls: ${tls}
+    network: ws
+    servername: ${servername}
+    ws-opts:
+      path: /?ed=2560
+      headers:
+        Host: ${host}`);
+            });
+
+            this.result.uri = uris.join('\n');
+            this.result.yaml = `proxies:\n${proxiesYaml.join('\n')}`;
+            this.showDialog = false;
+            this.building = false;
+            setTimeout(() => document.querySelector('textarea[readonly]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+          }, 1000);
+        },
+
+        generateUUID() {
+          if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+          }
+          const cryptoObj = typeof crypto !== 'undefined' ? crypto : (typeof window !== 'undefined' ? (window.crypto || window.msCrypto) : null);
+          if (cryptoObj && cryptoObj.getRandomValues) {
+            const buf = new Uint8Array(16);
+            cryptoObj.getRandomValues(buf);
+            buf[6] = (buf[6] & 0x0f) | 0x40;
+            buf[8] = (buf[8] & 0x3f) | 0x80;
+            const hex = Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+            return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+          }
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
+        },
+
+        getFlagEmoji(countryCode) {
+          if (!countryCode || countryCode.length !== 2) return '🌐';
+          const code = countryCode.toUpperCase();
+          return String.fromCodePoint(...[...code].map(ch => 0x1F1E6 - 65 + ch.charCodeAt(0)));
+        },
+
+        copyText(text) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+              .then(() => alert('✅ Copied to clipboard!'))
+              .catch(() => this.fallbackCopy(text));
+          } else {
+            this.fallbackCopy(text);
+          }
+        },
+
+        fallbackCopy(text) {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          try {
+            document.execCommand('copy');
+            alert('✅ Copied to clipboard!');
+          } catch {
+            alert('❌ Failed to copy');
+          }
+          document.body.removeChild(textarea);
+        }
+      };
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "vpn" generated at 2026-08-08T13:09:53.571Z.

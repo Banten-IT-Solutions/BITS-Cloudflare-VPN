@@ -30,12 +30,13 @@
     "url": "https://github.com/bitscoid/BITS-Cloudflare-VPN/issues"
   },
   "homepage": "https://github.com/bitscoid/BITS-Cloudflare-VPN",
-  "main": "worker.js",
+  "main": "src/index.ts",
   "exports": {
-    ".": "./worker.js"
+    ".": "./src/index.ts"
   },
   "files": [
-    "worker.js",
+    "src",
+    "assets",
     "KV.json",
     "proxy.txt",
     "raw.txt",
@@ -52,9 +53,13 @@
     "bun": ">=1.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260808.1",
     "@types/bun": "latest",
     "@types/node": "^26.1.2",
     "typescript": "^7.0.2",
     "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "hono": "^4.13.1"
   }
 }
