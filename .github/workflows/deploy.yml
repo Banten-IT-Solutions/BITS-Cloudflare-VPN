@@ -23,7 +23,6 @@ permissions:
 
 env:
   GIT_REF: ${{ github.event.inputs.commit || github.ref }}
-  # empty string means the default (no) environment on Workers
   WORKERS_ENV: ''
 
 jobs:
@@ -43,7 +42,6 @@ jobs:
           fetch-depth: 0
 
       - name: 🔧 Resolve environment (prod/one)
-        # 'dev' deploys to the default (empty) worker environment
         if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'one'
         run: |
           echo "WORKERS_ENV=${WENV}" >> "$GITHUB_ENV"
@@ -55,7 +53,6 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
 
       - name: 🏷️ Resolve environment from git tag
-        # tagged releases always deploy to production
         if: github.ref_type == 'tag'
         run: |
           echo "WORKERS_ENV=${WENV}" >> "$GITHUB_ENV"
@@ -73,7 +70,6 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           environment: ${{ env.WORKERS_ENV }}
         env:
-          # wrangler-action reads GIT_COMMIT_ID for version metadata
           GIT_COMMIT_ID: ${{ env.GIT_REF }}
 
       - name: 🎉 Deployment summary
