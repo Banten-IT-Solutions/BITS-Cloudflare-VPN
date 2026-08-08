@@ -1,5 +1,4 @@
 // Relay WebSocket handler + protocol parsers (verbatim dari worker.js baris 418-1167)
-// @ts-nocheck
 import { connect } from "cloudflare:sockets";
 import {
   DNS_SERVER_ADDRESS,
@@ -22,14 +21,7 @@ import {
   arrayBufferToHex,
 } from "./constants";
 
-// Module-level state untuk prxIP (diset dari index.ts sebelum websocketHandler dipanggil)
-let prxIP = "";
-
-export function setPrxIP(ip: string): void {
-  prxIP = ip;
-}
-
-export async function websocketHandler(request: Request) {
+export async function websocketHandler(request: Request, prxIP: string) {
   const webSocketPair = new WebSocketPair();
   const [client, webSocket] = Object.values(webSocketPair);
 
@@ -133,6 +125,7 @@ export async function websocketHandler(request: Request) {
             webSocket,
             responseHeader,
             log,
+            prxIP,
           );
         },
         close() {
@@ -169,7 +162,7 @@ async function protocolSniffer(buffer: ArrayBuffer) {
     const version = new Uint8Array(buffer.slice(0, 1))[0];
     if (version === 0) {
       const protocolUuid = new Uint8Array(buffer.slice(1, 17));
-      if (arrayBufferToHex(protocolUuid).match(/^[0-9a-f]{8}[0-9a-f]{4}4[0-9a-f]{3}[89ab][0-9a-f]{3}[0-9a-f]{12}$/i)) {
+      if (arrayBufferToHex(protocolUuid.buffer as ArrayBuffer).match(/^[0-9a-f]{8}[0-9a-f]{4}4[0-9a-f]{3}[89ab][0-9a-f]{3}[0-9a-f]{12}$/i)) {
         return atob(neko);
       }
     }
@@ -215,6 +208,60 @@ async function generateStreamResponseHeader(responseOptions: Uint8Array, encKey:
   }
 }
 
+function isDestinationSafe(address: string, port: number): boolean {
+  if (port < 1 || port > 65535 || isNaN(port)) {
+    return false;
+  }
+
+  const addr = address.trim().toLowerCase();
+
+  // Basic Hostname SSRF Checks
+  if (addr === "localhost" || addr.endsWith(".local") || addr.endsWith(".internal")) {
+    return false;
+  }
+
+  // IPv4 Checks
+  const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const match = addr.match(ipv4Regex);
+  if (match) {
+    const octets = match.slice(1).map(x => parseInt(x, 10));
+    if (octets.some(o => o < 0 || o > 255)) return false;
+
+    const [o1, o2, o3, o4] = octets;
+
+    // 127.0.0.0/8 (Loopback)
+    if (o1 === 127) return false;
+    // 10.0.0.0/8 (Private)
+    if (o1 === 10) return false;
+    // 172.16.0.0/12 (Private)
+    if (o1 === 172 && o2 >= 16 && o2 <= 31) return false;
+    // 192.168.0.0/16 (Private)
+    if (o1 === 192 && o2 === 168) return false;
+    // 169.254.0.0/16 (Link-Local)
+    if (o1 === 169 && o2 === 254) return false;
+    // 100.64.0.0/10 (Carrier-Grade NAT)
+    if (o1 === 100 && o2 >= 64 && o2 <= 127) return false;
+    // 0.0.0.0/8 (Current network)
+    if (o1 === 0) return false;
+    // Multicast & Broadcast
+    if (o1 >= 224) return false;
+  }
+
+  // IPv6 Checks
+  if (addr.includes(":")) {
+    // Loopback ::1
+    if (addr === "::1" || addr === "0:0:0:0:0:0:0:1") return false;
+    // Link-local fe80::/10
+    if (addr.startsWith("fe80:") || addr.startsWith("fe80::")) return false;
+    // Unique local fc00::/7
+    if (addr.startsWith("fc") || addr.startsWith("fd")) return false;
+    // Unspecified ::
+    if (addr === "::" || addr === "0:0:0:0:0:0:0:0") return false;
+  }
+
+  return true;
+}
+
 async function handleTCPOutBound(
   remoteSocket: any,
   addressRemote: string,
@@ -223,7 +270,14 @@ async function handleTCPOutBound(
   webSocket: any,
   responseHeader: any,
   log: any,
+  prxIP: string,
 ) {
+  // Validate outbound destination (SSRF Protection)
+  if (!isDestinationSafe(addressRemote, portRemote)) {
+    log(`Blocked unsafe connection to ${addressRemote}:${portRemote}`);
+    safeCloseWebSocket(webSocket);
+    return;
+  }
   async function connectAndWrite(address: string, port: number) {
     const tcpSocket = connect({
       hostname: address,
@@ -259,6 +313,11 @@ async function handleTCPOutBound(
 }
 
 async function handleUDPOutbound(targetAddress: string, targetPort: number, dataChunk: ArrayBuffer, webSocket: any, responseHeader: any, log: any, relay: any) {
+  // Validate outbound destination (SSRF Protection)
+  if (!isDestinationSafe(targetAddress, targetPort)) {
+    log(`Blocked unsafe UDP connection to ${targetAddress}:${targetPort}`);
+    return;
+  }
   try {
     let protocolHeader = responseHeader;
 
@@ -355,19 +414,19 @@ async function md5(...inputs: ArrayBuffer[]) {
     combined.set(new Uint8Array(input), offset);
     offset += input.byteLength;
   }
-  const hashBuffer = await crypto.subtle.digest("MD5", combined);
+  const hashBuffer = await crypto.subtle.digest("MD5", combined.buffer as ArrayBuffer);
   return new Uint8Array(hashBuffer);
 }
 
 async function sha256(input: Uint8Array) {
-  const hashBuffer = await crypto.subtle.digest("SHA-256", input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", input.buffer as ArrayBuffer);
   return new Uint8Array(hashBuffer);
 }
 
 async function kdf(key: Uint8Array, path: (string | Uint8Array)[]) {
   async function hmacSha256(key: Uint8Array, data: Uint8Array) {
-    const hmacKey = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-    const signature = await crypto.subtle.sign("HMAC", hmacKey, data);
+    const hmacKey = await crypto.subtle.importKey("raw", key.buffer as ArrayBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const signature = await crypto.subtle.sign("HMAC", hmacKey, data.buffer as ArrayBuffer);
     return new Uint8Array(signature);
   }
 
@@ -397,7 +456,7 @@ async function kdf(key: Uint8Array, path: (string | Uint8Array)[]) {
   }
 
   const sha256Hash = async (data: Uint8Array) => {
-    return new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+    return new Uint8Array(await crypto.subtle.digest("SHA-256", data.buffer as ArrayBuffer));
   };
 
   let currentHashFn = await recursiveHash(new TextEncoder().encode("VMess AEAD KDF"), sha256Hash);
@@ -411,10 +470,10 @@ async function kdf(key: Uint8Array, path: (string | Uint8Array)[]) {
 }
 
 async function aesGcmDecrypt(key: Uint8Array, nonce: Uint8Array, data: Uint8Array, aad: Uint8Array) {
-  const cryptoKey = await crypto.subtle.importKey("raw", key, { name: "AES-GCM" }, false, ["decrypt"]);
+  const cryptoKey = await crypto.subtle.importKey("raw", key.buffer as ArrayBuffer, { name: "AES-GCM" }, false, ["decrypt"]);
 
   try {
-    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce, additionalData: aad }, cryptoKey, data);
+    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce.buffer as ArrayBuffer, additionalData: aad.buffer as ArrayBuffer }, cryptoKey, data.buffer as ArrayBuffer);
     return new Uint8Array(decrypted);
   } catch (e: any) {
     throw new Error("AEAD decryption failed: " + e.message);
@@ -422,9 +481,9 @@ async function aesGcmDecrypt(key: Uint8Array, nonce: Uint8Array, data: Uint8Arra
 }
 
 async function aesGcmEncrypt(key: Uint8Array, nonce: Uint8Array, data: Uint8Array, aad: Uint8Array) {
-  const cryptoKey = await crypto.subtle.importKey("raw", key, { name: "AES-GCM" }, false, ["encrypt"]);
+  const cryptoKey = await crypto.subtle.importKey("raw", key.buffer as ArrayBuffer, { name: "AES-GCM" }, false, ["encrypt"]);
 
-  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce, additionalData: aad }, cryptoKey, data);
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce.buffer as ArrayBuffer, additionalData: aad.buffer as ArrayBuffer }, cryptoKey, data.buffer as ArrayBuffer);
   return new Uint8Array(encrypted);
 }
 

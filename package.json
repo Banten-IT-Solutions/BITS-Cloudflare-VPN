@@ -30,12 +30,13 @@
     "url": "https://github.com/bitscoid/BITS-Cloudflare-VPN/issues"
   },
   "homepage": "https://github.com/bitscoid/BITS-Cloudflare-VPN",
-  "main": "worker.js",
+  "main": "src/index.ts",
   "exports": {
-    ".": "./worker.js"
+    ".": "./src/index.ts"
   },
   "files": [
-    "worker.js",
+    "src",
+    "assets",
     "KV.json",
     "proxy.txt",
     "raw.txt",

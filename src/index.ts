@@ -1,6 +1,6 @@
 // Entry point: WS relay + Hono app
 import { Hono } from "hono";
-import { websocketHandler, setPrxIP } from "./core/relay";
+import { websocketHandler } from "./core/relay";
 import { getKVPrxList } from "./core/lists";
 import { createApiRoutes } from "./routes/api";
 import { CORS_HEADER_OPTIONS } from "./core/constants";
@@ -51,12 +51,11 @@ export default {
           }
 
           const prxIP = kvPrx[prxKey][Math.floor(Math.random() * kvPrx[prxKey].length)];
-          setPrxIP(prxIP);
 
-          return await websocketHandler(request);
+          return await websocketHandler(request, prxIP);
         } else if (prxMatch) {
-          setPrxIP(prxMatch[1]);
-          return await websocketHandler(request);
+          const prxIP = prxMatch[1];
+          return await websocketHandler(request, prxIP);
         }
       }
 
