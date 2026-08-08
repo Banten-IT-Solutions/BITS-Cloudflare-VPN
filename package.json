@@ -1,16 +1,16 @@
 {
-  "name": "bits-vpn",
-  "version": "2.0.0",
-  "private": true,
+  "name": "nautica",
+  "version": "1.0.0",
+  "license": "ISC",
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
-  "scripts": {
-    "build": "bun run --filter @bits-vpn/shared build && bun run --filter @bits-vpn/web build && bun run --filter @bits-vpn/worker build && bun run --filter @bits-vpn/scanner-worker build",
-    "dev:worker": "bun run --filter @bits-vpn/worker dev",
-    "dev:scanner": "bun run --filter @bits-vpn/scanner-worker dev",
-    "typecheck": "bun run --filter '@bits-vpn/*' typecheck",
-    "migrate:local": "bun run --cwd apps/worker wrangler d1 migrations apply vpn --local",
-    "migrate:remote": "bun run --cwd apps/worker wrangler d1 migrations apply vpn --remote"
+  "devDependencies": {
+    "@types/bun": "latest"
   },
-  "devDependencies": { "wrangler": "^4.0.0" }
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@types/node": "^22.10.2",
+    "javascript-obfuscator": "^4.1.1"
+  }
 }

@@ -1,323 +1,105 @@
-# BITS VPN
-
-VLESS proxy relay on Cloudflare Workers — single Worker serves the tunnel, REST API, and static frontend.
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?style=for-the-badge&logo=cloudflare" alt="Cloudflare Workers">
-  <img src="https://img.shields.io/badge/Hono-E36002?style=for-the-badge&logo=hono" alt="Hono">
-  <img src="https://img.shields.io/badge/Alpine.js-8BC0D0?style=for-the-badge&logo=alpinedotjs&logoColor=black" alt="Alpine.js">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
-</p>
-
-## Overview
-
-BITS VPN combines a VLESS-over-WebSocket tunnel relay (`cloudflare:sockets`), a subscription/health-check API (Hono), and a lightweight Alpine.js dashboard — all deployed as a single Cloudflare Worker with bound static assets.
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Runtime | Cloudflare Workers, `cloudflare:sockets`, `nodejs_compat` |
-| API | Hono, Zod (validation) |
-| Database | Cloudflare D1 (proxy metadata), KV (sub cache) |
-| Frontend | Vite, Alpine.js, Tailwind CSS v4 |
-| Tooling | Bun (workspaces), TypeScript, wrangler |
-| CI/CD | GitHub Actions (typecheck → build → deploy) |
-
-## Repository Structure
-
-```
-bits-vpn/
-├── apps/
-│   ├── worker/                 # Cloudflare Worker (API + tunnel)
-│   │   ├── src/
-│   │   │   ├── index.ts        # Entry: tunnel detection → Hono → static fallback
-│   │   │   ├── api.ts          # REST endpoints (/api/v1/*)
-│   │   │   ├── tunnel.ts       # VLESS-over-WebSocket relay
-│   │   │   ├── proxy.ts        # D1 queries + KV cache layer
-│   │   │   ├── health.ts       # Proxy health checker
-│   │   │   └── env.ts          # Env bindings type
-│   │   ├── d1/migrations/      # D1 schema migrations
-│   │   └── wrangler.toml       # Worker config
-│   │
-│   └── web/                    # Frontend SPA
-│       ├── index.html          # Single page (Alpine.js hash router)
-│       ├── src/
-│       │   ├── main.ts         # Alpine init
-│       │   ├── store.ts        # App state (monitor, build, convert)
-│       │   ├── style.css       # Tailwind v4 + fonts
-│       │   └── alpine.d.ts     # Type shim
-│       └── vite.config.ts      # Vite + Tailwind plugin
-│
-├── packages/
-│   └── shared/                 # Shared Zod schemas + types
-│       └── src/index.ts        # ProxySchema, SubQuerySchema, HealthCheckSchema
-│
-├── .github/workflows/ci.yml   # CI/CD pipeline
-├── tsconfig.base.json          # Base TS config
-└── package.json                # Bun workspace root
-```
+# Welcome to Nautica
+
+Sebuah repository serverless tunnel studi kasus Indonesia
+
+> ## NOTES.md
+>
+> Kamu tidak perlu membayar untuk menggunakan kode dalam repository/layanan ini.  
+> Kalau kamu membayar kepada siapapun, berarti kamu terkena scam.
+
+# Fitur
+
+- [x] Otomatis split protocol VLESS, Trojan, Shadowsocks, dan VMess
+- [x] Support VMess AEAD (kompatibel dengan V2Ray)
+- [x] Reverse proxy
+- [x] Cache daftar proxy
+- [x] Support TCP dan DoH
+- [x] Transport Websocket CDN dan SNI
+- [x] KV proxy key (proxy berdasarkan country)
+- [x] Pagination
+- [x] Tampilan web bagus dan minimalis (Menurut saya)
+- [x] Dark mode
+- [x] Auto check (ping) akun
+- [x] Ambil akun dalam beberapa format (link, clash, sing-box, dll)
+- [x] Registrasi wildcard
+- [x] Menambahkan filter
+  - [x] Negara `&cc=ID,SG,...`
+- [x] Subscription API
+  - [x] Country Code `&cc=ID,SG,JP,KR,...`
+  - [x] Format `&format=clash` (raw, clash, sfa, bfr, v2ray)
+  - [x] Limit `&limit=10`
+  - [x] VPN `&vpn=vless,trojan,ss,vmess`
+  - [x] Port `&port=443,80`
+  - [x] Domain `&domain=zoom.us`
+- [x] Tombol `Deploy to workers` untuk instant deployment
+
+# Todo (Belum Selesai)
+
+- [x] Lebih efisien (Partial) (I hate Javascript btw, jadi males buat benerin)
+- [ ] Skema URL shadowsocks
+
+Kode ini masih perlu banyak perbaikan, jadi silahkan berkontribusi dan berikan PR kalian!
+
+# Catatan
+
+- Harus UUID v4 Variant 2
+- Gunakan security `none`
+- Gunakan DoH di aplikasi VPN kalian jika tidak bisa browsing atau membuka website
+  - Contoh DoH `https://8.8.8.8/dns-query`
+- **VMess Protocol:**
+  - Mendukung VMess AEAD sesuai spesifikasi V2Ray
+  - Enkripsi menggunakan AES-128-GCM
+  - UUID default untuk testing: `00000000-0000-0000-0000-000000000000`
+  - AlterID harus `0` (AEAD mode)
+  - Security: `zero`
+
+# Cara Deploy
+
+## Instant
+
+Klik tombol di bawah  
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/FoolVPN-ID/Nautica)
+
+## Manual
+
+1. Buat akun cloudflare
+2. Buat worker
+3. Copy kode dari `_worker.js` ke editor cloudflare worker
+4. (Optional) Masukkan link daftar proxy kalian ke dalam environemnt variable `PROXY_BANK_URL`
+5. (Optional) Masukkan link target reverse proxy ke environment variable `REVERSE_PROXY_TARGET`
+6. Deploy
+7. Buka `https://DOMAIN_WORKER_KALIAN/sub`
+
+- Contoh daftar proxy [proxyList.txt](https://raw.githubusercontent.com/dickymuliafiqri/Nautica/refs/heads/main/proxyList.txt)
+- Contoh reverse proxy [example.com](https://example.com)
+
+## Cara Aktivasi API
+
+Salah satu fungsi API adalah agar kalian bisa melihat dan menambahkan subdomain wildcards ke workers.
+
+Berikut cara aktivasinya:
+
+1. Masuk ke halaman editor workers yang sudah kalian buat
+2. Isi `variable` dari baris ke 4-9 sesuai dengan key yang kalian miliki
+3. Deploy
+
+### Aktivasi Wildcard (Custom Domain)
+
+1. Selesaikan langkah [Aktivasi API](#cara-aktivasi-api)
+2. Isi variable `rootDomain` dengan domain utama kalian
+   - Contoh: Domain workers `nautica.foolvpn.me`, berarti domain utamanya adalah `foolvpn.me`
+3. Isi variable `serviceName` dengan nama workers kalian
+   - Contoh: Domain workers `nautica.foolvpn.me`, berarti nama workersnya adalah `nautica`
+4. Buat custom domain di pengaturan workers dengan kombinasi `serviceName`.`rootDomain`
+   - Contoh: `nautica.foolvpn.me`
+
+# Endpoint
+
+- `/` -> Halaman utama reverse proxy
+- `/sub/:page` -> Halaman sub/list akun
+- `/api/v1/sub` -> Subscription link, [Queries](#fitur)
+
+# Footnote
 
-## Quick Start
-
-### Prerequisites
-
-- [Bun](https://bun.sh) (latest)
-- Cloudflare account with D1 + KV enabled
-
-### Setup
-
-```bash
-# Install dependencies
-bun install
-
-# Build shared package (required before worker typecheck)
-bun run --filter @bits-vpn/shared build
-
-# Apply D1 migrations locally
-bun run migrate:local
-```
-
-### Development
-
-```bash
-# Start frontend dev server (http://localhost:5173)
-bun run dev:web
-
-# Start worker dev server (proxies API requests)
-bun run dev:worker
-```
-
-> The Vite dev server proxies `/api` requests to `https://vpn.bits.co.id` for local development.
-
-### Build & Typecheck
-
-```bash
-# Typecheck all packages
-bun run typecheck
-
-# Build frontend + worker
-bun run build
-```
-
-## Deployment
-
-CI/CD runs automatically on push to `main`:
-
-1. **Verify** — `bun install` → `typecheck` → `build`
-2. **Deploy** — Build frontend → Apply D1 migrations → `wrangler deploy`
-
-### Required GitHub Secrets
-
-| Secret | Description |
-|--------|-------------|
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API token with Workers/D1/KV permissions |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
-
-### wrangler.toml Setup
-
-Replace placeholder IDs before first deploy:
-
-```toml
-[[d1_databases]]
-database_id = "your-d1-database-id"    # ← replace
-
-[[kv_namespaces]]
-id = "your-kv-namespace-id"            # ← replace
-```
-
-Custom domains:
-
-```toml
-routes = [
-  { pattern = "vpn.bits.co.id", custom_domain = true },
-  { pattern = "support.zoom.us.vpn.bits.co.id", custom_domain = true },
-]
-```
-
-## API Reference
-
-All endpoints are CORS-enabled.
-
-### `GET /api/v1/sub`
-
-Query proxy subscription list from D1 with KV caching (5-min TTL).
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `cc` | string | — | Country codes, comma-separated (`ID,SG`) |
-| `vpn` | string | — | Protocols, comma-separated (`vless,trojan`) |
-| `port` | number | — | Port filter (`443`) |
-| `domain` | string | — | Domain filter |
-| `format` | enum | `raw` | `raw` \| `v2ray` \| `clash` \| `mihomo` \| `provider` |
-| `limit` | number | `50` | Max results (1–500) |
-
-**Response formats:**
-- `raw`, `v2ray` → `text/plain` — VLESS URIs, newline-separated
-- `clash`, `mihomo`, `provider` → `application/json` — JSON array of proxy objects
-
-### `GET /api/v1/check`
-
-Health check a proxy via HEAD request (2s timeout, 15s in-memory cache).
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `target` or `ip` | string | Target in `ip:port` format |
-
-```json
-{
-  "error": false,
-  "result": {
-    "proxy": "1.1.1.1",
-    "port": 443,
-    "proxyip": true,
-    "delay": 42
-  }
-}
-```
-
-TLS ports: `443`, `8443`, `2053`, `2083`, `2087`, `2096` → HTTPS probe; others → HTTP.
-
-### `GET /api/v1/myip`
-
-Returns client IP info from Cloudflare headers.
-
-```json
-{
-  "ip": "203.0.113.1",
-  "colo": "SIN",
-  "country": "ID",
-  "city": "Jakarta",
-  "asn": 13335
-}
-```
-
-### `GET /api/v1/health`
-
-```json
-{ "status": "ok" }
-```
-
-## WebSocket Tunnel
-
-VLESS-over-WebSocket relay using `cloudflare:sockets`.
-
-**Connection:** Any request with `Upgrade: websocket` header is handled as tunnel.
-
-**Path formats:**
-- `/<IP>:<port>`, `/<IP>-<port>`, `/<IP>=<port>` — direct proxy target
-- `/<CC>` or `/<CC1>,<CC2>` — random country-based selection
-
-**Protocol:** VLESS v0 header parsing → TCP relay via `cloudflare:sockets`. UDP is rejected. Early data supported via `sec-websocket-protocol` header (base64 URL-safe encoded).
-
-## D1 Schema
-
-```sql
-CREATE TABLE proxies (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  ip              TEXT NOT NULL,
-  port            INTEGER NOT NULL,
-  country         TEXT NOT NULL DEFAULT 'XX',
-  protocol        TEXT NOT NULL DEFAULT 'vless',
-  domain          TEXT NOT NULL DEFAULT '',
-  org             TEXT NOT NULL DEFAULT 'Unknown',
-  tls             INTEGER NOT NULL DEFAULT 1,
-  healthy         INTEGER,
-  delay_ms        INTEGER,
-  last_checked_at TEXT,
-  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE (ip, port)
-);
--- Indexes: country, protocol, port, domain
-```
-
-## Frontend Pages
-
-Hash-routed SPA (`#/monitor`, `#/build`, `#/convert`):
-
-| Route | Status | Description |
-|-------|--------|-------------|
-| `#/monitor` | Active | Proxy health monitor — checks latency via `/api/v1/check` |
-| `#/build` | Stub | Proxy list configuration (placeholder) |
-| `#/convert` | Stub | URL/format converter (placeholder) |
-
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `bun run build` | Build shared + web + worker |
-| `bun run dev:web` | Start Vite dev server |
-| `bun run dev:worker` | Start wrangler dev server |
-| `bun run typecheck` | Typecheck all packages |
-| `bun run migrate:local` | Apply D1 migrations locally |
-| `bun run migrate:remote` | Apply D1 migrations to production |
-
-## Scheduled proxy scanner
-
-`apps/scanner-worker` runs `0 0 * * *` UTC. It reads HTTPS source endpoints, accepts either JSON (`[{"ip","port","region"}]` or `{ "proxies": [...] }`) or `IP:PORT REGION` lines, keeps only ID/SG IPv4 entries, probes each target with bounded concurrency and retry, then atomically writes R2 objects:
-
-- `proxy-lists/latest.json` — current document read by proxy Worker.
-- `proxy-lists/history/<ISO timestamp>.json` — immutable scan history.
-
-R2 chosen over KV: list is file-shaped, strongly consistent after write, supports history without KV key/list limits. Scanner and proxy Worker bind same `bits-vpn-proxy-lists` bucket.
-
-### API and tunnel contract
-
-`GET /api/v1/proxies?region=ID` returns scanner output. `region` accepts `ID` or `SG`; invalid value returns `400`; missing/invalid scanner file returns `503`.
-
-```json
-{
-  "generated_at": "2026-08-08T00:00:00.000Z",
-  "proxies": [
-    {
-      "ip": "203.0.113.10",
-      "port": 443,
-      "region": "ID",
-      "last_checked": "2026-08-08T00:00:00.000Z",
-      "response_time_ms": 42,
-      "source": "https://source.example/proxies.json"
-    }
-  ]
-}
-```
-
-WebSocket `/ID`, `/SG`, `/ID,SG` selects cryptographically random healthy entry from R2. Empty list returns `503`. Direct `/IP:PORT` paths remain backward compatible.
-
-### Deploy
-
-1. Create shared R2 bucket once:
-   ```bash
-   bunx wrangler r2 bucket create bits-vpn-proxy-lists
-   ```
-2. Replace D1 and KV placeholders in `apps/worker/wrangler.jsonc`.
-3. Set scanner source endpoints before deploy. `SOURCE_URLS` is non-secret config; use comma-separated HTTPS URLs. Edit `apps/scanner-worker/wrangler.jsonc` or deploy with environment-specific vars. Never put API credentials in this field. If private source needs credentials, add secret-backed authenticated fetch before enabling it.
-4. Deploy both Workers:
-   ```bash
-   bun run --filter @bits-vpn/shared build
-   bun run --cwd apps/worker deploy
-   bun run --cwd apps/scanner-worker deploy
-   ```
-
-Cron config changes can take up to 15 minutes to propagate. First list stays unavailable until first successful scan.
-
-### Test and monitor
-
-```bash
-bun install
-bun run typecheck
-bun run build
-bun run --cwd apps/scanner-worker dev
-curl 'http://localhost:8787/cdn-cgi/handler/scheduled?format=json'
-bunx wrangler tail bits-vpn-scanner
-bunx wrangler tail bits-vpn
-```
-
-Use separate local Wrangler ports when both Workers run. Set `SOURCE_URLS` in `apps/scanner-worker/.dev.vars`; file is ignored by Git. Check Workers Cron Events for last 100 runs. Structured scanner log fields: `sources`, `candidates`, `valid`, `success_rate`, `duration_ms`. Alert on scan errors, `valid: 0`, or stale `generated_at` older than 48 hours.
-
-## License
-
-MIT License
-
----
-
-<p align="center">Built on Cloudflare Workers</p>
+- Hal aneh lain yang saya kerjakan [FoolVPN](https://t.me/foolvpn)
+- Tanya-tanya -> [Telegram](https://t.me/d_fordlalatina)

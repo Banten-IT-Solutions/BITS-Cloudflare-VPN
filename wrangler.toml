@@ -1,0 +1,10 @@
+name = "nautica"
+main = "_worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat_v2"]
+
+[unsafe.metadata.observability]
+enabled = true
+
+[observability.logs]
+enabled = true
