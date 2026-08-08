@@ -1,6 +1,6 @@
 # BITS Cloudflare VPN
 
-VPN Serverless (VLESS / VMess / Trojan via WebSocket) yang berjalan di infrastruktur Cloudflare Workers. Proyek ini memfasilitasi pembuatan konfigurasi VPN gratis dengan IP proxy negara tujuan (colocation) yang terus diperbarui secara otomatis, dikembangkan oleh [Banten IT Solutions](https://bitsco.id).
+VPN Serverless (VLESS / VMess / Trojan via WebSocket) yang berjalan di infrastruktur Cloudflare Workers. Proyek ini memfasilitasi pembuatan konfigurasi VPN gratis dengan IP proxy negara tujuan (colocation) yang terus diperbarui secara otomatis, dikembangkan oleh [Banten IT Solutions](https://github.com/bitscoid).
 
 > **Arsitektur:** Backend berbasis framework [Hono](https://hono.dev), frontend menggunakan Alpine.js dengan tema Glassmorphic premium, dan core relay WebSocket vanilla dioptimalkan untuk throughput maksimum dan latency minimal.
 
@@ -256,5 +256,5 @@ Proyek ini didistribusikan di bawah lisensi MIT. Lihat file [LICENSE](LICENSE) u
 
 ---
 
-**Dikembangkan dengan dedikasi oleh [Banten IT Solutions](https://bitsco.id)**  
+**Dikembangkan dengan dedikasi oleh [Banten IT Solutions](https://github.com/bitscoid)**  
 *Jika proyek ini membantu mempermudah kebutuhan VPN Anda, dukung kami dengan memberikan Star ⭐ pada repositori ini!*
