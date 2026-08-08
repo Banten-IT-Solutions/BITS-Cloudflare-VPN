@@ -1,65 +1,219 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VPN Serverless — Cloudflare Workers</title>
-<link rel="stylesheet" href="/shared.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.30.0"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/motion@11.x/dist/motion.min.js"></script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        dark: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+          950: '#020617',
+        }
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.5s ease-out',
+        'slide-up': 'slideUp 0.5s ease-out',
+        'glow': 'glow 2s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        glow: {
+          '0%, 100%': { boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' },
+          '50%': { boxShadow: '0 0 40px rgba(99, 102, 241, 0.6)' },
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { 
+    background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+    min-height: 100vh;
+  }
+  .glass {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+  }
+  .glow-border {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+</style>
 </head>
-<body>
-<div class="wrap">
-  <nav>
-    <a href="/" class="active">Home</a>
-    <a href="/build">Build</a>
+<body class="text-slate-50 antialiased">
+<div class="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
+  <!-- Nav -->
+  <nav class="flex gap-6 mb-12 pb-6 border-b border-slate-800">
+    <a href="/" class="flex items-center gap-2 text-indigo-400 font-semibold">
+      <i data-lucide="home" class="w-5 h-5"></i>
+      Home
+    </a>
+    <a href="/build" class="flex items-center gap-2 text-slate-400 hover:text-slate-50 transition">
+      <i data-lucide="hammer" class="w-5 h-5"></i>
+      Build
+    </a>
   </nav>
 
-  <h1 id="serviceName">VPN Serverless</h1>
-  <div class="sub">Tunnel VPN di Cloudflare Workers — VLESS / VMess / Trojan via WebSocket (CDN)</div>
-
-  <div class="card">
-    <h2>Status</h2>
-    <div>
-      <span class="pill">✅ Worker aktif</span>
-      <span class="pill">Endpoint: <code id="domain">wss://...</code></span>
-      <span class="pill">Proto: VLESS · VMess · Trojan</span>
-    </div>
-    <p class="note" style="margin-top:8px">Semua subdomain wildcard juga melayani tunnel ini.</p>
-    <div style="margin-top:12px">
-      <label>My IP:</label>
-      <div id="myip" class="url">Loading...</div>
-    </div>
+  <!-- Hero -->
+  <div class="text-center mb-16 animate-slide-up">
+    <h1 class="text-5xl font-bold mb-4">
+      <span class="gradient-text" id="serviceName">VPN Serverless</span>
+    </h1>
+    <p class="text-slate-400 text-lg">Tunnel VPN di Cloudflare Workers — VLESS / VMess / Trojan via WebSocket (CDN)</p>
   </div>
 
-  <div class="card">
-    <h2>Mulai cepat</h2>
-    <ol style="padding-left:20px; margin-bottom:10px">
-      <li>Buka <a href="/build">halaman Build</a> untuk memilih proxy dan konfigurasi.</li>
-      <li>Generate link vless:// dengan config SNI/CDN, wildcard, port.</li>
-      <li>Salin URL atau YAML Clash, lalu import ke aplikasi VPN (v2rayN, Nekoray, Clash, dll.).</li>
+  <!-- Status Card -->
+  <div class="glass rounded-2xl p-8 mb-6 glow-border animate-slide-up" style="animation-delay: 0.1s">
+    <div class="flex items-center gap-3 mb-6">
+      <i data-lucide="activity" class="w-6 h-6 text-emerald-500"></i>
+      <h2 class="text-2xl font-semibold">Status</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="glass rounded-xl p-4 border border-slate-700">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="wifi" class="w-5 h-5 text-emerald-500"></i>
+          <span class="text-sm text-slate-400">Endpoint</span>
+        </div>
+        <code class="text-indigo-400" id="domain">wss://...</code>
+      </div>
+      <div class="glass rounded-xl p-4 border border-slate-700">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="shield" class="w-5 h-5 text-purple-500"></i>
+          <span class="text-sm text-slate-400">Protocols</span>
+        </div>
+        <div class="text-sm">VLESS · VMess · Trojan</div>
+      </div>
+      <div class="glass rounded-xl p-4 border border-slate-700">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="map-pin" class="w-5 h-5 text-blue-500"></i>
+          <span class="text-sm text-slate-400">My IP</span>
+        </div>
+        <div class="text-sm" id="myip">Loading...</div>
+      </div>
+    </div>
+    <p class="text-sm text-slate-500">
+      <i data-lucide="info" class="w-4 h-4 inline"></i>
+      Semua subdomain wildcard juga melayani tunnel ini
+    </p>
+  </div>
+
+  <!-- Quick Start -->
+  <div class="glass rounded-2xl p-8 mb-6 animate-slide-up" style="animation-delay: 0.2s">
+    <div class="flex items-center gap-3 mb-6">
+      <i data-lucide="zap" class="w-6 h-6 text-yellow-500"></i>
+      <h2 class="text-2xl font-semibold">Mulai Cepat</h2>
+    </div>
+    <ol class="space-y-3 mb-6">
+      <li class="flex items-start gap-3">
+        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-semibold">1</span>
+        <span>Buka <a href="/build" class="text-indigo-400 hover:text-indigo-300 underline">halaman Build</a> untuk memilih proxy dan konfigurasi.</span>
+      </li>
+      <li class="flex items-start gap-3">
+        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-semibold">2</span>
+        <span>Generate link vless:// dengan config SNI/CDN, wildcard, port.</span>
+      </li>
+      <li class="flex items-start gap-3">
+        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-semibold">3</span>
+        <span>Salin URL atau YAML Clash, lalu import ke aplikasi VPN (v2rayN, Nekoray, Clash, dll.).</span>
+      </li>
     </ol>
-    <div class="url" id="apiExample">https://.../api/sub?vpn=vless&limit=10&format=v2ray</div>
-  </div>
-
-  <div class="card">
-    <h2>Parameter API /api/sub</h2>
-    <div class="grid">
-      <div><label>vpn</label><code>vless</code>, <code>vmess</code>, <code>trojan</code></div>
-      <div><label>cc</label>kode negara <code>ID</code>, <code>SG</code>, ...</div>
-      <div><label>port</label><code>443</code>, <code>80</code></div>
-      <div><label>limit</label>jumlah akun (default <code>10</code>)</div>
-      <div><label>format</label><code>raw</code>, <code>v2ray</code>, <code>json</code></div>
-      <div><label>domain</label>SNI/domain isian</div>
+    <div class="glass rounded-xl p-4 border border-slate-700">
+      <code class="text-sm text-slate-300 break-all" id="apiExample">https://.../api/sub?vpn=vless&limit=10&format=v2ray</code>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Tools</h2>
-    <p class="note"><a href="/build">🔨 Build</a> — Pilih proxy + konfigurasi SNI/CDN → generate vless:// + Clash YAML</p>
-    <p class="note"><a href="/api/myip">📍 /api/myip</a> — Cek IP & colo kamu saat ini</p>
+  <!-- API Parameters -->
+  <div class="glass rounded-2xl p-8 mb-6 animate-slide-up" style="animation-delay: 0.3s">
+    <div class="flex items-center gap-3 mb-6">
+      <i data-lucide="code" class="w-6 h-6 text-pink-500"></i>
+      <h2 class="text-2xl font-semibold">Parameter API /api/sub</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="glass rounded-xl p-4 border border-slate-700">
+        <div class="font-semibold text-indigo-400 mb-1">vpn</div>
+        <div class="text-sm text-slate-400"><code>vless</code>, <code>vmess</code>, <code>trojan</code></div>
+      </div>
+      <div class="glass rounded-xl p-4 border border-slate-700">
+        <div class="font-semibold text-indigo-400 mb-1">cc</div>
+        <div class="text-sm text-slate-400">kode negara <code>ID</code>, <code>SG</code>, ...</div>
+      </div>
+      <div class="glass rounded-xl p-4 border border-slate-700">
+        <div class="font-semibold text-indigo-400 mb-1">port</div>
+        <div class="text-sm text-slate-400"><code>443</code>, <code>80</code></div>
+      </div>
+      <div class="glass rounded-xl p-4 border border-slate-700">
+        <div class="font-semibold text-indigo-400 mb-1">limit</div>
+        <div class="text-sm text-slate-400">jumlah akun (default <code>10</code>)</div>
+      </div>
+      <div class="glass rounded-xl p-4 border border-slate-700">
+        <div class="font-semibold text-indigo-400 mb-1">format</div>
+        <div class="text-sm text-slate-400"><code>raw</code>, <code>v2ray</code>, <code>json</code></div>
+      </div>
+      <div class="glass rounded-xl p-4 border border-slate-700">
+        <div class="font-semibold text-indigo-400 mb-1">domain</div>
+        <div class="text-sm text-slate-400">SNI/domain isian</div>
+      </div>
+    </div>
   </div>
 
-  <div class="foot">
-    <span id="footDomain">...</span> &middot; Banten IT Solutions &middot; gratis, tidak perlu bayar
+  <!-- Tools -->
+  <div class="glass rounded-2xl p-8 mb-6 animate-slide-up" style="animation-delay: 0.4s">
+    <div class="flex items-center gap-3 mb-6">
+      <i data-lucide="wrench" class="w-6 h-6 text-orange-500"></i>
+      <h2 class="text-2xl font-semibold">Tools</h2>
+    </div>
+    <div class="space-y-3">
+      <a href="/build" class="flex items-center gap-3 p-4 glass rounded-xl border border-slate-700 hover:border-indigo-500/50 transition group">
+        <i data-lucide="hammer" class="w-5 h-5 text-indigo-400 group-hover:scale-110 transition"></i>
+        <div>
+          <div class="font-semibold group-hover:text-indigo-400 transition">Build</div>
+          <div class="text-sm text-slate-400">Pilih proxy + konfigurasi SNI/CDN → generate vless:// + Clash YAML</div>
+        </div>
+      </a>
+      <a href="/api/myip" class="flex items-center gap-3 p-4 glass rounded-xl border border-slate-700 hover:border-indigo-500/50 transition group">
+        <i data-lucide="map-pin" class="w-5 h-5 text-blue-400 group-hover:scale-110 transition"></i>
+        <div>
+          <div class="font-semibold group-hover:text-blue-400 transition">/api/myip</div>
+          <div class="text-sm text-slate-400">Cek IP & colo kamu saat ini</div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="text-center text-sm text-slate-500 mt-12">
+    <span id="footDomain">...</span> · Banten IT Solutions · gratis, tidak perlu bayar
   </div>
 </div>
 
@@ -81,6 +235,9 @@
   } catch (e) {
     document.getElementById("myip").textContent = "Failed to load";
   }
+
+  // Initialize Lucide icons
+  lucide.createIcons();
 })();
 </script>
 </body>

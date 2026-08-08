@@ -3831,6 +3831,15 @@ __name(getPrxList, "getPrxList");
 // src/routes/api.ts
 function createApiRoutes() {
   const app2 = new Hono2();
+  app2.get("/check", async (c) => {
+    const target = c.req.query("target");
+    if (!target) {
+      return c.json({ error: "Missing target parameter" }, 400, CORS_HEADER_OPTIONS);
+    }
+    const [ip, port] = target.split(":");
+    const result = await checkPrxHealth(ip, port || "443");
+    return c.json(result, 200, CORS_HEADER_OPTIONS);
+  });
   app2.get("/sub", async (c) => {
     const url = new URL(c.req.url);
     const domain2 = url.hostname;
@@ -3904,13 +3913,14 @@ function createApiRoutes() {
   });
   app2.get("/proxies", async (c) => {
     const q = c.req.query("q") || "";
-    const cc = c.req.query("cc")?.split(",") || [];
+    const ccParam = c.req.query("cc") || "";
+    const cc = ccParam ? ccParam.split(",").filter(Boolean) : [];
     const port = c.req.query("port");
     const page = parseInt(c.req.query("page") || "1") || 1;
     const limit = Math.min(parseInt(c.req.query("limit") || "20") || 20, 100);
     const prxBankUrl = c.env.PRX_BANK_URL;
     let items = await getPrxList(prxBankUrl);
-    if (cc.length) {
+    if (cc.length > 0 && cc[0] !== "") {
       items = items.filter((prx) => cc.includes(prx.country));
     }
     if (port) {
@@ -3938,25 +3948,10 @@ function createApiRoutes() {
   return app2;
 }
 __name(createApiRoutes, "createApiRoutes");
-function createCheckRoute() {
-  const app2 = new Hono2();
-  app2.get("/check", async (c) => {
-    const target = c.req.query("target");
-    if (!target) {
-      return c.json({ error: "Missing target parameter" }, 400, CORS_HEADER_OPTIONS);
-    }
-    const [ip, port] = target.split(":");
-    const result = await checkPrxHealth(ip, port || "443");
-    return c.json(result, 200, CORS_HEADER_OPTIONS);
-  });
-  return app2;
-}
-__name(createCheckRoute, "createCheckRoute");
 
 // src/index.ts
 var app = new Hono2();
-app.route("/api/v1", createApiRoutes());
-app.route("/", createCheckRoute());
+app.route("/api", createApiRoutes());
 var serveAsset = /* @__PURE__ */ __name((filename) => async (c) => {
   const assetUrl = new URL(c.req.url);
   assetUrl.pathname = `/${filename}`;
@@ -3964,9 +3959,6 @@ var serveAsset = /* @__PURE__ */ __name((filename) => async (c) => {
 }, "serveAsset");
 app.get("/", serveAsset("index.html"));
 app.get("/build", serveAsset("build.html"));
-app.get("/sub", serveAsset("build.html"));
-app.get("/convert", serveAsset("convert.html"));
-app.get("/shared.css", serveAsset("shared.css"));
 app.notFound((c) => c.json({ error: "Not found" }, 404, CORS_HEADER_OPTIONS));
 var index_default = {
   async fetch(request, env2, ctx) {
