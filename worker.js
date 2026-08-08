@@ -787,18 +787,13 @@ async function readStreamHeader(buffer) {
     // Decrypt header payload (AAD is authId)
     const headerPayload = await aesGcmDecrypt(payloadKey, payloadIv, encryptedHeader, authId);
 
-    // Debug logging
-    console.log("Header payload length:", headerPayload.length);
-    console.log("Header payload (hex):", arrayBufferToHex(headerPayload.buffer));
-
-    // Parse decrypted header - following exact Rust implementation order
+    // Parse decrypted header
     const view = new DataView(headerPayload.buffer);
     let offset = 0;
 
     // Version (1 byte)
     const version = view.getUint8(offset);
     offset += 1;
-    console.log("[0] Version:", version, "| offset now:", offset);
     if (version !== 1) {
       return { hasError: true, message: `Invalid protocol version: ${version}` };
     }
@@ -806,33 +801,27 @@ async function readStreamHeader(buffer) {
     // IV (16 bytes)
     const encIv = new Uint8Array(headerPayload.slice(offset, offset + 16));
     offset += 16;
-    console.log("[1-16] IV read | offset now:", offset);
 
     // Key (16 bytes)
     const encKey = new Uint8Array(headerPayload.slice(offset, offset + 16));
     offset += 16;
-    console.log("[17-32] Key read | offset now:", offset);
 
-    // Options (4 bytes total - Rust reads as array)
+    // Options (4 bytes)
     const options = new Uint8Array(headerPayload.slice(offset, offset + 4));
     offset += 4;
-    console.log("[33-36] Options:", Array.from(options), "| offset now:", offset);
 
     // Command (1 byte)
     const cmd = view.getUint8(offset);
     offset += 1;
-    console.log("[37] Command:", cmd, "| offset now:", offset);
     const isUDP = cmd !== 0x01;
 
     // Port (2 bytes, big-endian)
     const portRemote = view.getUint16(offset, false);
     offset += 2;
-    console.log("[38-39] Port:", portRemote, "| offset now:", offset);
 
     // Address Type (1 byte)
     const addressType = view.getUint8(offset);
     offset += 1;
-    console.log("[40] Address type:", addressType, "| offset now:", offset);
     let addressRemote = "";
 
     // Parse address following Rust implementation
@@ -857,11 +846,8 @@ async function readStreamHeader(buffer) {
         offset += 16;
         break;
       default:
-        console.log("ERROR: Invalid address type:", addressType, "at offset:", offset - 1);
         return { hasError: true, message: `Invalid address type: ${addressType} (hex: 0x${addressType.toString(16)})` };
     }
-
-    console.log("Final parsed address:", addressRemote);
 
     // Calculate raw data index: authId (16) + encryptedLength (18) + nonce (8) + encrypted header payload (headerLength + 16 GCM tag)
     const rawDataIndex = 42 + headerLength + 16;
@@ -1200,10 +1186,6 @@ function shuffleArray(array) {
     // And swap it with the current element.
     [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
   }
-}
-
-function reverse(s) {
-  return s.split("").reverse().join("");
 }
 
 function getFlagEmoji(isoCode) {
