@@ -25,7 +25,6 @@ const serveAsset = (filename: string) => async (c: any) => {
 
 app.get("/", serveAsset("index.html"));
 app.get("/build", serveAsset("build.html"));
-app.get("/convert", serveAsset("convert.html"));
 app.get("/shared.css", serveAsset("shared.css"));
 
 // Fallback 404

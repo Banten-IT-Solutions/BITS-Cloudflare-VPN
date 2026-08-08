@@ -6,13 +6,12 @@ VPN serverless (VLESS / VMess / Trojan via WebSocket) berjalan di Cloudflare Wor
 
 ## Fitur
 
-- 🚀 **3 halaman frontend interaktif** — Landing, Build config VPN, Convert URL
+- 🚀 **2 halaman frontend interaktif** — Landing, Build config VPN
 - 🧩 Protokol **VLESS** (default), **VMess**, dan **Trojan** via WebSocket
 - 📍 Filter proxy berdasarkan negara (colo)
 - 🔌 Port `443` (TLS) / `80` (plain)
 - 🖥️ Format subscription: `raw`, `v2ray` (base64), `json`
 - 🔨 **Build page** — Pilih proxy + config SNI/CDN/Wildcard → generate vless:// + Clash YAML
-- 🔄 **Convert page** — vless:// → Clash YAML (client-side, no server)
 - 🗃️ IP pool auto-update dari GitHub via CI workflow (setiap 30 menit)
 - 🛸 Wildcard subdomain `*.yuliana.my.id` mendukung tunnel
 
@@ -64,7 +63,6 @@ Buka `https://yuliana.my.id/build` di browser:
 |---|---|
 | `/` | **Landing** — Status worker, myip, dokumentasi API |
 | `/build` | **Build VPN** — Pilih proxy + dialog config (SNI/CDN, Bug, Wildcard, SSL) → generate vless:// + Clash YAML |
-| `/convert` | **Convert** — Paste vless:// URLs → Clash YAML format (pure client-side) |
 
 ## API Endpoints
 
@@ -215,7 +213,6 @@ src/
 assets/
   index.html            # Landing page (Alpine.js)
   build.html            # Build VPN config page
-  convert.html          # Convert vless:// → Clash YAML
   shared.css            # Dark theme CSS
 ```
 
