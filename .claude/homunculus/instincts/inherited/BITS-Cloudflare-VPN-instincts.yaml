@@ -1,0 +1,175 @@
+# Instincts generated from https://github.com/bitscoid/BITS-Cloudflare-VPN
+# Generated: 2026-08-08T18:20:10.088Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: BITS-Cloudflare-VPN-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/bitscoid/BITS-Cloudflare-VPN
+---
+
+# BITS Cloudflare VPN Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: fix, refactor, design, feat, docs
+
+## Evidence
+
+- 24 commits analyzed
+- Detected conventional commit pattern
+- Examples: feat: migrate to Hono + Alpine.js frontend, refactor: simplify API routes + remove /sub duplicate
+
+---
+id: BITS-Cloudflare-VPN-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/bitscoid/BITS-Cloudflare-VPN
+---
+
+# BITS Cloudflare VPN Commit Length
+
+## Action
+
+Write moderate-length commit messages (~58 characters)
+
+## Evidence
+
+- Average commit message length: 58 chars
+- Based on 24 commits
+
+---
+id: BITS-Cloudflare-VPN-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/bitscoid/BITS-Cloudflare-VPN
+---
+
+# BITS Cloudflare VPN Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: BITS-Cloudflare-VPN-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/bitscoid/BITS-Cloudflare-VPN
+---
+
+# BITS Cloudflare VPN Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: BITS-Cloudflare-VPN-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/bitscoid/BITS-Cloudflare-VPN
+---
+
+# BITS Cloudflare VPN Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: BITS-Cloudflare-VPN-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/bitscoid/BITS-Cloudflare-VPN
+---
+
+# BITS Cloudflare VPN Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: BITS-Cloudflare-VPN-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/bitscoid/BITS-Cloudflare-VPN
+---
+
+# BITS Cloudflare VPN Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~9x per month
+- Files: src/core/*, src/*, src/routes/*
+
+---
+id: BITS-Cloudflare-VPN-workflow-refactoring
+trigger: "when refactoring code"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/bitscoid/BITS-Cloudflare-VPN
+---
+
+# BITS Cloudflare VPN Workflow Refactoring
+
+## Action
+
+Follow the refactoring workflow:
+1. Ensure tests pass before refactor
+2. Refactor code structure
+3. Verify tests still pass
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~8x per month
+- Files: src/**/*
+
