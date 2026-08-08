@@ -1,4 +1,4 @@
-name: Sync Bun
+name: 🔄 Sync Bun
 
 on:
   workflow_dispatch:
