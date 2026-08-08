@@ -1,0 +1,45 @@
+name: 🔄 Sync bun.lockb
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-bun-lockb
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: ✅ Regenerate bun.lockb
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: 🏞️ Checkout repository
+        uses: actions/checkout@v7.0.1
+        with:
+          token: ${{ github.token }}
+
+      - name: 🟣 Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+
+      - name: 🧶 Regenerate lockfile
+        run: |
+          bun install
+          if git diff --quiet bun.lockb; then
+            echo "::notice::✅ bun.lockb sudah sinkron, tidak ada perubahan"
+            exit 0
+          fi
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bun.lockb
+          git commit -m "chore: sync bun.lockb"
+          git push origin main
+          echo "::notice::🔄 bun.lockb disinkronkan dan di-push"
