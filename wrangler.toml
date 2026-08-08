@@ -5,8 +5,7 @@ compatibility_flags = ["nodejs_compat_v2"]
 
 [vars]
 PRX_BANK_URL = "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt"
-# Aktifkan jika kamu punya converter sendiri (untuk format sfa/bfr/clash):
-# CONVERTER_URL = "https://converter.example.com/convert"
+REVERSE_PRX_TARGET = "https://bits.co.id"
 
 [unsafe.metadata.observability]
 enabled = true

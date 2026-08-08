@@ -1,13 +1,11 @@
 import { connect } from "cloudflare:sockets";
 
-// Variables
 let serviceName = "";
 let APP_DOMAIN = "";
 
 let prxIP = "";
 let cachedPrxList = [];
 
-// Constant
 const horse = "dHJvamFu";
 const flash = "dm1lc3M=";
 const neko = "dmxlc3M=";
@@ -20,15 +18,13 @@ const KV_PRX_URL =
   "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/KV.json";
 const PRX_BANK_URL =
   "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt";
+const REVERSE_PRX_TARGET = "https://bits.co.id";
 const DNS_SERVER_ADDRESS = "8.8.8.8";
 const DNS_SERVER_PORT = 53;
 const RELAY_SERVER_UDP = {
   host: "udp-relay.hobihaus.space", // Kontribusi atau cek relay publik disini: https://hub.docker.com/r/kelvinzer0/udp-relay
   port: 7300,
 };
-// Self-contained: health check dijalankan langsung dari Worker (TCP probe),
-// dan converter format memakai env CONVERTER_URL (host sendiri). Tidak ada lagi
-// ketergantungan ke service luar (foolvpn.web.id).
 const WS_READY_STATE_OPEN = 1;
 const WS_READY_STATE_CLOSING = 2;
 const CORS_HEADER_OPTIONS = {
@@ -37,7 +33,7 @@ const CORS_HEADER_OPTIONS = {
   "Access-Control-Max-Age": "86400",
 };
 
-// Encrypted Stream Constants (Base64 Encoded)
+// VMess AEAD salt constants
 const SALT_A1 = atob("Vk1lc3MgSGVhZGVyIEFFQUQgS2V5X0xlbmd0aA==");
 const SALT_A2 = atob("Vk1lc3MgSGVhZGVyIEFFQUQgTm9uY2VfTGVuZ3Ro");
 const SALT_A3 = atob("Vk1lc3MgSGVhZGVyIEFFQUQgS2V5");
@@ -125,12 +121,10 @@ export default {
 
       const upgradeHeader = request.headers.get("Upgrade");
 
-      // Handle prx client
       if (upgradeHeader === "websocket") {
         const prxMatch = url.pathname.match(/^\/(.+[:=-]\d+)$/);
 
         if (url.pathname.length == 3 || url.pathname.match(",")) {
-          // Contoh: /ID, /SG, dll
           const prxKeys = url.pathname.replace("/", "").toUpperCase().split(",");
           const prxKey = prxKeys[Math.floor(Math.random() * prxKeys.length)];
           const kvPrx = await getKVPrxList();
@@ -171,14 +165,12 @@ export default {
           const prxBankUrl = url.searchParams.get("prx-list") || env.PRX_BANK_URL || PRX_BANK_URL;
           const prxList = await getPrxList(prxBankUrl)
             .then((prxs) => {
-              // Filter CC
               if (filterCC.length) {
                 return prxs.filter((prx) => filterCC.includes(prx.country));
               }
               return prxs;
             })
             .then((prxs) => {
-              // shuffle result
               shuffleArray(prxs);
               return prxs;
             });
@@ -229,40 +221,16 @@ export default {
             case atob(v2):
               finalResult = btoa(result.join("\n"));
               break;
-            case atob(neko):
-            case "sfa":
-            case "bfr":
-              const converterUrl = env.CONVERTER_URL;
-              if (!converterUrl) {
-                return new Response(
-                  "Converter not configured. Set CONVERTER_URL env var to your own converter service.",
-                  {
-                    status: 503,
-                    headers: {
-                      ...CORS_HEADER_OPTIONS,
-                    },
-                  },
-                );
-              }
-              const res = await fetch(converterUrl, {
-                method: "POST",
-                body: JSON.stringify({
-                  url: result.join(","),
-                  format: filterFormat,
-                  template: "cf",
-                }),
-              });
-              if (res.status == 200) {
-                finalResult = await res.text();
-              } else {
-                return new Response(res.statusText, {
-                  status: res.status,
+            default:
+              return new Response(
+                `Unsupported format "${filterFormat}". Supported formats: raw, ${atob(v2)}.`,
+                {
+                  status: 400,
                   headers: {
                     ...CORS_HEADER_OPTIONS,
                   },
-                });
-              }
-              break;
+                },
+              );
           }
 
           return new Response(finalResult, {
@@ -290,7 +258,7 @@ export default {
         }
       }
 
-      const targetReversePrx = env.REVERSE_PRX_TARGET || "example.com";
+      const targetReversePrx = env.REVERSE_PRX_TARGET || REVERSE_PRX_TARGET;
       return await reverseWeb(request, targetReversePrx);
     } catch (err) {
       return new Response(`An error occurred: ${err.toString()}`, {
@@ -367,7 +335,6 @@ async function websocketHandler(request) {
             throw new Error(protocolHeader.message);
           }
 
-          // Generate stream response header if needed
           let responseHeader = protocolHeader.version;
           if (protocol === atob(flash) && protocolHeader.needsResponse) {
             responseHeader = await generateStreamResponseHeader(
@@ -442,35 +409,27 @@ async function protocolSniffer(buffer) {
     }
   }
 
-  // Light protocol detection (VLESS) - check UUID v4 pattern
   if (buffer.byteLength >= 18) {
     const version = new Uint8Array(buffer.slice(0, 1))[0];
     if (version === 0) {
       const protocolUuid = new Uint8Array(buffer.slice(1, 17));
-      // Hanya mendukung UUID v4
       if (arrayBufferToHex(protocolUuid).match(/^[0-9a-f]{8}[0-9a-f]{4}4[0-9a-f]{3}[89ab][0-9a-f]{3}[0-9a-f]{12}$/i)) {
         return atob(neko);
       }
     }
   }
 
-  // VMess AEAD detection: minimum 42 bytes (authId 16 + encLen 18 + nonce 8)
-  // But we need to be more selective - check if it's NOT shadowsocks first
   if (buffer.byteLength >= 42) {
-    // Shadowsocks ATYP is always 1, 3, or 4 at first byte
     const firstByte = new Uint8Array(buffer.slice(0, 1))[0];
 
-    // If first byte looks like SS address type, it's probably SS
     if (firstByte === 0x01 || firstByte === 0x03 || firstByte === 0x04) {
-      // Likely Shadowsocks, not VMess
       return "ss";
     }
 
-    // Otherwise, assume it's VMess AEAD
     return atob(flash);
   }
 
-  return "ss"; // default
+  return "ss";
 }
 
 async function generateStreamResponseHeader(responseOptions, encKey, encIv) {
@@ -481,7 +440,6 @@ async function generateStreamResponseHeader(responseOptions, encKey, encIv) {
     const key = (await sha256(encKey)).slice(0, 16);
     const iv = (await sha256(encIv)).slice(0, 16);
 
-    // Encrypt length (2 bytes for value 4)
     const lengthKey = (await kdf(key, [SALT_B1])).slice(0, 16);
     const lengthIv = (await kdf(iv, [SALT_B2])).slice(0, 12);
 
@@ -491,12 +449,11 @@ async function generateStreamResponseHeader(responseOptions, encKey, encIv) {
 
     const encryptedLength = await aesGcmEncrypt(lengthKey, lengthIv, lengthData, new Uint8Array(0));
 
-    // Create header payload (4 bytes)
     const headerPayload = new Uint8Array([
-      responseOptions[0], // options[0] from request
+      responseOptions[0],
       0x00,
       0x00,
-      0x00, // padding
+      0x00,
     ]);
 
     const payloadKey = (await kdf(key, [SALT_B3])).slice(0, 16);
@@ -504,7 +461,6 @@ async function generateStreamResponseHeader(responseOptions, encKey, encIv) {
 
     const encryptedPayload = await aesGcmEncrypt(payloadKey, payloadIv, headerPayload, new Uint8Array(0));
 
-    // Combine length + payload
     const response = new Uint8Array(encryptedLength.length + encryptedPayload.length);
     response.set(encryptedLength, 0);
     response.set(encryptedPayload, encryptedLength.length);
@@ -649,7 +605,6 @@ function makeReadableWebSocketStream(webSocketServer, earlyDataHeader, log) {
   return stream;
 }
 
-// Crypto Helper Functions
 async function md5(...inputs) {
   const combined = new Uint8Array(inputs.reduce((acc, input) => acc + input.length, 0));
   let offset = 0;
@@ -667,40 +622,33 @@ async function sha256(input) {
 }
 
 async function kdf(key, path) {
-  // VMess KDF uses custom recursive HMAC
+  // VMess KDF custom recursive HMAC
   // Reference: https://github.com/v2ray/v2ray-core/blob/master/common/crypto/auth.go
 
-  // Create HMAC-SHA256
   async function hmacSha256(key, data) {
     const hmacKey = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
     const signature = await crypto.subtle.sign("HMAC", hmacKey, data);
     return new Uint8Array(signature);
   }
 
-  // RecursiveHash implementation matching Rust code
   async function recursiveHash(keyBytes, innerHashFn) {
     return async (data) => {
-      // Prepare HMAC pads
       const ipad = new Uint8Array(64);
       const opad = new Uint8Array(64);
 
-      // Copy key into pads
       ipad.set(keyBytes.slice(0, Math.min(64, keyBytes.length)));
       opad.set(keyBytes.slice(0, Math.min(64, keyBytes.length)));
 
-      // XOR with HMAC constants
       for (let i = 0; i < 64; i++) {
         ipad[i] ^= 0x36;
         opad[i] ^= 0x5c;
       }
 
-      // Compute inner hash: H(ipad || data)
       const innerData = new Uint8Array(ipad.length + data.length);
       innerData.set(ipad);
       innerData.set(data, ipad.length);
       const innerResult = await innerHashFn(innerData);
 
-      // Compute outer hash: H(opad || innerResult)
       const outerData = new Uint8Array(opad.length + innerResult.length);
       outerData.set(opad);
       outerData.set(innerResult, opad.length);
@@ -708,12 +656,10 @@ async function kdf(key, path) {
     };
   }
 
-  // Base SHA256 hash function
   const sha256Hash = async (data) => {
     return new Uint8Array(await crypto.subtle.digest("SHA-256", data));
   };
 
-  // Build recursive hash chain
   let currentHashFn = await recursiveHash(new TextEncoder().encode("VMess AEAD KDF"), sha256Hash);
 
   for (const salt of path) {
@@ -721,7 +667,6 @@ async function kdf(key, path) {
     currentHashFn = await recursiveHash(saltBytes, currentHashFn);
   }
 
-  // Final hash with key
   return await currentHashFn(key);
 }
 
@@ -746,8 +691,6 @@ async function aesGcmEncrypt(key, nonce, data, aad) {
 // Stream Protocol Handler
 async function readStreamHeader(buffer) {
   try {
-    // For simplicity, we'll use a fixed UUID for decryption
-    // In production, this should be configured
     const uuidString = "00000000-0000-0000-0000-000000000000";
     const uuidBytes = new Uint8Array(
       uuidString
@@ -756,35 +699,27 @@ async function readStreamHeader(buffer) {
         .map((byte) => parseInt(byte, 16)),
     );
 
-    // Create MD5 hash of UUID + constant
+    // Auth key = MD5(UUID + config salt)
     const authKey = await md5(
       uuidBytes,
       new TextEncoder().encode(atob("YzQ4NjE5ZmUtOGYwMi00OWUwLWI5ZTktZWRmNzYzZTE3ZTIx")),
     );
 
-    // Read AEAD header structure
     const authId = new Uint8Array(buffer.slice(0, 16));
     const encryptedLength = new Uint8Array(buffer.slice(16, 34));
     const nonce = new Uint8Array(buffer.slice(34, 42));
 
-    // Derive keys for length decryption
     const lengthKey = (await kdf(authKey, [SALT_A1, authId, nonce])).slice(0, 16);
-
     const lengthIv = (await kdf(authKey, [SALT_A2, authId, nonce])).slice(0, 12);
 
-    // Decrypt header length (AAD is authId)
     const lengthBytes = await aesGcmDecrypt(lengthKey, lengthIv, encryptedLength, authId);
     const headerLength = (lengthBytes[0] << 8) | lengthBytes[1];
 
-    // Read encrypted header payload (with 16 bytes GCM tag)
     const encryptedHeader = new Uint8Array(buffer.slice(42, 42 + headerLength + 16));
 
-    // Derive keys for payload decryption
     const payloadKey = (await kdf(authKey, [SALT_A3, authId, nonce])).slice(0, 16);
-
     const payloadIv = (await kdf(authKey, [SALT_A4, authId, nonce])).slice(0, 12);
 
-    // Decrypt header payload (AAD is authId)
     const headerPayload = await aesGcmDecrypt(payloadKey, payloadIv, encryptedHeader, authId);
 
     // Parse decrypted header
@@ -1177,13 +1112,10 @@ function arrayBufferToHex(buffer) {
 function shuffleArray(array) {
   let currentIndex = array.length;
 
-  // While there remain elements to shuffle...
   while (currentIndex != 0) {
-    // Pick a remaining element...
     let randomIndex = Math.floor(Math.random() * currentIndex);
     currentIndex--;
 
-    // And swap it with the current element.
     [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
   }
 }

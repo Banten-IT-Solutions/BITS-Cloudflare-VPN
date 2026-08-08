@@ -65,13 +65,13 @@ Klik tombol di bawah
 1. Buat akun cloudflare
 2. Buat worker
 3. Copy kode dari `worker.js` ke editor cloudflare worker
-4. (Optional) Masukkan link daftar proxy kalian ke dalam environemnt variable `PROXY_BANK_URL`
-5. (Optional) Masukkan link target reverse proxy ke environment variable `REVERSE_PROXY_TARGET`
+4. (Optional) Masukkan link daftar proxy kalian ke dalam environment variable `PRX_BANK_URL`
+5. (Optional) Masukkan link target reverse proxy ke environment variable `REVERSE_PRX_TARGET` (default: `https://bits.co.id`)
 6. Deploy
 7. Buka `https://DOMAIN_WORKER_KALIAN/sub`
 
 - Contoh daftar proxy [proxy.txt](https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt)
-- Contoh reverse proxy [example.com](https://example.com)
+- Contoh reverse proxy [bits.co.id](https://bits.co.id)
 
 ## GitHub Actions (Secret yang diperlukan)
 
