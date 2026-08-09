@@ -268,8 +268,8 @@
           <div class="space-y-5">
             <!-- Protocols (paling atas) -->
             <div>
-              <label class="block text-xs text-slate-400 font-medium mb-3">Protocol Selection</label>
-              <div class="grid grid-cols-2 gap-3">
+              <label class="block text-xs text-slate-400 font-medium mb-3">Protocols</label>
+              <div class="grid grid-cols-3 gap-3">
                 <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
                   :class="config.proto === 'vless' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'">
                   <input type="radio" x-model="config.proto" value="vless" class="sr-only">
@@ -293,7 +293,7 @@
 
             <!-- Mode SNI/CDN -->
             <div>
-              <label class="block text-xs text-slate-400 font-medium mb-3">Mode Selection</label>
+              <label class="block text-xs text-slate-400 font-medium mb-3">Mode</label>
               <div class="grid grid-cols-2 gap-3">
                 <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
                   :class="config.mode === 'sni' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'">
@@ -310,16 +310,16 @@
               </div>
             </div>
 
-            <!-- Bug Domain -->
+            <!-- Domain -->
             <div>
-              <label class="block text-xs text-slate-400 font-medium mb-2">Bug Domain</label>
+              <label class="block text-xs text-slate-400 font-medium mb-2">Domain</label>
               <input x-model="config.bug" type="text" placeholder="support.zoom.us"
                 class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none text-sm transition">
             </div>
 
-            <!-- Wildcard Subdomain -->
+            <!-- Wildcard -->
             <div>
-              <label class="block text-xs text-slate-400 font-medium mb-3">Wildcard Subdomain</label>
+              <label class="block text-xs text-slate-400 font-medium mb-3">Wildcard</label>
               <div class="grid grid-cols-2 gap-3">
                 <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
                   :class="config.wildcard === 'no' ? 'border-slate-500 bg-slate-500/10' : 'hover:border-slate-700'">
@@ -338,7 +338,7 @@
 
             <!-- Port -->
             <div>
-              <label class="block text-xs text-slate-400 font-medium mb-3">Port Configuration</label>
+              <label class="block text-xs text-slate-400 font-medium mb-3">Port</label>
               <div class="grid grid-cols-2 gap-3">
                 <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
                   :class="config.port === '443' ? 'border-emerald-500 bg-emerald-500/10' : 'hover:border-slate-700'">
@@ -532,7 +532,7 @@
             // Validate & sanitize input bug domain
             const cleanBug = bug.replace(/[^a-zA-Z0-9.-]/g, '').trim();
             if (!cleanBug) {
-              alert('Invalid Bug Domain!');
+              alert('Invalid Domain!');
               this.building = false;
               return;
             }
