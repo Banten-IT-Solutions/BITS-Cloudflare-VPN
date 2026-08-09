@@ -103,8 +103,8 @@
           <span class="hidden sm:block h-px w-12 bg-gradient-to-l from-transparent to-fuchsia-400/70"></span>
         </div>
 
-        <!-- Country cards (multi-select dengan klik, tanpa checkbox) - 10 per baris -->
-        <div x-show="!loading" x-cloak class="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 gap-2">
+        <!-- Country cards (multi-select dengan klik, tanpa checkbox) - 8 per baris -->
+        <div x-show="!loading" x-cloak class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
           <template x-for="c in filteredCountries" :key="c.code">
             <button @click="toggleCountry(c.code)"
               :class="selectedCodes.includes(c.code) ? 'selected' : ''"
@@ -123,7 +123,7 @@
         <div x-show="!loading && filteredCountries.length === 0" x-cloak class="text-center py-8 text-sm text-slate-500">
           Tidak ada negara ditemukan.
         </div>
-        <div x-show="loading" class="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 gap-2">
+        <div x-show="loading" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
           <template x-for="i in 20" :key="i">
             <div class="glass-card rounded-xl px-3 py-3 flex flex-col items-center gap-1 animate-pulse">
               <span class="w-6 h-6 rounded-full bg-slate-800"></span>
