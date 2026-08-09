@@ -94,41 +94,18 @@
 
       <!-- Country Grid Card -->
       <section class="glass-card rounded-3xl p-6 animate-slide-up">
-        <!-- Toolbar with badges -->
-        <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
-          <div class="flex items-center gap-3">
-            <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
-              <span class="w-5 h-5">🌎</span>
-            </div>
-            <h2 class="text-lg font-bold">Pilih Negara</h2>
-          </div>
-
-          <!-- Badge group: Selected + Path (simetris & menarik) -->
-          <div x-show="selectedCodes.length > 0" x-cloak class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-emerald-500/50 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 text-emerald-300 shadow-sm">
-              <span class="text-sm">✅</span>
-              <span x-text="selectedCodes.length"></span>
-              <span class="text-emerald-400/80">Selected</span>
-            </span>
-            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/50 bg-gradient-to-br from-indigo-500/20 to-purple-600/10 font-mono text-xs shadow-sm">
-              <span class="text-slate-400 font-sans">path:</span>
-              <span class="text-indigo-300 font-semibold" x-text="'/' + selectedCodes.join(',')"></span>
-            </span>
-          </div>
-        </div>
-
-        <!-- Country cards (multi-select dengan klik, tanpa checkbox) -->
-        <div x-show="!loading" x-cloak class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
+        <!-- Country cards (multi-select dengan klik, tanpa checkbox) - 10 per baris -->
+        <div x-show="!loading" x-cloak class="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 gap-2">
           <template x-for="c in filteredCountries" :key="c.code">
             <button @click="toggleCountry(c.code)"
               :class="selectedCodes.includes(c.code) ? 'selected' : ''"
-              class="country-card relative glass-card rounded-2xl px-2 py-4 flex flex-col items-center gap-1.5 text-center border">
+              class="country-card relative glass-card rounded-xl px-1.5 py-2.5 flex flex-col items-center gap-0.5 text-center border">
               <!-- Check badge -->
               <span x-show="selectedCodes.includes(c.code)"
-                class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] leading-none font-bold">✓</span>
-              <span class="text-3xl leading-none drop-shadow" x-text="getFlagEmoji(c.code)"></span>
-              <span class="text-xs font-bold tracking-wide" x-text="c.code"></span>
-              <span class="text-[10px] text-slate-500" x-text="c.count + ' proxy'"></span>
+                class="absolute top-1 right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] leading-none font-bold">✓</span>
+              <span class="text-2xl leading-none drop-shadow" x-text="getFlagEmoji(c.code)"></span>
+              <span class="text-[11px] font-bold tracking-wide" x-text="c.code"></span>
+              <span class="text-[9px] text-slate-500" x-text="c.count"></span>
             </button>
           </template>
         </div>
@@ -137,12 +114,12 @@
         <div x-show="!loading && filteredCountries.length === 0" x-cloak class="text-center py-8 text-sm text-slate-500">
           Tidak ada negara ditemukan.
         </div>
-        <div x-show="loading" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
-          <template x-for="i in 16" :key="i">
-            <div class="glass-card rounded-2xl px-3 py-4 flex flex-col items-center gap-1.5 animate-pulse">
-              <span class="w-8 h-8 rounded-full bg-slate-800"></span>
-              <span class="h-3 w-8 rounded bg-slate-800"></span>
-              <span class="h-2 w-12 rounded bg-slate-800"></span>
+        <div x-show="loading" class="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 gap-2">
+          <template x-for="i in 20" :key="i">
+            <div class="glass-card rounded-xl px-3 py-3 flex flex-col items-center gap-1 animate-pulse">
+              <span class="w-6 h-6 rounded-full bg-slate-800"></span>
+              <span class="h-2.5 w-7 rounded bg-slate-800"></span>
+              <span class="h-2 w-5 rounded bg-slate-800"></span>
             </div>
           </template>
         </div>
@@ -171,15 +148,13 @@
             </button>
           </div>
 
-          <!-- Selected summary (bendera saja, simple) -->
-          <div class="flex items-center gap-2 flex-wrap mb-5 p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-xs text-indigo-200">
-            <span class="font-semibold text-indigo-300">Negara terpilih:</span>
-            <span class="text-2xl leading-none">
+          <!-- Selected summary (bendera saja) -->
+          <div class="flex justify-center mb-5 p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10">
+            <span class="text-3xl leading-none tracking-wider">
               <template x-for="code in selectedCodes" :key="code">
                 <span x-text="getFlagEmoji(code)"></span>
               </template>
             </span>
-            <span class="text-slate-400 font-mono">→ <span x-text="'/' + selectedCodes.join(',')"></span></span>
           </div>
 
           <div class="space-y-5">
