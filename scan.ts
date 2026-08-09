@@ -161,7 +161,7 @@ async function readProxyList(): Promise<ProxyStruct[]> {
           }
 
           proxySaved += 1;
-          console.log(`[${i}/${proxyList.length}] Proxy disimpan:`, proxySaved);
+          console.log(`[${i}/${proxyList.length}] Proxy saved:`, proxySaved);
         }
       })
       .finally(() => {
@@ -185,7 +185,7 @@ async function readProxyList(): Promise<ProxyStruct[]> {
   await Bun.write(RAW_PROXY_LIST_FILE, uniqueRawProxies.join("\n"));
   await Bun.write(PROXY_LIST_FILE, activeProxyList.join("\n"));
 
-  console.log(`Waktu proses: ${(Bun.nanoseconds() / 1000000000).toFixed(2)} detik`);
+  console.log(`Process time: ${(Bun.nanoseconds() / 1000000000).toFixed(2)} seconds`);
   process.exit(0);
 })();
 

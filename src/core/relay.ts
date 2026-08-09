@@ -1,4 +1,4 @@
-// Relay WebSocket handler + protocol parsers (verbatim dari worker.js baris 418-1167)
+// Relay WebSocket handler + protocol parsers (verbatim from worker.js lines 418-1167)
 import { connect } from "cloudflare:sockets";
 import {
   DNS_SERVER_ADDRESS,
@@ -791,8 +791,8 @@ export async function checkPrxHealth(prxIP: string, prxPort: string) {
   try {
     socket = connect({ hostname: prxIP, port: Number(prxPort) });
 
-    // Ukur latency saat koneksi BERHASIL DIBUKA (socket.opened),
-    // bukan saat koneksi ditutup (socket.closed) yang bisa memakan waktu lama.
+    // Measure latency when connection is successfully opened (socket.opened),
+    // not when connection closes (socket.closed), which can take a long time.
     await Promise.race([
       socket.opened,
       new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), timeoutMs)),

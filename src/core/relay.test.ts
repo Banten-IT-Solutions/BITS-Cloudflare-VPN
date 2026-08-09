@@ -1,10 +1,10 @@
 import assert from "assert";
-// Mock minimal WebCrypto API jika berjalan di Node.js lama (Cloudflare Workers/Bun mendukungnya native)
+// Mock minimal WebCrypto API if running on old Node.js (Cloudflare Workers/Bun support it natively)
 if (typeof crypto === "undefined") {
   global.crypto = require("crypto").webcrypto;
 }
 
-// Simulasi helper byte
+// Byte helper simulation
 function createVLESSHeader(version: number): ArrayBuffer {
   // UUID (16 bytes)
   const uuid = new Uint8Array([
@@ -18,8 +18,8 @@ function createVLESSHeader(version: number): ArrayBuffer {
   return header.buffer as ArrayBuffer;
 }
 
-// Mock function dari relay.ts yang ingin ditest
-// Karena protocolSniffer tidak di-export, kita uji representasi logika version-sniffing
+// Mock function from relay.ts under test
+// Since protocolSniffer is not exported, test version-sniffing logic representation
 function testProtocolSniffer(buffer: ArrayBuffer): string {
   const base64Neko = "bmVrbw=="; // "neko"
   const base64Flash = "Zmxhc2g="; // "flash"
@@ -28,7 +28,7 @@ function testProtocolSniffer(buffer: ArrayBuffer): string {
     const version = new Uint8Array(buffer.slice(0, 1))[0];
     if (version === 0) {
       const protocolUuid = new Uint8Array(buffer.slice(1, 17));
-      // Convert buffer ke hex
+      // Convert buffer to hex
       const hex = Array.from(protocolUuid)
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
@@ -41,7 +41,7 @@ function testProtocolSniffer(buffer: ArrayBuffer): string {
   return atob(base64Flash);
 }
 
-// Eksekusi Tests
+// Run tests
 try {
   console.log("🧪 Running VLESS Protocol Sniffer tests...");
 

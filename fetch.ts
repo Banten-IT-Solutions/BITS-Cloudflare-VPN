@@ -1,6 +1,6 @@
 const CLEAN_IP_URL = "https://raw.githubusercontent.com/vfarid/cf-clean-ips/main/list.txt";
 const IRCF_JSON_URL = "https://raw.githubusercontent.com/ircfspace/cf2dns/master/list/ipv4.json";
-// Sumber utama raw proxy: Nautica (FoolVPN) — rawProxyList.txt berisi ±12.5k IP
+// Main raw proxy source: Nautica (FoolVPN) — rawProxyList.txt contains about 12.5k IPs
 const NAUTICA_URL = "https://raw.githubusercontent.com/FoolVPN-ID/Nautica/main/rawProxyList.txt";
 const RAW_PROXY_LIST_FILE = "./raw.txt";
 
@@ -11,7 +11,7 @@ interface ProxyEntry {
   org: string;
 }
 
-// Membaca file raw.txt yang sudah ada secara lokal
+// Read existing local raw.txt
 async function readExistingRaw(): Promise<ProxyEntry[]> {
   try {
     const file = Bun.file(RAW_PROXY_LIST_FILE);
@@ -58,7 +58,7 @@ function parseStandardText(text: string): ProxyEntry[] {
   return list;
 }
 
-// Fetch dari vfarid/cf-clean-ips (Clean Cloudflare IPs)
+// Fetch from vfarid/cf-clean-ips (clean Cloudflare IPs)
 async function fetchVfaridIPs(): Promise<ProxyEntry[]> {
   try {
     console.log("🌐 Fetching clean Cloudflare IPs from vfarid...");
@@ -101,7 +101,7 @@ async function fetchVfaridIPs(): Promise<ProxyEntry[]> {
   }
 }
 
-// Fetch dari ircfspace/cf2dns (Clean Cloudflare JSON list)
+// Fetch from ircfspace/cf2dns (clean Cloudflare JSON list)
 async function fetchIrcfIPs(): Promise<ProxyEntry[]> {
   try {
     console.log("🌐 Fetching clean Cloudflare IPs from ircfspace...");
@@ -133,7 +133,7 @@ async function fetchIrcfIPs(): Promise<ProxyEntry[]> {
   }
 }
 
-// Fetch dari upstream Nautica (FoolVPN-ID) — sumber utama raw proxy
+// Fetch from upstream Nautica (FoolVPN-ID) — main raw proxy source
 async function fetchNautica(): Promise<ProxyEntry[]> {
   try {
     console.log("🌐 Fetching raw proxy list from Nautica (FoolVPN)...");
@@ -147,7 +147,7 @@ async function fetchNautica(): Promise<ProxyEntry[]> {
 }
 
 (async () => {
-  // Read local + fetch remote (dengan toleransi kegagalan masing-masing)
+  // Read local + fetch remote with independent failure tolerance
   const existing = await readExistingRaw();
   const listNautica = await fetchNautica();
   const listVfarid = await fetchVfaridIPs();
@@ -161,12 +161,12 @@ async function fetchNautica(): Promise<ProxyEntry[]> {
   // Merge secara unik berdasarkan IP
   const mergedMap = new Map<string, ProxyEntry>();
 
-  // 1. Masukkan list existing terlebih dahulu (agar informasi country/org asli terjaga)
+  // 1. Insert existing list first to preserve original country/org data
   for (const item of existing) {
     mergedMap.set(item.ip, item);
   }
 
-  // 2. Gabungkan data baru (jika IP belum ada)
+  // 2. Merge new data only when IP is not already present
   const allNewLists = [...listNautica, ...listVfarid, ...listIrcf];
   let addedCount = 0;
   for (const item of allNewLists) {
@@ -178,10 +178,10 @@ async function fetchNautica(): Promise<ProxyEntry[]> {
 
   const mergedList = Array.from(mergedMap.values());
   
-  // Urutkan berdasarkan kode negara agar tertata
+  // Sort by country code for stable output
   mergedList.sort((a, b) => a.country.localeCompare(b.country));
 
-  // Tulis ke raw.txt
+  // Write to raw.txt
   const rawLines = mergedList.map(item => `${item.ip},${item.port},${item.country},${item.org}`);
   await Bun.write(RAW_PROXY_LIST_FILE, rawLines.join("\n"));
   

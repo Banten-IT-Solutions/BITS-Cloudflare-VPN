@@ -1,4 +1,4 @@
-// Constants dari worker.js (baris 1-45 + helpers)
+// Constants from worker.js (lines 1-45 + helpers)
 
 export const horse = "dHJvamFu";
 export const flash = "dm1lc3M=";

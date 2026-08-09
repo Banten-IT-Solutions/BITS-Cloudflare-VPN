@@ -1,4 +1,4 @@
-// API routes: /api/v1/sub, /myip, /check, /proxies
+// API routes: /sub, /myip, /check, /proxies
 import { Hono } from "hono";
 import { getPrxList, getKVPrxList, type ProxyEntry } from "../core/lists";
 import { checkPrxHealth } from "../core/relay";
@@ -18,7 +18,7 @@ interface Env {
   KV_PRX_URL?: string;
 }
 
-// IP Rate Limiter: Map<ip_client, array_of_timestamps>
+// IP rate limiter: Map<clientIp, timestamp[]>
 const rateLimitCache = new Map<string, number[]>();
 const LIMIT_WINDOW_MS = 10 * 1000; // 10 seconds
 const MAX_REQUESTS = 12;           // Max 12 requests per window
@@ -33,7 +33,7 @@ export function createApiRoutes() {
       const now = Date.now();
       let timestamps = rateLimitCache.get(clientIP) || [];
       
-      // Clean up stale timestamps
+      // Remove stale timestamps
       timestamps = timestamps.filter(t => now - t < LIMIT_WINDOW_MS);
       
       if (timestamps.length >= MAX_REQUESTS) {
@@ -47,7 +47,7 @@ export function createApiRoutes() {
         return c.json({ error: "Missing target parameter" }, 400, CORS_HEADER_OPTIONS);
       }
 
-      // Parse IP:Port dengan validasi
+      // Parse IP:PORT with validation
       const parts = target.split(":");
       if (parts.length !== 2) {
         return c.json({ error: "Invalid target format. Expected IP:PORT" }, 400, CORS_HEADER_OPTIONS);
@@ -56,13 +56,13 @@ export function createApiRoutes() {
       const [ip, portStr] = parts;
       const port = parseInt(portStr, 10);
 
-      // Validasi IP format (basic IPv4 check)
+      // Validate IP format (basic IPv4 check)
       const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
       if (!ipv4Regex.test(ip)) {
         return c.json({ error: "Invalid IP address format" }, 400, CORS_HEADER_OPTIONS);
       }
 
-      // Validasi port range
+      // Validate port range
       if (isNaN(port) || port < 1 || port > 65535) {
         return c.json({ error: "Invalid port number" }, 400, CORS_HEADER_OPTIONS);
       }
@@ -145,7 +145,7 @@ export function createApiRoutes() {
         finalResult = btoa(result.join("\n"));
         break;
       case "json":
-        // Format JSON untuk UI build page
+        // JSON format for build UI
         const jsonResult = result.map((link, i) => {
           const [proto, rest] = link.split("://");
           const hashIndex = rest.indexOf("#");
@@ -166,7 +166,7 @@ export function createApiRoutes() {
 
   app.get("/sub", subHandler);
 
-  // GET /countries - daftar negara + jumlah proxy dari KV list (untuk /country page)
+  // GET /countries - country list + proxy count from KV list (for /country page)
   app.get("/countries", async (c) => {
     try {
       const kvPrx = await getKVPrxList(c.env.KV_PRX_URL);
@@ -198,7 +198,7 @@ export function createApiRoutes() {
     );
   });
 
-  // GET /proxies - list proxies with filter & pagination (untuk /build page)
+  // GET /proxies - proxy list with filter & pagination (for /build page)
   app.get("/proxies", async (c) => {
     try {
       const q = c.req.query("q") || "";
@@ -213,7 +213,7 @@ export function createApiRoutes() {
       const prxBankUrl = c.env.PRX_BANK_URL;
       let items = await getPrxList(prxBankUrl);
 
-      // Filter by country (hanya jika cc tidak kosong)
+      // Filter by country only when cc is not empty
       if (cc.length > 0 && cc[0] !== "") {
         items = items.filter((prx) => cc.includes(prx.country));
       }
@@ -239,7 +239,7 @@ export function createApiRoutes() {
       const offset = (page - 1) * limit;
       const paginatedItems = items.slice(offset, offset + limit);
 
-      // Daftar negara unik (dari data sebelum hasil filter) untuk chips filter
+      // Unique country list from pre-filter data for filter chips
       const countryCounts = new Map<string, number>();
       for (const prx of items) {
         countryCounts.set(prx.country, (countryCounts.get(prx.country) || 0) + 1);

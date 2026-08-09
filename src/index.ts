@@ -16,7 +16,7 @@ const app = new Hono<{ Bindings: Env }>();
 // Mount API routes (tanpa /v1, langsung /api/*)
 app.route("/api", createApiRoutes());
 
-// Serve static assets untuk halaman frontend
+// Serve static assets for frontend pages
 const serveAsset = (filename: string) => async (c: any) => {
   const assetUrl = new URL(c.req.url);
   assetUrl.pathname = `/${filename}`;
@@ -45,7 +45,7 @@ export default {
 
       const upgradeHeader = request.headers.get("Upgrade");
 
-      // Handle WebSocket upgrade untuk relay
+      // Handle WebSocket upgrade for relay
       if (upgradeHeader === "websocket") {
         const prxMatch = url.pathname.match(/^\/(.+[:=-]\d+)$/);
 
@@ -68,7 +68,7 @@ export default {
         }
       }
 
-      // Semua request non-WS → Hono app
+      // All non-WS requests go to Hono app
       return app.fetch(request, env, ctx);
     } catch (err: any) {
       return new Response(`An error occurred: ${err.toString()}`, {

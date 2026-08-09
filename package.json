@@ -1,18 +1,21 @@
 {
-  "name": "vpn",
+  "name": "BITS-Cloudflare-VPN",
   "version": "2.0.0",
-  "description": "Serverless VPN tunnel proxy on Cloudflare Workers - supports VLESS, Trojan, Shadowsocks, and VMess over WebSocket (CDN) with SNI and DoH",
+  "description": "High-performance Serverless VPN Relay for VLESS, VMess, and Trojan over Cloudflare Workers.",
   "keywords": [
     "vpn",
     "cloudflare",
     "cloudflare-workers",
+    "hono",
+    "bun",
     "proxy",
+    "serverless",
     "vless",
-    "trojan",
-    "shadowsocks",
     "vmess",
+    "trojan",
     "websocket",
-    "cdn"
+    "clash",
+    "singbox"
   ],
   "license": "MIT",
   "type": "module",
@@ -29,7 +32,7 @@
   "bugs": {
     "url": "https://github.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/issues"
   },
-  "homepage": "https://github.com/Banten-IT-Solutions/BITS-Cloudflare-VPN",
+  "homepage": "https://bits.co.id",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts"
