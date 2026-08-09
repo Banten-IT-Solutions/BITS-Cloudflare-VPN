@@ -551,7 +551,8 @@
               
               // Safe URI configuration
               const safeHash = encodeURIComponent(`${orgName} WS ${tls ? 'TLS' : 'NTLS'} [BITS Cloudflare VPN]`);
-              const uri = `vless://${uuid}@${server}:${cleanPort}?encryption=none&security=${tls ? 'tls' : 'none'}${tls ? `&sni=${servername}` : ''}&type=ws&host=${host}&path=%2F%3Fed%3D2560#${safeHash}`;
+              const wsPath = `/${proxy.prxIP}-${proxy.prxPort}`;
+              const uri = `vless://${uuid}@${server}:${cleanPort}?encryption=none&security=${tls ? 'tls' : 'none'}${tls ? `&sni=${servername}` : ''}&type=ws&host=${host}&path=${encodeURIComponent(wsPath)}#${safeHash}`;
               uris.push(uri);
               
               proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
@@ -564,7 +565,7 @@
     network: ws
     servername: ${servername}
     ws-opts:
-      path: /?ed=2560
+      path: ${wsPath}
       headers:
         Host: ${host}`);
             });
