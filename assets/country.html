@@ -171,14 +171,14 @@
             </button>
           </div>
 
-          <!-- Selected summary -->
+          <!-- Selected summary (bendera saja, simple) -->
           <div class="flex items-center gap-2 flex-wrap mb-5 p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-xs text-indigo-200">
             <span class="font-semibold text-indigo-300">Negara terpilih:</span>
-            <template x-for="code in selectedCodes" :key="code">
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-400/30 font-mono">
-                <span x-text="getFlagEmoji(code)"></span><span x-text="code"></span>
-              </span>
-            </template>
+            <span class="text-2xl leading-none">
+              <template x-for="code in selectedCodes" :key="code">
+                <span x-text="getFlagEmoji(code)"></span>
+              </template>
+            </span>
             <span class="text-slate-400 font-mono">→ <span x-text="'/' + selectedCodes.join(',')"></span></span>
           </div>
 
