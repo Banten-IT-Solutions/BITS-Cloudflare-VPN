@@ -24,12 +24,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bitscoid/BITS-Cloudflare-VPN.git"
+    "url": "git+https://github.com/Banten-IT-Solutions/BITS-Cloudflare-VPN.git"
   },
   "bugs": {
-    "url": "https://github.com/bitscoid/BITS-Cloudflare-VPN/issues"
+    "url": "https://github.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/issues"
   },
-  "homepage": "https://github.com/bitscoid/BITS-Cloudflare-VPN",
+  "homepage": "https://github.com/Banten-IT-Solutions/BITS-Cloudflare-VPN",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts"

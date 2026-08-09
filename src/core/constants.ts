@@ -8,9 +8,9 @@ export const v2 = "djJyYXk=";
 export const PORTS = [443, 80];
 export const PROTOCOLS = [atob(neko), atob(horse), atob(flash)];
 export const KV_PRX_URL =
-  "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/KV.json";
+  "https://raw.githubusercontent.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/main/KV.json";
 export const PRX_BANK_URL =
-  "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt";
+  "https://raw.githubusercontent.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/main/proxy.txt";
 export const DNS_SERVER_ADDRESS = "8.8.8.8";
 export const DNS_SERVER_PORT = 53;
 export const RELAY_SERVER_UDP = {

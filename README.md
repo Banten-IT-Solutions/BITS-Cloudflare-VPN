@@ -37,7 +37,7 @@ bun install -g wrangler
 
 ### 2. Kloning dan Instalasi
 ```sh
-git clone https://github.com/bitscoid/BITS-Cloudflare-VPN.git
+git clone https://github.com/Banten-IT-Solutions/BITS-Cloudflare-VPN.git
 cd BITS-Cloudflare-VPN
 bun install # atau npm install
 ```
@@ -51,7 +51,7 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat_v2"]
 
 [vars]
-PRX_BANK_URL = "https://raw.githubusercontent.com/bitscoid/BITS-Cloudflare-VPN/main/proxy.txt"
+PRX_BANK_URL = "https://raw.githubusercontent.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/main/proxy.txt"
 
 [assets]
 directory = "./assets"
