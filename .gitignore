@@ -177,3 +177,6 @@ dist
 # Wrangler build output
 .wrangler/
 .wrangler-out/
+
+# Playwright MCP test artifacts
+.playwright-mcp/

@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="id" class="dark scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Config Converter — BITS Cloudflare VPN</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔄</text></svg>">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        bg: '#050014',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+        'float': 'float 6s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0) scale(1)' },
+          '50%': { transform: 'translateY(-20px) scale(1.05)' }
+        }
+      }
+    }
+  }
+}
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<style>
+  body {
+    background-color: #050014;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+    background-size: 32px 32px;
+    color: white;
+    overflow-x: hidden;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+  .gradient-bg {
+    background: linear-gradient(135deg, #4f46e5 0%, #d946ef 100%);
+  }
+  .blob {
+    position: absolute;
+    filter: blur(80px);
+    opacity: 0.4;
+    z-index: -1;
+    border-radius: 50%;
+  }
+  .glass-card {
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.4) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  /* Custom checkbox sesuai theme */
+  .cb {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background: rgba(15, 23, 42, 0.6);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    color: transparent;
+    position: relative;
+  }
+  .cb:hover {
+    border-color: #818cf8;
+    background: rgba(79, 70, 229, 0.15);
+  }
+  .cb:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+  .cb:checked {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    border-color: #6366f1;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+  }
+  .cb:checked::after {
+    content: "";
+    position: absolute;
+    top: 20%;
+    left: 35%;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #050014; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  
+  [x-cloak] { display: none; }
+</style>
+</head>
+<body class="antialiased relative" x-data="convertApp()" x-init="init()">
+
+  <!-- Background Blobs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="blob bg-indigo-600/40 w-[600px] h-[600px] -top-[200px] -left-[100px] animate-float"></div>
+    <div class="blob bg-fuchsia-600/30 w-[500px] h-[500px] top-[20%] -right-[150px] animate-float" style="animation-delay: -2s;"></div>
+    <div class="blob bg-amber-500/20 w-[400px] h-[400px] bottom-0 left-[20%] animate-float" style="animation-delay: -4s;"></div>
+  </div>
+
+  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-12 min-h-screen">
+    
+    <main class="space-y-6">
+      
+      <!-- Hero Card: Converter -->
+      <section class="glass-card rounded-3xl p-6 animate-slide-up">
+
+        <!-- Title row -->
+        <div class="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold">
+              🔄 Config <span class="bg-gradient-to-r from-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">Converter</span>
+            </h1>
+            <p class="text-sm text-slate-400 mt-2">
+              Konversi VLESS, VMess &amp; Trojan URI ke Clash YAML dan sebaliknya.
+            </p>
+          </div>
+          <span x-show="converted > 0" x-cloak
+            class="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 mt-1">
+            <span class="text-[11px] leading-none">🔗</span>
+            <span x-text="converted"></span>
+            <span class="normal-case">proxy terkonversi</span>
+          </span>
+        </div>
+
+        <!-- Direction toggle (Mode Selection pattern) -->
+        <div class="mb-5">
+          <label class="block text-xs text-slate-400 font-medium mb-3">Arah Konversi</label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+              :class="dir === 'v2c' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'">
+              <input type="radio" name="dir" value="v2c" :checked="dir === 'v2c'" @change="switchDir('v2c')" class="sr-only">
+              <span class="w-5 h-5 text-indigo-400">🔗</span>
+              <span class="text-sm font-semibold">URI → Clash</span>
+            </label>
+            <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+              :class="dir === 'c2v' ? 'border-purple-500 bg-purple-500/10' : 'hover:border-slate-700'">
+              <input type="radio" name="dir" value="c2v" :checked="dir === 'c2v'" @change="switchDir('c2v')" class="sr-only">
+              <span class="w-5 h-5 text-purple-400">📄</span>
+              <span class="text-sm font-semibold">Clash → URI</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Input -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm text-slate-400 flex items-center gap-2">
+              <span class="w-4 h-4">📥</span>
+              <span x-show="dir === 'v2c'">VLESS / VMess / Trojan URIs</span>
+              <span x-show="dir === 'c2v'" x-cloak>Clash YAML</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <button @click="loadSample()"
+                class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1">
+                <span class="w-4 h-4">📥</span> Load Sample
+              </button>
+              <button @click="clearInput()"
+                class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1">
+                <span class="w-4 h-4">🗑️</span> Clear
+              </button>
+            </div>
+          </div>
+          <textarea x-model="input" rows="10" spellcheck="false" x-cloak
+            :placeholder="dir === 'v2c' ? 'Tempel VLESS / VMess / Trojan URI di sini, satu per baris…' : 'Tempel YAML Clash (proxies: [...]) di sini…'"
+            class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none font-mono text-xs resize-y transition"></textarea>
+        </div>
+
+        <!-- Convert button -->
+        <button @click="convert()"
+          class="w-full py-4 gradient-bg hover:scale-[1.02] rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg">
+          <span class="text-lg leading-none">⚡</span>
+          <span x-text="dir === 'v2c' ? 'Convert to Clash YAML' : 'Convert to URIs'"></span>
+        </button>
+
+        <!-- Stats row -->
+        <div x-show="converted > 0 || skipped > 0 || errorCount > 0" x-cloak class="flex flex-wrap gap-2 mt-4">
+          <span x-show="converted > 0"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">
+            <span class="text-[11px] leading-none">✅</span>
+            <span x-text="converted"></span>
+            <span class="capitalize">Converted</span>
+          </span>
+          <span x-show="skipped > 0"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-slate-500/40 bg-slate-500/10 text-slate-400">
+            <span class="text-[11px] leading-none">⏭️</span>
+            <span x-text="skipped"></span>
+            <span class="capitalize">Skipped</span>
+          </span>
+          <span x-show="errorCount > 0"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-rose-500/40 bg-rose-500/10 text-rose-400">
+            <span class="text-[11px] leading-none">❌</span>
+            <span x-text="errorCount"></span>
+            <span class="capitalize">Errors</span>
+          </span>
+        </div>
+
+        <!-- Errors -->
+        <div x-show="errorCount > 0" x-cloak class="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 space-y-1">
+          <template x-for="(err, i) in errorList" :key="i">
+            <p class="text-xs font-mono text-rose-300 break-all" x-text="err"></p>
+          </template>
+        </div>
+
+        <!-- Output -->
+        <div class="mt-6">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm text-slate-400 flex items-center gap-2">
+              <span class="w-4 h-4" :class="dir === 'v2c' ? '' : 'text-purple-400'">📄</span>
+              <span x-show="dir === 'v2c'">Clash YAML</span>
+              <span x-show="dir === 'c2v'" x-cloak>VLESS / VMess / Trojan URIs</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <button @click="copyText(output)"
+                class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1">
+                <span class="w-4 h-4">📋</span> Copy
+              </button>
+              <button @click="download()"
+                class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1">
+                <span class="w-4 h-4">⬇️</span> Download
+              </button>
+            </div>
+          </div>
+          <textarea readonly x-model="output" rows="11" spellcheck="false"
+            class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 font-mono text-xs resize-y focus:outline-none"></textarea>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-6 text-center animate-fade-in" style="animation-delay: 0.3s;">
+      <p class="text-sm text-slate-400">
+        Developed with ❤️ by Banten IT Solutions
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    function convertApp() {
+      // ---------- Base64 (UTF-8 safe) helpers ----------
+      const fromB64 = (b64) => {
+        let b = b64.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = b.length % 4;
+        if (pad) b += '='.repeat(4 - pad);
+        const bin = atob(b);
+        const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+        return new TextDecoder().decode(bytes);
+      };
+      const toB64 = (str) => {
+        const bytes = new TextEncoder().encode(str);
+        let bin = '';
+        bytes.forEach((b) => (bin += String.fromCharCode(b)));
+        return btoa(bin);
+      };
+
+      // ---------- Sample data (VLESS + VMess + Trojan) ----------
+      const VMESS_JSON = {
+        v: '2',
+        ps: '🇮🇩 Org VMess WS TLS [BITS Cloudflare VPN]',
+        add: 'yuliana.my.id',
+        port: '443',
+        id: '7f6e5d4c-3b2a-1f0e-9d8c-7b6a5f4e3d2c',
+        aid: '0',
+        scy: 'auto',
+        net: 'ws',
+        host: 'yuliana.my.id',
+        path: '/1.2.3.4-443',
+        tls: 'tls',
+        sni: 'yuliana.my.id'
+      };
+      const URIS_SAMPLE = [
+        'vless://550e8400-e29b-41d4-a716-446655440000@yuliana.my.id:443?encryption=none&security=tls&sni=yuliana.my.id&type=ws&host=yuliana.my.id&path=%2F1.2.3.4-443#%F0%9F%87%AE%F0%9F%87%B9%20Org%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D',
+        'vmess://' + toB64(JSON.stringify(VMESS_JSON)),
+        'trojan://Trojan471-Demo@yuliana.my.id:443?sni=yuliana.my.id&security=tls&type=ws&host=yuliana.my.id&path=%2F1.2.3.4-443#%F0%9F%87%BA%F0%9F%87%B8%20Org%20Trojan%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D'
+      ].join('\n');
+
+      const CLASH_SAMPLE = `proxies:
+  - name: "🇮🇩 Org WS TLS [BITS Cloudflare VPN]"
+    server: yuliana.my.id
+    port: 443
+    type: vless
+    uuid: 550e8400-e29b-41d4-a716-446655440000
+    tls: true
+    skip-cert-verify: true
+    servername: yuliana.my.id
+    network: ws
+    ws-opts:
+      path: /1.2.3.4-443
+      headers:
+        Host: yuliana.my.id
+    udp: true
+  - name: "🇮🇩 Org VMess WS TLS"
+    type: vmess
+    server: yuliana.my.id
+    port: 443
+    uuid: 7f6e5d4c-3b2a-1f0e-9d8c-7b6a5f4e3d2c
+    alterId: 0
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: yuliana.my.id
+    network: ws
+    ws-opts:
+      path: /1.2.3.4-443
+      headers:
+        Host: yuliana.my.id
+    udp: true
+  - name: "🇺🇸 Org Trojan WS TLS"
+    type: trojan
+    server: yuliana.my.id
+    port: 443
+    password: 2.471-Demo
+    sni: yuliana.my.id
+    skip-cert-verify: true
+    network: ws
+    ws-opts:
+      path: /1.2.3.4-443
+      headers:
+        Host: yuliana.my.id
+    udp: true
+  - name: "SS Shadow Example"
+    type: ss
+    server: shadowsocks.example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: secret123`;
+
+      return {
+        dir: 'v2c',
+        inputs: { v2c: undefined, c2v: undefined },
+        input: '',
+        output: '',
+        errorList: [],
+        errorCount: 0,
+        converted: 0,
+        skipped: 0,
+
+        init() {
+          if (this.inputs.v2c === undefined) {
+            this.input = URIS_SAMPLE;
+            this.inputs.v2c = URIS_SAMPLE;
+          }
+        },
+
+        switchDir(d) {
+          if (d === this.dir) return;
+          this.inputs[this.dir] = this.input;
+          this.dir = d;
+          if (this.inputs[d] === undefined) {
+            this.input = this.loadSampleFor(d);
+            this.inputs[d] = this.input;
+          } else {
+            this.input = this.inputs[d];
+          }
+          this.output = '';
+          this.errorList = [];
+          this.errorCount = 0;
+          this.converted = 0;
+          this.skipped = 0;
+        },
+
+        loadSampleFor(d) {
+          return d === 'v2c' ? URIS_SAMPLE : CLASH_SAMPLE;
+        },
+
+        loadSample() {
+          this.input = this.loadSampleFor(this.dir);
+          this.inputs[this.dir] = this.input;
+        },
+
+        clearInput() {
+          this.input = '';
+          this.inputs[this.dir] = '';
+          this.output = '';
+          this.errorList = [];
+          this.errorCount = 0;
+          this.converted = 0;
+          this.skipped = 0;
+        },
+
+        convert() {
+          this.output = '';
+          this.errorList = [];
+          this.errorCount = 0;
+          this.converted = 0;
+          this.skipped = 0;
+
+          if (!this.input.trim()) {
+            this.errorList.push('Input kosong. Tempel data atau klik "Load Sample".');
+            this.errorCount = 1;
+            return;
+          }
+          if (this.dir === 'v2c') this.convertToYaml();
+          else this.convertToUris();
+        },
+
+        // ---------- URI → Clash YAML ----------
+        convertToYaml() {
+          const lines = this.input.split(/\r?\n/);
+          const out = [];
+
+          lines.forEach((raw, i) => {
+            const line = raw.trim();
+            if (!line || line.startsWith('#')) return;
+
+            let scheme;
+            if (/^vless:\/\//i.test(line)) scheme = 'vless';
+            else if (/^vmess:\/\//i.test(line)) scheme = 'vmess';
+            else if (/^trojan:\/\//i.test(line)) scheme = 'trojan';
+            if (!scheme) { this.skipped++; return; }
+
+            try {
+              const block =
+                scheme === 'vless' ? this.vlessLine(line) :
+                scheme === 'vmess' ? this.vmessLine(line) :
+                this.trojanLine(line);
+              out.push(block);
+            } catch (e) {
+              this.errorCount++;
+              this.errorList.push(`Baris ${i + 1} (${scheme}): ${e.message || e}`);
+            }
+          });
+
+          this.converted = out.length;
+          this.output = out.length ? `proxies:\n${out.join('\n')}` : '';
+        },
+
+        yamlEscape(str) {
+          return String(str).replace(/"/g, '\\"');
+        },
+
+        commonWsOpts(network, host, path) {
+          const lines = [];
+          if (network === 'ws') {
+            lines.push(`    network: ws`);
+            lines.push(`    ws-opts:`);
+            lines.push(`      path: ${path || '/'}`);
+            if (host) {
+              lines.push(`      headers:`);
+              lines.push(`        Host: ${host}`);
+            }
+          } else if (network === 'grpc') {
+            lines.push(`    network: grpc`);
+            lines.push(`    grpc-opts:`);
+            if (host || path) lines.push(`      'grpc-service-name': ${host || path}`);
+          } else {
+            lines.push(`    network: ${network === 'tcp' ? 'tcp' : (network || 'tcp')}`);
+          }
+          return lines;
+        },
+
+        // --- VLESS ---
+        vlessLine(line) {
+          const url = new URL(line);
+          const uuid = url.username;
+          const server = url.hostname;
+          const port = url.port || '443';
+          const params = url.searchParams;
+          let remark = '';
+          try { remark = decodeURIComponent(url.hash.replace('#', '')); } catch (e) { /* biarkan kosong */ }
+
+          const security = (params.get('security') || 'none').toLowerCase();
+          const network = params.get('type') || 'tcp';
+          const host = params.get('host') || '';
+          let path = params.get('path') || '';
+          try { path = decodeURIComponent(path); } catch (e) { /* biarkan mentah */ }
+          const sni = params.get('sni') || '';
+          const flow = params.get('flow') || '';
+          const fp = params.get('fp') || '';
+          const alpn = params.get('alpn') || '';
+          const pbk = params.get('pbk') || '';
+          const sid = params.get('sid') || '';
+
+          const tls = security === 'tls' || security === 'reality';
+          const name = remark || `${server}:${port}`;
+
+          const p = [`  - name: "${this.yamlEscape(name)}"`];
+          p.push(`    type: vless`);
+          p.push(`    server: ${server}`);
+          p.push(`    port: ${port}`);
+          p.push(`    uuid: ${uuid}`);
+          if (flow) p.push(`    flow: ${flow}`);
+          p.push(`    tls: ${tls}`);
+          p.push(`    skip-cert-verify: true`);
+          if (tls) {
+            p.push(`    servername: ${sni || host || server}`);
+            if (fp) p.push(`    client-fingerprint: ${fp}`);
+            if (alpn) p.push(`    alpn: [${alpn.split(',').map((s) => s.trim()).join(', ')}]`);
+          }
+          p.push(...this.commonWsOpts(network, host, path));
+          if (security === 'reality') {
+            p.push(`    reality-opts:`);
+            if (pbk) p.push(`      'public-key': ${pbk}`);
+            if (sid) p.push(`      'short-id': ${sid}`);
+          }
+          p.push(`    udp: true`);
+          return p.join('\n');
+        },
+
+        // --- VMess ---
+        vmessLine(line) {
+          let payload = line.replace(/^vmess:\/\//i, '');
+          const idx = payload.indexOf('#');
+          if (idx !== -1) payload = payload.slice(0, idx);
+          if (!payload.trim()) throw new Error('payload VMess kosong');
+
+          let j;
+          try {
+            j = JSON.parse(fromB64(payload));
+          } catch (e) {
+            throw new Error('base64 JSON VMess tidak valid');
+          }
+
+          const server = j.add || '';
+          const port = j.port != null ? j.port : '443';
+          const id = j.id || j.uuid || '';
+          const aid = j.aid != null ? j.aid : '0';
+          const cipher = j.scy || 'auto';
+          const tls = String(j.tls || '').toLowerCase() === 'tls' || j.tls === true || j.tls === 'true';
+          const network = j.net || 'tcp';
+          const host = j.host || '';
+          const path = j.path || '';
+          const sni = j.sni || '';
+          const fp = j.fp || '';
+          const alpn = j.alpn || '';
+          const name = j.ps || `${server}:${port}`;
+
+          const p = [`  - name: "${this.yamlEscape(name)}"`];
+          p.push(`    type: vmess`);
+          p.push(`    server: ${server}`);
+          p.push(`    port: ${port}`);
+          p.push(`    uuid: ${id}`);
+          p.push(`    alterId: ${aid}`);
+          p.push(`    cipher: ${cipher}`);
+          if (tls) {
+            p.push(`    tls: true`);
+            p.push(`    skip-cert-verify: true`);
+            p.push(`    servername: ${sni || host || server}`);
+            if (fp) p.push(`    client-fingerprint: ${fp}`);
+            if (alpn) p.push(`    alpn: [${alpn.split(',').map((s) => s.trim()).join(', ')}]`);
+          } else {
+            p.push(`    tls: false`);
+          }
+          p.push(...this.commonWsOpts(network, host, path));
+          p.push(`    udp: true`);
+          return p.join('\n');
+        },
+
+        // --- Trojan ---
+        trojanLine(line) {
+          const url = new URL(line);
+          const password = url.username;
+          const server = url.hostname;
+          const port = url.port || '443';
+          const params = url.searchParams;
+          let remark = '';
+          try { remark = decodeURIComponent(url.hash.replace('#', '')); } catch (e) { /* biarkan kosong */ }
+
+          const security = (params.get('security') || 'tls').toLowerCase();
+          const network = params.get('type') || 'tcp';
+          const host = params.get('host') || '';
+          let path = params.get('path') || '';
+          try { path = decodeURIComponent(path); } catch (e) { /* biarkan mentah */ }
+          const sni = params.get('sni') || '';
+          const fp = params.get('fp') || '';
+          const alpn = params.get('alpn') || '';
+          const flow = params.get('flow') || '';
+
+          const tls = security !== 'none' && security !== 'nontls';
+          const name = remark || `${server}:${port}`;
+
+          const p = [`  - name: "${this.yamlEscape(name)}"`];
+          p.push(`    type: trojan`);
+          p.push(`    server: ${server}`);
+          p.push(`    port: ${port}`);
+          p.push(`    password: ${this.yamlEscape(password)}`);
+          if (tls) {
+            p.push(`    tls: true`);
+            if (sni || host || server) p.push(`    sni: ${sni || host || server}`);
+            if (fp) p.push(`    client-fingerprint: ${fp}`);
+            if (alpn) p.push(`    alpn: [${alpn.split(',').map((s) => s.trim()).join(', ')}]`);
+          } else {
+            p.push(`    tls: false`);
+          }
+          if (flow) p.push(`    flow: ${flow}`);
+          p.push(`    skip-cert-verify: true`);
+          p.push(...this.commonWsOpts(network, host, path));
+          p.push(`    udp: true`);
+          return p.join('\n');
+        },
+
+        // ---------- Clash YAML → URI ----------
+        convertToUris() {
+          if (typeof jsyaml === 'undefined') {
+            this.errorCount = 1;
+            this.errorList.push('Library js-yaml belum dimuat. Muat ulang halaman.');
+            return;
+          }
+
+          let data;
+          try {
+            data = jsyaml.load(this.input);
+          } catch (e) {
+            this.errorCount = 1;
+            this.errorList.push(`YAML tidak valid: ${e.message}`);
+            return;
+          }
+
+          const list = Array.isArray(data) ? data : (data && Array.isArray(data.proxies) ? data.proxies : []);
+          if (!list || list.length === 0) {
+            this.errorCount = 1;
+            this.errorList.push('Tidak ada proxy ditemukan. Pastikan dokumen berupa array atau { proxies: [...] }.');
+            return;
+          }
+
+          const uris = [];
+          list.forEach((p) => {
+            if (!p || typeof p !== 'object') { this.skipped++; return; }
+            const type = String(p.type || '').toLowerCase();
+            try {
+              if (type === 'vless') uris.push(this.vlessToUri(p));
+              else if (type === 'vmess') uris.push(this.vmessToUri(p));
+              else if (type === 'trojan') uris.push(this.trojanToUri(p));
+              else this.skipped++;
+            } catch (e) {
+              this.errorCount++;
+              this.errorList.push(`${type || 'unknown'}: ${e.message || e}`);
+            }
+          });
+
+          this.converted = uris.length;
+          this.output = uris.join('\n');
+        },
+
+        wsUriPath(p) {
+          const network = p.network || 'tcp';
+          const wsOpts = p['ws-opts'] || {};
+          const grpcOpts = p['grpc-opts'] || {};
+          let host = '';
+          let path = '';
+          if (network === 'ws') {
+            host = (wsOpts.headers && wsOpts.headers.Host) || '';
+            path = wsOpts.path || '';
+          } else if (network === 'grpc') {
+            host = grpcOpts['grpc-service-name'] || '';
+          }
+          return { network, host, path };
+        },
+
+        vlessToUri(p) {
+          const server = p.server || '';
+          const port = p.port != null ? p.port : 443;
+          const { network, host, path } = this.wsUriPath(p);
+          const reality = p['reality-opts'] || {};
+          const tls = p.tls || Object.keys(reality).length > 0;
+
+          const q = [];
+          q.push('encryption=none');
+          q.push(`security=${Object.keys(reality).length > 0 ? 'reality' : (tls ? 'tls' : 'none')}`);
+          if (tls) {
+            const sni = p.servername || host || server;
+            if (sni) q.push(`sni=${encodeURIComponent(sni)}`);
+          }
+          q.push(`type=${encodeURIComponent(network)}`);
+          if (network === 'ws') {
+            if (path) q.push(`path=${encodeURIComponent(path)}`);
+            if (host) q.push(`host=${encodeURIComponent(host)}`);
+          } else if (network === 'grpc' && host) {
+            q.push(`host=${encodeURIComponent(host)}`);
+          }
+          if (p.flow) q.push(`flow=${encodeURIComponent(p.flow)}`);
+          if (p['client-fingerprint']) q.push(`fp=${encodeURIComponent(p['client-fingerprint'])}`);
+          if (p.alpn) q.push(`alpn=${encodeURIComponent(Array.isArray(p.alpn) ? p.alpn.join(',') : p.alpn)}`);
+          if (Object.keys(reality).length > 0) {
+            if (reality['public-key']) q.push(`pbk=${encodeURIComponent(reality['public-key'])}`);
+            if (reality['short-id']) q.push(`sid=${encodeURIComponent(reality['short-id'])}`);
+            if (reality['spx']) q.push(`spx=${encodeURIComponent(reality['spx'])}`);
+          }
+
+          const frag = p.name ? `#${encodeURIComponent(p.name)}` : '';
+          return `vless://${p.uuid || ''}@${server}:${port}?${q.join('&')}${frag}`;
+        },
+
+        vmessToUri(p) {
+          const server = p.server || '';
+          const port = p.port != null ? p.port : 443;
+          const { network, host, path } = this.wsUriPath(p);
+          const reality = p['reality-opts'] || {};
+
+          const v = {
+            v: '2',
+            ps: p.name || `${server}:${port}`,
+            add: server,
+            port: String(port),
+            id: p.uuid || '',
+            aid: String(p.alterId != null ? p.alterId : 0),
+            scy: p.cipher || 'auto',
+            net: network,
+            type: p['header-type'] || '',
+            host: host || '',
+            path: path || '',
+            tls: p.tls ? 'tls' : 'none',
+            sni: p.servername || p.sni || '',
+            alpn: Array.isArray(p.alpn) ? p.alpn.join(',') : (p.alpn || ''),
+            fp: p['client-fingerprint'] || '',
+            pbk: reality['public-key'] || '',
+            sid: reality['short-id'] || '',
+            spx: reality['spx'] || ''
+          };
+          return 'vmess://' + toB64(JSON.stringify(v));
+        },
+
+        trojanToUri(p) {
+          const server = p.server || '';
+          const port = p.port != null ? p.port : 443;
+          const { network, host, path } = this.wsUriPath(p);
+          const reality = p['reality-opts'] || {};
+          const tls = p.tls || Object.keys(reality).length > 0;
+
+          const q = [];
+          q.push(`security=${Object.keys(reality).length > 0 ? 'reality' : (tls ? 'tls' : 'none')}`);
+          const sni = p.sni || p.servername || '';
+          if (sni) q.push(`sni=${encodeURIComponent(sni)}`);
+          q.push(`type=${encodeURIComponent(network)}`);
+          if (network === 'ws') {
+            if (path) q.push(`path=${encodeURIComponent(path)}`);
+            if (host) q.push(`host=${encodeURIComponent(host)}`);
+          } else if (network === 'grpc' && host) {
+            q.push(`host=${encodeURIComponent(host)}`);
+          }
+          if (p['client-fingerprint']) q.push(`fp=${encodeURIComponent(p['client-fingerprint'])}`);
+          if (p.alpn) q.push(`alpn=${encodeURIComponent(Array.isArray(p.alpn) ? p.alpn.join(',') : p.alpn)}`);
+          if (p.flow) q.push(`flow=${encodeURIComponent(p.flow)}`);
+          if (Object.keys(reality).length > 0) {
+            if (reality['public-key']) q.push(`pbk=${encodeURIComponent(reality['public-key'])}`);
+            if (reality['short-id']) q.push(`sid=${encodeURIComponent(reality['short-id'])}`);
+            if (reality['spx']) q.push(`spx=${encodeURIComponent(reality['spx'])}`);
+          }
+
+          const frag = p.name ? `#${encodeURIComponent(p.name)}` : '';
+          return `trojan://${p.password || ''}@${server}:${port}?${q.join('&')}${frag}`;
+        },
+
+        // ---------- Helpers ----------
+        copyText(text) {
+          text = text || this.output;
+          if (!text) return;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+              .then(() => alert('✅ Copied to clipboard!'))
+              .catch(() => this.fallbackCopy(text));
+          } else {
+            this.fallbackCopy(text);
+          }
+        },
+
+        fallbackCopy(text) {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          try {
+            document.execCommand('copy');
+            alert('✅ Copied to clipboard!');
+          } catch {
+            alert('❌ Failed to copy');
+          }
+          document.body.removeChild(textarea);
+        },
+
+        download() {
+          if (!this.output) return;
+          const filename = this.dir === 'v2c' ? 'clash-config.yaml' : 'uris.txt';
+          const type = this.dir === 'v2c' ? 'application/x-yaml' : 'text/plain';
+          const blob = new Blob([this.output], { type });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(a.href);
+        }
+      };
+    }
+  </script>
+</body>
+</html>
