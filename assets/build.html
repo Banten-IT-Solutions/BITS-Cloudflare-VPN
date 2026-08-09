@@ -556,18 +556,20 @@
               uris.push(uri);
               
               proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
-    type: vless
     server: ${server}
     port: ${cleanPort}
+    type: vless
     uuid: ${uuid}
-    udp: false
+    cipher: auto
     tls: ${tls}
-    network: ws
+    skip-cert-verify: true
     servername: ${servername}
+    network: ws
     ws-opts:
       path: ${wsPath}
       headers:
-        Host: ${host}`);
+        Host: ${host}
+    udp: true`);
             });
 
             this.result.uri = uris.join('\n');
