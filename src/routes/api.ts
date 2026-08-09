@@ -166,6 +166,21 @@ export function createApiRoutes() {
 
   app.get("/sub", subHandler);
 
+  // GET /countries - daftar negara + jumlah proxy dari KV list (untuk /country page)
+  app.get("/countries", async (c) => {
+    try {
+      const kvPrx = await getKVPrxList(c.env.KV_PRX_URL);
+      const countries = Object.entries(kvPrx)
+        .filter(([, arr]) => Array.isArray(arr) && arr.length > 0)
+        .map(([code, arr]) => ({ code: code.toUpperCase(), count: arr.length }))
+        .sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));
+      return c.json({ count: countries.length, countries }, 200, CORS_HEADER_OPTIONS);
+    } catch (error: any) {
+      console.error("Error in /countries:", error);
+      return c.json({ error: "Failed to fetch countries", message: error.message }, 500, CORS_HEADER_OPTIONS);
+    }
+  });
+
   // GET /myip - client IP info
   app.get("/myip", async (c) => {
     const req = c.req.raw;
