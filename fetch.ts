@@ -1,7 +1,7 @@
 const CLEAN_IP_URL = "https://raw.githubusercontent.com/vfarid/cf-clean-ips/main/list.txt";
 const IRCF_JSON_URL = "https://raw.githubusercontent.com/ircfspace/cf2dns/master/list/ipv4.json";
-const NAUTICA_DICKY_URL = "https://raw.githubusercontent.com/dickymuliafiqri/Nautica/main/rawProxyList.txt";
-const NAUTICA_FOOL_URL = "https://raw.githubusercontent.com/FoolVPN-ID/Nautica/main/rawProxyList.txt";
+// Sumber utama raw proxy: Nautica (FoolVPN) — rawProxyList.txt berisi ±12.5k IP
+const NAUTICA_URL = "https://raw.githubusercontent.com/FoolVPN-ID/Nautica/main/rawProxyList.txt";
 const RAW_PROXY_LIST_FILE = "./raw.txt";
 
 interface ProxyEntry {
@@ -133,28 +133,15 @@ async function fetchIrcfIPs(): Promise<ProxyEntry[]> {
   }
 }
 
-// Fetch dari upstream Nautica (Dicky Muliafiqri)
-async function fetchNauticaDicky(): Promise<ProxyEntry[]> {
+// Fetch dari upstream Nautica (FoolVPN-ID) — sumber utama raw proxy
+async function fetchNautica(): Promise<ProxyEntry[]> {
   try {
-    console.log("🌐 Fetching raw proxy list from Nautica (dicky)...");
-    const response = await fetch(NAUTICA_DICKY_URL);
+    console.log("🌐 Fetching raw proxy list from Nautica (FoolVPN)...");
+    const response = await fetch(NAUTICA_URL);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return parseStandardText(await response.text());
   } catch (error) {
-    console.error("❌ Failed to fetch from Nautica (dicky):", error);
-    return [];
-  }
-}
-
-// Fetch dari upstream FoolVPN-ID (Nautica Fork)
-async function fetchNauticaFool(): Promise<ProxyEntry[]> {
-  try {
-    console.log("🌐 Fetching raw proxy list from FoolVPN Nautica...");
-    const response = await fetch(NAUTICA_FOOL_URL);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return parseStandardText(await response.text());
-  } catch (error) {
-    console.error("❌ Failed to fetch from FoolVPN Nautica:", error);
+    console.error("❌ Failed to fetch from Nautica (FoolVPN):", error);
     return [];
   }
 }
@@ -162,27 +149,25 @@ async function fetchNauticaFool(): Promise<ProxyEntry[]> {
 (async () => {
   // Read local + fetch remote (dengan toleransi kegagalan masing-masing)
   const existing = await readExistingRaw();
+  const listNautica = await fetchNautica();
   const listVfarid = await fetchVfaridIPs();
   const listIrcf = await fetchIrcfIPs();
-  const listDicky = await fetchNauticaDicky();
-  const listFool = await fetchNauticaFool();
-  
+
   console.log(`📊 Current raw.txt: ${existing.length} IPs`);
+  console.log(`📊 Fetched from Nautica (FoolVPN): ${listNautica.length} IPs`);
   console.log(`📊 Fetched from vfarid: ${listVfarid.length} IPs`);
   console.log(`📊 Fetched from ircfspace: ${listIrcf.length} IPs`);
-  console.log(`📊 Fetched from Nautica (dicky): ${listDicky.length} IPs`);
-  console.log(`📊 Fetched from FoolVPN: ${listFool.length} IPs`);
 
   // Merge secara unik berdasarkan IP
   const mergedMap = new Map<string, ProxyEntry>();
-  
+
   // 1. Masukkan list existing terlebih dahulu (agar informasi country/org asli terjaga)
   for (const item of existing) {
     mergedMap.set(item.ip, item);
   }
-  
+
   // 2. Gabungkan data baru (jika IP belum ada)
-  const allNewLists = [...listVfarid, ...listIrcf, ...listDicky, ...listFool];
+  const allNewLists = [...listNautica, ...listVfarid, ...listIrcf];
   let addedCount = 0;
   for (const item of allNewLists) {
     if (!mergedMap.has(item.ip)) {
