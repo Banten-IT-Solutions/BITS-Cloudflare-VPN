@@ -94,6 +94,11 @@
 
       <!-- Country Grid Card -->
       <section class="glass-card rounded-3xl p-6 animate-slide-up">
+        <!-- Title -->
+        <h2 class="text-center text-lg font-bold mb-5 bg-gradient-to-r from-indigo-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+          Pilih Negara
+        </h2>
+
         <!-- Country cards (multi-select dengan klik, tanpa checkbox) - 10 per baris -->
         <div x-show="!loading" x-cloak class="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 gap-2">
           <template x-for="c in filteredCountries" :key="c.code">
@@ -148,13 +153,11 @@
             </button>
           </div>
 
-          <!-- Selected summary (bendera saja) -->
-          <div class="flex justify-center mb-5 p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10">
-            <span class="text-3xl leading-none tracking-wider">
-              <template x-for="code in selectedCodes" :key="code">
-                <span x-text="getFlagEmoji(code)"></span>
-              </template>
-            </span>
+          <!-- Selected summary (bendera saja, tanpa pembungkus) -->
+          <div class="flex justify-center mb-5 gap-1">
+            <template x-for="code in selectedCodes" :key="code">
+              <span class="text-lg leading-none" x-text="getFlagEmoji(code)"></span>
+            </template>
           </div>
 
           <div class="space-y-5">
