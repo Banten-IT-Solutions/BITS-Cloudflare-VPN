@@ -141,10 +141,10 @@
             </p>
           </div>
           <span x-show="converted > 0" x-cloak
-            class="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 mt-1">
-            <span class="text-[11px] leading-none">🔗</span>
+            class="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 mt-1">
+            <span class="text-[11px] leading-none">✅</span>
             <span x-text="converted"></span>
-            <span class="normal-case">proxy terkonversi</span>
+            <span class="capitalize">Converted</span>
           </span>
         </div>
 
@@ -165,13 +165,6 @@
             </label>
           </div>
         </div>
-
-        <!-- Convert button -->
-        <button @click="convert()"
-          class="w-full py-3.5 mb-4 gradient-bg hover:scale-[1.02] rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg">
-          <span class="text-lg leading-none">⚡</span>
-          <span x-text="dir === 'v2c' ? 'Convert to Clash YAML' : 'Convert to URIs'"></span>
-        </button>
 
         <!-- Input & Output (2 kolom compact) -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -194,7 +187,7 @@
                 </button>
               </div>
             </div>
-            <textarea x-model="input" rows="12" spellcheck="false" x-cloak
+            <textarea x-model="input" rows="16" spellcheck="false" x-cloak
               :placeholder="dir === 'v2c' ? 'Tempel VLESS / VMess / Trojan URI di sini, satu per baris…' : 'Tempel YAML Clash (proxies: [...]) di sini…'"
               class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none font-mono text-xs resize-y transition"></textarea>
           </div>
@@ -218,19 +211,20 @@
                 </button>
               </div>
             </div>
-            <textarea readonly x-model="output" rows="12" spellcheck="false"
+            <textarea readonly x-model="output" rows="16" spellcheck="false"
               class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 font-mono text-xs resize-y focus:outline-none"></textarea>
           </div>
         </div>
 
+        <!-- Convert button (di bawah textarea) -->
+        <button @click="convert()"
+          class="w-full py-3.5 mt-4 gradient-bg hover:scale-[1.02] rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg">
+          <span class="text-lg leading-none">⚡</span>
+          <span x-text="dir === 'v2c' ? 'Convert to Clash YAML' : 'Convert to URIs'"></span>
+        </button>
+
         <!-- Stats row -->
-        <div x-show="converted > 0 || skipped > 0 || errorCount > 0" x-cloak class="flex flex-wrap gap-2 mt-4">
-          <span x-show="converted > 0"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">
-            <span class="text-[11px] leading-none">✅</span>
-            <span x-text="converted"></span>
-            <span class="capitalize">Converted</span>
-          </span>
+        <div x-show="skipped > 0 || errorCount > 0" x-cloak class="flex flex-wrap gap-2 mt-4">
           <span x-show="skipped > 0"
             class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-slate-500/40 bg-slate-500/10 text-slate-400">
             <span class="text-[11px] leading-none">⏭️</span>
@@ -346,13 +340,7 @@
       path: /1.2.3.4-443
       headers:
         Host: yuliana.my.id
-    udp: true
-  - name: "SS Shadow Example"
-    type: ss
-    server: shadowsocks.example.com
-    port: 8388
-    cipher: aes-256-gcm
-    password: secret123`;
+    udp: true`;
 
       return {
         dir: 'v2c',
