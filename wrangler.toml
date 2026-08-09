@@ -15,10 +15,12 @@ binding = "ASSETS"
 pattern = "yuliana.my.id"
 custom_domain = true
 
-# Wildcard semua subdomain -> pakai route zone (Custom Domain tidak mendukung wildcard)
+# SNI-trick hostname: custom domain eksak agar SSL SAN persis hostname ini muncul,
+# sehingga koneksi SSL/TLS dengan SNI support.zoom.us.yuliana.my.id diterima oleh edge
+# (Universal SSL/wildcard hanya men-cover 1 level => tidak cukup untuk 3 level).
 [[routes]]
-pattern = "*.yuliana.my.id/*"
-zone_name = "yuliana.my.id"
+pattern = "support.zoom.us.yuliana.my.id"
+custom_domain = true
 
 [unsafe.metadata.observability]
 enabled = true
