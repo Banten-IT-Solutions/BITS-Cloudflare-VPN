@@ -254,7 +254,7 @@
 
       <!-- Config Dialog -->
       <div x-show="showDialog" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" style="background:rgba(0,0,0,0.8)">
-        <div @click.away="showDialog = false" class="glass-card rounded-3xl p-6 max-w-md w-full animate-slide-up">
+        <div @click.away="showDialog = false" class="glass-card rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto animate-slide-up">
           <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-3">
               <span class="w-5 h-5 text-purple-400">🎛️</span>
@@ -266,6 +266,31 @@
           </div>
 
           <div class="space-y-5">
+            <!-- Protocols (paling atas) -->
+            <div>
+              <label class="block text-xs text-slate-400 font-medium mb-3">Protocol Selection</label>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                  :class="config.proto === 'vless' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'">
+                  <input type="radio" x-model="config.proto" value="vless" class="sr-only">
+                  <span class="w-5 h-5 text-indigo-400">🔗</span>
+                  <span class="text-sm font-semibold">VLESS</span>
+                </label>
+                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                  :class="config.proto === 'vmess' ? 'border-purple-500 bg-purple-500/10' : 'hover:border-slate-700'">
+                  <input type="radio" x-model="config.proto" value="vmess" class="sr-only">
+                  <span class="w-5 h-5 text-purple-400">📡</span>
+                  <span class="text-sm font-semibold">VMess</span>
+                </label>
+                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                  :class="config.proto === 'trojan' ? 'border-emerald-500 bg-emerald-500/10' : 'hover:border-slate-700'">
+                  <input type="radio" x-model="config.proto" value="trojan" class="sr-only">
+                  <span class="w-5 h-5 text-emerald-400">🏹</span>
+                  <span class="text-sm font-semibold">Trojan</span>
+                </label>
+              </div>
+            </div>
+
             <!-- Mode SNI/CDN -->
             <div>
               <label class="block text-xs text-slate-400 font-medium mb-3">Mode Selection</label>
@@ -352,7 +377,8 @@
           <div>
             <div class="flex items-center justify-between mb-2">
               <label class="text-sm text-slate-400 flex items-center gap-2">
-                <span class="w-4 h-4">🔗</span> VLESS URIs
+                <span class="w-4 h-4">🔗</span>
+                <span x-text="config.proto === 'vmess' ? 'VMess URIs' : (config.proto === 'trojan' ? 'Trojan URIs' : 'VLESS URIs')"></span>
               </label>
               <button @click="copyText(result.uri)" 
                 class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1">
@@ -407,7 +433,7 @@
         searchTimer: null,
         abortController: null,
         showDialog: false,
-        config: { mode: 'sni', bug: 'support.zoom.us', wildcard: 'no', port: '443' },
+        config: { mode: 'sni', bug: 'support.zoom.us', wildcard: 'no', port: '443', proto: 'vless' },
         result: { uri: '', yaml: '' },
 
         init() {
@@ -501,7 +527,7 @@
           this.building = true;
           setTimeout(() => {
             const hostname = location.hostname;
-            const { mode, bug, wildcard, port } = this.config;
+            const { mode, bug, wildcard, port, proto } = this.config;
             
             // Validate & sanitize input bug domain
             const cleanBug = bug.replace(/[^a-zA-Z0-9.-]/g, '').trim();
@@ -548,14 +574,67 @@
               const uuid = this.generateUUID();
               const flag = this.getFlagEmoji(proxy.country);
               const orgName = `${flag} ${proxy.org}`;
-              
-              // Safe URI configuration
-              const safeHash = encodeURIComponent(`${orgName} WS ${tls ? 'TLS' : 'NTLS'} [BITS Cloudflare VPN]`);
+
+              const label = `${orgName} WS ${tls ? 'TLS' : 'NTLS'} [BITS Cloudflare VPN]`;
+              const safeHash = encodeURIComponent(label);
               const wsPath = `/${proxy.prxIP}-${proxy.prxPort}`;
-              const uri = `vless://${uuid}@${server}:${cleanPort}?encryption=none&security=${tls ? 'tls' : 'none'}${tls ? `&sni=${servername}` : ''}&type=ws&host=${host}&path=${encodeURIComponent(wsPath)}#${safeHash}`;
-              uris.push(uri);
-              
-              proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
+              const tlsQuery = tls ? `&sni=${servername}` : '';
+              const netQuery = `type=ws&host=${host}&path=${encodeURIComponent(wsPath)}`;
+
+              if (proto === 'vmess') {
+                const vmess = {
+                  v: '2',
+                  ps: label,
+                  add: server,
+                  port: cleanPort,
+                  id: uuid,
+                  aid: '0',
+                  scy: 'auto',
+                  net: 'ws',
+                  type: '',
+                  host: host,
+                  path: wsPath,
+                  tls: tls ? 'tls' : 'none',
+                  sni: tls ? servername : ''
+                };
+                uris.push('vmess://' + this.encodeBase64(JSON.stringify(vmess)));
+                proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
+    type: vmess
+    server: ${server}
+    port: ${cleanPort}
+    uuid: ${uuid}
+    alterId: 0
+    cipher: auto
+    tls: ${tls}
+    skip-cert-verify: true
+    servername: ${servername}
+    network: ws
+    ws-opts:
+      path: ${wsPath}
+      headers:
+        Host: ${host}
+    udp: true`);
+              } else if (proto === 'trojan') {
+                const password = this.generatePassword();
+                uris.push(`trojan://${password}@${server}:${cleanPort}?security=${tls ? 'tls' : 'none'}${tlsQuery}&${netQuery}#${safeHash}`);
+                proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
+    type: trojan
+    server: ${server}
+    port: ${cleanPort}
+    password: ${password}
+    tls: ${tls}
+    sni: ${servername}
+    skip-cert-verify: true
+    network: ws
+    ws-opts:
+      path: ${wsPath}
+      headers:
+        Host: ${host}
+    udp: true`);
+              } else {
+                // vless (default)
+                uris.push(`vless://${uuid}@${server}:${cleanPort}?encryption=none&security=${tls ? 'tls' : 'none'}${tlsQuery}&${netQuery}#${safeHash}`);
+                proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
     server: ${server}
     port: ${cleanPort}
     type: vless
@@ -570,6 +649,7 @@
       headers:
         Host: ${host}
     udp: true`);
+              }
             });
 
             this.result.uri = uris.join('\n');
@@ -598,6 +678,27 @@
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
           });
+        },
+
+        // Encode JSON ke base64 (UTF-8 aman) — untuk URI vmess://
+        encodeBase64(str) {
+          if (typeof TextEncoder !== 'undefined') {
+            const bytes = new TextEncoder().encode(str);
+            let bin = '';
+            bytes.forEach(b => bin += String.fromCharCode(b));
+            return btoa(bin);
+          }
+          return btoa(unescape(encodeURIComponent(str)));
+        },
+
+        // Password acak untuk Trojan
+        generatePassword() {
+          const cryptoObj = typeof crypto !== 'undefined' ? crypto : (typeof window !== 'undefined' ? (window.crypto || window.msCrypto) : null);
+          if (cryptoObj && cryptoObj.getRandomValues) {
+            const bytes = cryptoObj.getRandomValues(new Uint8Array(16));
+            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+          }
+          return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
         },
 
         getFlagEmoji(countryCode) {
