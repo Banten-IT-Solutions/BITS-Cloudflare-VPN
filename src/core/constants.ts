@@ -5,7 +5,6 @@ export const flash = "dm1lc3M=";
 export const neko = "dmxlc3M=";
 export const v2 = "djJyYXk=";
 
-export const PORTS = [443, 80];
 export const PROTOCOLS = [atob(neko), atob(horse), atob(flash)];
 export const KV_PRX_URL =
   "https://raw.githubusercontent.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/main/KV.json";

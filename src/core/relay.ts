@@ -19,7 +19,6 @@ import {
   neko,
   base64ToArrayBuffer,
   arrayBufferToHex,
-  sha224Hex,
 } from "./constants";
 
 export async function websocketHandler(request: Request, prxIP: string, vmessUuid?: string, trojanPasswordHashes?: string[]) {

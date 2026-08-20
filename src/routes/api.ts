@@ -1,13 +1,11 @@
 // API routes: /sub, /myip, /check, /proxies
 import { Hono } from "hono";
-import { getPrxList, getKVPrxList, type ProxyEntry } from "../core/lists";
+import { getPrxList, getKVPrxList } from "../core/lists";
 import { checkPrxHealth } from "../core/relay";
 import {
-  PORTS,
   PROTOCOLS,
   CORS_HEADER_OPTIONS,
   horse,
-  neko,
   v2,
   getFlagEmoji,
   shuffleArray,
@@ -109,16 +107,56 @@ export function createApiRoutes() {
       }
 
       const url = new URL(c.req.url);
-      const domain = url.hostname;
-      const serviceName = domain.split(".")[0];
+      const hostname = url.hostname;
 
-      const filterCC = c.req.query("cc")?.split(",") || [];
-      const filterPort = c.req.query("port")?.split(",").map((p: string) => parseInt(p)) || PORTS;
-      const filterVPN = c.req.query("vpn")?.split(",").filter((p: string) => PROTOCOLS.includes(p)) || [];
-      const protocols = filterVPN.length ? filterVPN : [atob(neko)];
+      // cc: default ID,SG. Gunakan "all" (atau kosong) untuk semua negara.
+      const ccQuery = c.req.query("cc");
+      const filterCC =
+        ccQuery === undefined
+          ? ["ID", "SG"]
+          : ccQuery.trim().toLowerCase() === "all" || ccQuery.trim() === ""
+            ? [] // kosong = tanpa filter = semua negara
+            : ccQuery.split(",").map((s: string) => s.trim().toUpperCase()).filter(Boolean);
+      const filterPort = c.req.query("port")?.split(",").map((p: string) => parseInt(p)) || [443];
+      const protoParam = c.req.query("proto") || c.req.query("vpn") || "vless";
+      const protocols = protoParam.split(",").filter((p: string) => PROTOCOLS.includes(p));
+      if (!protocols.length) protocols.push("vless"); // fallback jika nilai proto tidak dikenal
       const filterLimit = parseInt(c.req.query("limit") || "10") || 10;
-      const filterFormat = c.req.query("format") || "raw";
-      const fillerDomain = c.req.query("domain") || domain;
+      const filterFormat = c.req.query("format") || "v2ray";
+
+      // Build settings — sama dengan UI /build:
+      //   mode     = sni | cdn          (default: cdn)
+      //   domain   = custom domain "bug" (default: support.zoom.us)
+      //   wildcard = yes | no           (default: yes)
+      const mode = c.req.query("mode") || "cdn";
+      const bugDomain = c.req.query("domain") || "support.zoom.us";
+      const wildcard = c.req.query("wildcard") || "yes";
+
+      // Hitung server (add), servername (SNI), dan host (WS Host header)
+      // mengikuti logika yang sama dengan UI /build:
+      let server: string, servername: string, host: string;
+      if (mode === "cdn") {
+        if (wildcard === "yes") {
+          server = bugDomain;
+          servername = `${bugDomain}.${hostname}`;
+          host = `${bugDomain}.${hostname}`;
+        } else {
+          server = bugDomain;
+          servername = hostname;
+          host = hostname;
+        }
+      } else {
+        // mode === "sni"
+        if (wildcard === "yes") {
+          server = `${bugDomain}.${hostname}`;
+          servername = bugDomain;
+          host = bugDomain;
+        } else {
+          server = hostname;
+          servername = bugDomain;
+          host = bugDomain;
+        }
+      }
 
       const prxBankUrl = c.req.query("prx-list") || c.env.PRX_BANK_URL;
       let prxList = await getPrxList(prxBankUrl);
@@ -133,57 +171,156 @@ export function createApiRoutes() {
     // - Trojan links use hex(SHA224(SUB_TOKEN)) as password (hashed, not raw token)
     const uuid = await uuidFromToken(subToken);
     const trojanPassword = sha224Hex(subToken);
-    const result: string[] = [];
+
+    // Struktur data lengkap untuk tiap link (dipakai semua format output)
+    const links: Array<{
+      protocol: string;
+      server: string;
+      port: number;
+      username: string;
+      security: string;
+      sni: string;
+      path: string;
+      host: string;
+      name: string;
+      remark: string;
+      uri: string;
+    }> = [];
 
     for (const prx of prxList) {
-      const uri = new URL(`${atob(horse)}://${fillerDomain}`);
-      uri.searchParams.set("encryption", "none");
-      uri.searchParams.set("type", "ws");
-      uri.searchParams.set("host", domain);
-
       for (const port of filterPort) {
         for (const protocol of protocols) {
-          if (result.length >= filterLimit) break;
+          if (links.length >= filterLimit) break;
 
-          uri.protocol = protocol;
-          uri.port = port.toString();
           // Trojan uses hashed password (hex SHA224); VLESS/VMess use the static UUID
-          uri.username = protocol === atob(horse) ? trojanPassword : uuid;
-
-          uri.searchParams.set("security", port == 443 ? "tls" : "none");
-          uri.searchParams.set("sni", port == 80 && protocol == atob("dm1lc3M=") ? "" : domain);
-          uri.searchParams.set("path", `/${prx.prxIP}-${prx.prxPort}`);
-
-          uri.hash = `${result.length + 1} ${getFlagEmoji(prx.country)} ${prx.org} WS ${
+          const username = protocol === atob(horse) ? trojanPassword : uuid;
+          const security = port == 443 ? "tls" : "none";
+          const sni = port == 80 && protocol == atob("dm1lc3M=") ? "" : servername;
+          const path = `/${prx.prxIP}-${prx.prxPort}`;
+          const remark = `${getFlagEmoji(prx.country)} ${prx.org} WS ${
             port == 443 ? "TLS" : "NTLS"
           } [BITS Cloudflare VPN]`;
-          result.push(uri.toString());
+          const name = `${getFlagEmoji(prx.country)} ${prx.org}`;
+
+          const uri = new URL(`${atob(horse)}://${server}`);
+          uri.protocol = protocol;
+          uri.port = port.toString();
+          uri.username = username;
+          // Urutan query params mengikuti contoh: encryption, security, sni, type, host, path
+          uri.searchParams.set("encryption", "none");
+          uri.searchParams.set("security", security);
+          uri.searchParams.set("sni", sni);
+          uri.searchParams.set("type", "ws");
+          uri.searchParams.set("host", host);
+          uri.searchParams.set("path", path);
+          uri.hash = encodeURIComponent(remark);
+
+          links.push({
+            protocol,
+            server,
+            port,
+            username,
+            security,
+            sni,
+            path,
+            host,
+            name,
+            remark,
+            uri: uri.toString(),
+          });
         }
       }
     }
 
-    let finalResult: string;
-    switch (filterFormat) {
-      case "raw":
-        finalResult = result.join("\n");
-        break;
-      case atob(v2):
-        finalResult = btoa(result.join("\n"));
-        break;
-      case "json":
-        // JSON format for build UI
-        const jsonResult = result.map((link, i) => {
-          const [proto, rest] = link.split("://");
-          const hashIndex = rest.indexOf("#");
-          const remark = hashIndex !== -1 ? decodeURIComponent(rest.substring(hashIndex + 1)) : "";
-          return { index: i + 1, protocol: proto, link, remark };
-        });
-        return c.json(jsonResult, 200, CORS_HEADER_OPTIONS);
-      default:
-        return c.text(`Unsupported format "${filterFormat}". Supported formats: raw, ${atob(v2)}, json.`, 400, CORS_HEADER_OPTIONS);
-    }
+    // Output: v2ray (default), clash, singbox
+    const resultLines = links.map((l) => l.uri);
 
-    return c.text(finalResult, 200, CORS_HEADER_OPTIONS);
+    // Konversi link ke format Clash YAML (proxy list)
+    const toClashYaml = (l: (typeof links)[number]) => {
+      const name = l.name.replace(/"/g, '\\"');
+      const tls = l.port == 443;
+      const fields: string[] = [
+        `  - name: "${name}"`,
+        `    server: ${l.server}`,
+        `    port: ${l.port}`,
+      ];
+      if (l.protocol === atob(horse)) {
+        fields.push(`    type: trojan`, `    password: ${l.username}`);
+      } else if (l.protocol === "vmess") {
+        fields.push(`    type: vmess`, `    uuid: ${l.username}`, `    alterId: 0`, `    cipher: auto`);
+      } else {
+        fields.push(`    type: vless`, `    uuid: ${l.username}`, `    cipher: auto`);
+      }
+      fields.push(
+        `    tls: ${tls}`,
+        `    skip-cert-verify: true`,
+        `    servername: ${l.sni}`,
+        `    network: ws`,
+        `    ws-opts:`,
+        `      path: ${l.path}`,
+        `      headers:`,
+        `        Host: ${l.host}`,
+        `    udp: true`,
+      );
+      return fields.join("\n");
+    };
+
+    // Konversi link ke format Sing-box outbound (JSON)
+    const toSingboxJson = (l: (typeof links)[number]) => {
+      const tlsObj: Record<string, unknown> = {
+        enabled: l.port == 443,
+        server_name: l.sni || l.server,
+        utls: { enabled: true, fingerprint: "chrome" },
+      };
+      if (l.port != 443) delete tlsObj.utls;
+      const transport = { type: "ws", path: l.path, headers: { Host: l.host } };
+      const base: Record<string, unknown> = {
+        tag: l.name,
+        server: l.server,
+        server_port: l.port,
+      };
+      if (l.protocol === atob(horse)) {
+        return {
+          ...base,
+          type: "trojan",
+          password: l.username,
+          tls: tlsObj,
+          transport,
+        };
+      }
+      if (l.protocol === "vmess") {
+        return {
+          ...base,
+          type: "vmess",
+          uuid: l.username,
+          security: "auto",
+          alter_id: 0,
+          tls: tlsObj,
+          transport,
+        };
+      }
+      // vless
+      return {
+        ...base,
+        type: "vless",
+        uuid: l.username,
+        flow: "",
+        packet_encoding: "",
+        tls: tlsObj,
+        transport,
+      };
+    };
+
+    switch (filterFormat) {
+      case atob(v2):
+        return c.text(btoa(resultLines.join("\n")), 200, CORS_HEADER_OPTIONS);
+      case "clash":
+        return c.text(`proxies:\n${links.map(toClashYaml).join("\n")}`, 200, CORS_HEADER_OPTIONS);
+      case "singbox":
+        return c.json({ outbounds: links.map(toSingboxJson) }, 200, CORS_HEADER_OPTIONS);
+      default:
+        return c.text(`Unsupported format "${filterFormat}". Supported formats: ${atob(v2)}, clash, singbox.`, 400, CORS_HEADER_OPTIONS);
+    }
     } catch (error: any) {
       console.error("Error in /sub:", error);
       return c.json({ error: "Failed to generate subscription", message: error.message }, 500, CORS_HEADER_OPTIONS);

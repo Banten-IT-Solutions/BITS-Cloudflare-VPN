@@ -166,25 +166,390 @@ Generate subscription output.
 | Param | Description | Default |
 |-------|-------------|---------|
 | `token` | **Wajib.** Subscription access token | — |
-| `vpn` | Protocol filter: `vless`, `vmess`, `trojan` | `vless` |
-| `cc` | Country filter, comma-separated | all |
-| `port` | Port filter: `443`, `80` | `443,80` |
+| `proto` | Protocol filter: `vless`, `vmess`, `trojan` (alias lama: `vpn`) | `vless` |
+| `cc` | Country filter, comma-separated. Gunakan `all` (atau kosong) untuk semua negara | `ID,SG` |
+| `port` | Port filter: `443`, `80` | `443` |
 | `limit` | Max output count | `10` |
-| `format` | `raw`, `v2ray`, `json` | `raw` |
-| `domain` | Override host / SNI domain | request host |
+| `format` | `v2ray`, `clash`, `singbox` | `v2ray` |
+| `mode` | Build mode: `sni` atau `cdn` (sama seperti UI `/build`) | `cdn` |
+| `domain` | Custom domain ("bug") untuk SNI/host | `support.zoom.us` |
+| `wildcard` | Wildcard domain: `yes` atau `no` (sama seperti UI `/build`) | `yes` |
+| `prx-list` | Override URL bank proxy | `PRX_BANK_URL` env |
+
+Kombinasi `mode` + `wildcard` menentukan `server` (address), `servername` (SNI), dan `host` (WS Host header), identik dengan UI `/build`:
+
+| Mode | Wildcard | server | servername | host |
+|------|----------|--------|------------|------|
+| `sni` | `no` | request host | domain | domain |
+| `sni` | `yes` | `domain.request-host` | domain | domain |
+| `cdn` | `no` | domain | request host | request host |
+| `cdn` | `yes` | domain | `domain.request-host` | `domain.request-host` |
 
 **Example**
 
 ```bash
-curl "https://domain.com/api/sub?token=RAHASIA&vpn=vless&cc=ID&limit=5&format=raw"
+# Default (v2ray base64, VLESS, cdn mode, domain support.zoom.us, wildcard yes, port 443, cc ID,SG)
+curl "https://domain.com/api/sub?token=RAHASIA"
+
+# Clash YAML proxy list
+curl "https://domain.com/api/sub?token=RAHASIA&format=clash"
+
+# Sing-box outbound JSON
+curl "https://domain.com/api/sub?token=RAHASIA&format=singbox"
+
+# SNI mode non-wildcard, Trojan, port 80
+curl "https://domain.com/api/sub?token=RAHASIA&format=v2ray&proto=trojan&mode=sni&domain=support.zoom.us&wildcard=no&port=80"
+
+# Semua negara
+curl "https://domain.com/api/sub?token=RAHASIA&cc=all"
+curl "https://domain.com/api/sub?token=RAHASIA&cc="
 ```
 
-**Contoh format link yang dihasilkan** (UUID & token di bawah hanya placeholder):
+Ketiga format (`v2ray`, `clash`, `singbox`) **dinamis** mengikuti query params
+yang dipakai. Berikut **18 contoh lengkap** — 2 konfigurasi (`sni` non-wildcard &
+`cdn` wildcard) × 3 protokol (`vless`, `vmess`, `trojan`) × 3 format.
+Request host `domain.com`, custom domain `support.zoom.us`, port `443`, cc `ID,SG`,
+proxy contoh `36.95.152.58:12137` (PT Telekomunikasi Indonesia). UUID & token
+hanya placeholder.
+
+#### Konfigurasi A: `mode=sni&wildcard=no` (SNI non-wildcard)
+
+```bash
+curl "https://domain.com/api/sub?token=RAHASIA&mode=sni&wildcard=no&domain=support.zoom.us&port=443&cc=ID,SG"
+```
+
+- server = `domain.com` (request host)
+- servername (SNI) = `support.zoom.us`
+- host (WS Host) = `support.zoom.us`
+
+##### A1. `proto=vless`
 
 ```text
-vless://00000000-0000-4000-8000-000000000000@domain.com:443?encryption=none&type=ws&host=domain.com&security=tls&sni=domain.com&path=%2F1.2.3.4-443#remark
-vmess://00000000-0000-4000-8000-000000000000@domain.com:443?encryption=none&type=ws&host=domain.com&security=tls&sni=domain.com&path=%2F1.2.3.4-443#remark
-trojan://RAHASIA@domain.com:443?encryption=none&type=ws&host=domain.com&security=tls&sni=domain.com&path=%2F1.2.3.4-443#remark
+# format=v2ray (base64) → hasil decode:
+vless://00000000-0000-4000-8000-000000000000@domain.com:443?encryption=none&security=tls&sni=support.zoom.us&type=ws&host=support.zoom.us&path=%2F36.95.152.58-12137#🇮🇩%20PT%20Telekomunikasi%20Indonesia%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D
+```
+
+```yaml
+# format=clash
+proxies:
+  - name: "🇮🇩 PT Telekomunikasi Indonesia"
+    server: domain.com
+    port: 443
+    type: vless
+    uuid: 00000000-0000-4000-8000-000000000000
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: support.zoom.us
+    network: ws
+    ws-opts:
+      path: /36.95.152.58-12137
+      headers:
+        Host: support.zoom.us
+    udp: true
+```
+
+```json
+// format=singbox
+{
+  "outbounds": [
+    {
+      "tag": "🇮🇩 PT Telekomunikasi Indonesia",
+      "server": "domain.com",
+      "server_port": 443,
+      "type": "vless",
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "flow": "",
+      "packet_encoding": "",
+      "tls": {
+        "enabled": true,
+        "server_name": "support.zoom.us",
+        "utls": { "enabled": true, "fingerprint": "chrome" }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/36.95.152.58-12137",
+        "headers": { "Host": "support.zoom.us" }
+      }
+    }
+  ]
+}
+```
+
+##### A2. `proto=vmess`
+
+```text
+# format=v2ray (base64) → hasil decode:
+vmess://00000000-0000-4000-8000-000000000000@domain.com:443?encryption=none&security=tls&sni=support.zoom.us&type=ws&host=support.zoom.us&path=%2F36.95.152.58-12137#🇮🇩%20PT%20Telekomunikasi%20Indonesia%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D
+```
+
+```yaml
+# format=clash
+proxies:
+  - name: "🇮🇩 PT Telekomunikasi Indonesia"
+    server: domain.com
+    port: 443
+    type: vmess
+    uuid: 00000000-0000-4000-8000-000000000000
+    alterId: 0
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: support.zoom.us
+    network: ws
+    ws-opts:
+      path: /36.95.152.58-12137
+      headers:
+        Host: support.zoom.us
+    udp: true
+```
+
+```json
+// format=singbox
+{
+  "outbounds": [
+    {
+      "tag": "🇮🇩 PT Telekomunikasi Indonesia",
+      "server": "domain.com",
+      "server_port": 443,
+      "type": "vmess",
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "security": "auto",
+      "alter_id": 0,
+      "tls": {
+        "enabled": true,
+        "server_name": "support.zoom.us",
+        "utls": { "enabled": true, "fingerprint": "chrome" }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/36.95.152.58-12137",
+        "headers": { "Host": "support.zoom.us" }
+      }
+    }
+  ]
+}
+```
+
+##### A3. `proto=trojan`
+
+```text
+# format=v2ray (base64) → hasil decode:
+trojan://RAHASIA@domain.com:443?encryption=none&security=tls&sni=support.zoom.us&type=ws&host=support.zoom.us&path=%2F36.95.152.58-12137#🇮🇩%20PT%20Telekomunikasi%20Indonesia%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D
+```
+
+```yaml
+# format=clash
+proxies:
+  - name: "🇮🇩 PT Telekomunikasi Indonesia"
+    server: domain.com
+    port: 443
+    type: trojan
+    password: RAHASIA
+    tls: true
+    skip-cert-verify: true
+    servername: support.zoom.us
+    network: ws
+    ws-opts:
+      path: /36.95.152.58-12137
+      headers:
+        Host: support.zoom.us
+    udp: true
+```
+
+```json
+// format=singbox
+{
+  "outbounds": [
+    {
+      "tag": "🇮🇩 PT Telekomunikasi Indonesia",
+      "server": "domain.com",
+      "server_port": 443,
+      "type": "trojan",
+      "password": "RAHASIA",
+      "tls": {
+        "enabled": true,
+        "server_name": "support.zoom.us",
+        "utls": { "enabled": true, "fingerprint": "chrome" }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/36.95.152.58-12137",
+        "headers": { "Host": "support.zoom.us" }
+      }
+    }
+  ]
+}
+```
+
+#### Konfigurasi B: `mode=cdn&wildcard=yes` (CDN wildcard — default)
+
+```bash
+curl "https://domain.com/api/sub?token=RAHASIA&mode=cdn&wildcard=yes&domain=support.zoom.us&port=443&cc=ID,SG"
+```
+
+- server = `support.zoom.us`
+- servername (SNI) = `support.zoom.us.domain.com`
+- host (WS Host) = `support.zoom.us.domain.com`
+
+##### B1. `proto=vless`
+
+```text
+# format=v2ray (base64) → hasil decode:
+vless://00000000-0000-4000-8000-000000000000@support.zoom.us:443?encryption=none&security=tls&sni=support.zoom.us.domain.com&type=ws&host=support.zoom.us.domain.com&path=%2F36.95.152.58-12137#🇮🇩%20PT%20Telekomunikasi%20Indonesia%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D
+```
+
+```yaml
+# format=clash
+proxies:
+  - name: "🇮🇩 PT Telekomunikasi Indonesia"
+    server: support.zoom.us
+    port: 443
+    type: vless
+    uuid: 00000000-0000-4000-8000-000000000000
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: support.zoom.us.domain.com
+    network: ws
+    ws-opts:
+      path: /36.95.152.58-12137
+      headers:
+        Host: support.zoom.us.domain.com
+    udp: true
+```
+
+```json
+// format=singbox
+{
+  "outbounds": [
+    {
+      "tag": "🇮🇩 PT Telekomunikasi Indonesia",
+      "server": "support.zoom.us",
+      "server_port": 443,
+      "type": "vless",
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "flow": "",
+      "packet_encoding": "",
+      "tls": {
+        "enabled": true,
+        "server_name": "support.zoom.us.domain.com",
+        "utls": { "enabled": true, "fingerprint": "chrome" }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/36.95.152.58-12137",
+        "headers": { "Host": "support.zoom.us.domain.com" }
+      }
+    }
+  ]
+}
+```
+
+##### B2. `proto=vmess`
+
+```text
+# format=v2ray (base64) → hasil decode:
+vmess://00000000-0000-4000-8000-000000000000@support.zoom.us:443?encryption=none&security=tls&sni=support.zoom.us.domain.com&type=ws&host=support.zoom.us.domain.com&path=%2F36.95.152.58-12137#🇮🇩%20PT%20Telekomunikasi%20Indonesia%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D
+```
+
+```yaml
+# format=clash
+proxies:
+  - name: "🇮🇩 PT Telekomunikasi Indonesia"
+    server: support.zoom.us
+    port: 443
+    type: vmess
+    uuid: 00000000-0000-4000-8000-000000000000
+    alterId: 0
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: support.zoom.us.domain.com
+    network: ws
+    ws-opts:
+      path: /36.95.152.58-12137
+      headers:
+        Host: support.zoom.us.domain.com
+    udp: true
+```
+
+```json
+// format=singbox
+{
+  "outbounds": [
+    {
+      "tag": "🇮🇩 PT Telekomunikasi Indonesia",
+      "server": "support.zoom.us",
+      "server_port": 443,
+      "type": "vmess",
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "security": "auto",
+      "alter_id": 0,
+      "tls": {
+        "enabled": true,
+        "server_name": "support.zoom.us.domain.com",
+        "utls": { "enabled": true, "fingerprint": "chrome" }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/36.95.152.58-12137",
+        "headers": { "Host": "support.zoom.us.domain.com" }
+      }
+    }
+  ]
+}
+```
+
+##### B3. `proto=trojan`
+
+```text
+# format=v2ray (base64) → hasil decode:
+trojan://RAHASIA@support.zoom.us:443?encryption=none&security=tls&sni=support.zoom.us.domain.com&type=ws&host=support.zoom.us.domain.com&path=%2F36.95.152.58-12137#🇮🇩%20PT%20Telekomunikasi%20Indonesia%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D
+```
+
+```yaml
+# format=clash
+proxies:
+  - name: "🇮🇩 PT Telekomunikasi Indonesia"
+    server: support.zoom.us
+    port: 443
+    type: trojan
+    password: RAHASIA
+    tls: true
+    skip-cert-verify: true
+    servername: support.zoom.us.domain.com
+    network: ws
+    ws-opts:
+      path: /36.95.152.58-12137
+      headers:
+        Host: support.zoom.us.domain.com
+    udp: true
+```
+
+```json
+// format=singbox
+{
+  "outbounds": [
+    {
+      "tag": "🇮🇩 PT Telekomunikasi Indonesia",
+      "server": "support.zoom.us",
+      "server_port": 443,
+      "type": "trojan",
+      "password": "RAHASIA",
+      "tls": {
+        "enabled": true,
+        "server_name": "support.zoom.us.domain.com",
+        "utls": { "enabled": true, "fingerprint": "chrome" }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/36.95.152.58-12137",
+        "headers": { "Host": "support.zoom.us.domain.com" }
+      }
+    }
+  ]
+}
 ```
 
 ### 2. `GET /api/proxies`
