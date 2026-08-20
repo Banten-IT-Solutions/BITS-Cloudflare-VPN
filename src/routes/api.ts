@@ -197,10 +197,8 @@ export function createApiRoutes() {
           const security = port == 443 ? "tls" : "none";
           const sni = port == 80 && protocol == atob("dm1lc3M=") ? "" : servername;
           const path = `/${prx.prxIP}-${prx.prxPort}`;
-          const remark = `${getFlagEmoji(prx.country)} ${prx.org} WS ${
-            port == 443 ? "TLS" : "NTLS"
-          } [BITS Cloudflare VPN]`;
           const name = `${getFlagEmoji(prx.country)} ${prx.org}`;
+          const remark = name;
 
           const uri = new URL(`${atob(horse)}://${server}`);
           uri.protocol = protocol;
