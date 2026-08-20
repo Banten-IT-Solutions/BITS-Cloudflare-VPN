@@ -39,8 +39,12 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          secrets: |
+            SUB_TOKEN
         env:
           GIT_COMMIT_ID: ${{ env.GIT_REF }}
+          # Dari GitHub Secret -> dipasang sebagai Cloudflare Worker secret "SUB_TOKEN"
+          SUB_TOKEN: ${{ secrets.SUB_TOKEN }}
 
       - name: 🎉 Deployment summary
         run: |

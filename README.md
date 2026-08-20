@@ -128,6 +128,7 @@ custom_domain = true
 |----------|-------------|
 | `PRX_BANK_URL` | Remote raw proxy source for `/api/proxies` and `/api/sub`. |
 | `KV_PRX_URL` | Optional country bucket source, defaults to `KV.json`. |
+| `SUB_TOKEN` | Token wajib untuk `/api/sub` (juga menjadi password Trojan + sumber derive UUID VLESS/VMess). Diset sebagai GitHub Secret → Cloudflare Worker secret via deploy workflow (jangan hardcode). |
 
 ## 📡 API Endpoints
 
@@ -137,10 +138,34 @@ All endpoints under `/api`.
 
 Generate subscription output.
 
+> **Auth:** Wajib menyertakan `?token=<SUB_TOKEN>`. Nilai token diambil dari
+> Cloudflare Worker secret `SUB_TOKEN` (dipasang dari GitHub Secret `SUB_TOKEN`
+> via workflow `deploy.yml`). Tanpa token valid akan mendapat `403 Forbidden`.
+
+> **Kredensial statis (wajib):** Relay **hanya menerima koneksi** dengan kredensial
+> yang benar:
+> - **VLESS**: UUID harus `uuidFromToken(SUB_TOKEN)` — hasil `SHA-256(SUB_TOKEN)`
+>   yang dibatasi 16 byte lalu di-set bit version `4` dan variant `10xx`
+> - **VMess**: UUID harus sama (divalidasi via AEAD)
+> - **Trojan**: relay menerima **dua bentuk** password (keduanya derive dari
+>   `SUB_TOKEN`, jadi hanya pemegang secret yang bisa connect):
+>   - client pakai `SUB_TOKEN` mentah → hash yang dikirim = `hex(SHA-224(SUB_TOKEN))`
+>   - client pakai password hash dari link sub → hash yang dikirim = `hex(SHA-224(SHA-224(SUB_TOKEN)))`
+>   Link `/api/sub` selalu memakai bentuk **hash** (token mentah tidak pernah
+>   muncul di link)
+> Karena derive bersifat deterministik, nilai UUID/password hanya bisa diperoleh
+> dari `SUB_TOKEN` yang dikonfigurasi di runtime — tidak tersedia sebagai konstanta.
+> Kredensial lain → koneksi ditolak.
+>
+> **Contoh bentuk UUID hasil derive** (nilai di bawah hanya *placeholder* untuk
+> ilustrasi, bukan kredensial asli):
+> `00000000-0000-4000-8000-000000000000`
+
 **Query params**
 
 | Param | Description | Default |
 |-------|-------------|---------|
+| `token` | **Wajib.** Subscription access token | — |
 | `vpn` | Protocol filter: `vless`, `vmess`, `trojan` | `vless` |
 | `cc` | Country filter, comma-separated | all |
 | `port` | Port filter: `443`, `80` | `443,80` |
@@ -151,7 +176,15 @@ Generate subscription output.
 **Example**
 
 ```bash
-curl "https://domain.com/api/sub?vpn=vless&cc=ID&limit=5&format=raw"
+curl "https://domain.com/api/sub?token=RAHASIA&vpn=vless&cc=ID&limit=5&format=raw"
+```
+
+**Contoh format link yang dihasilkan** (UUID & token di bawah hanya placeholder):
+
+```text
+vless://00000000-0000-4000-8000-000000000000@domain.com:443?encryption=none&type=ws&host=domain.com&security=tls&sni=domain.com&path=%2F1.2.3.4-443#remark
+vmess://00000000-0000-4000-8000-000000000000@domain.com:443?encryption=none&type=ws&host=domain.com&security=tls&sni=domain.com&path=%2F1.2.3.4-443#remark
+trojan://RAHASIA@domain.com:443?encryption=none&type=ws&host=domain.com&security=tls&sni=domain.com&path=%2F1.2.3.4-443#remark
 ```
 
 ### 2. `GET /api/proxies`

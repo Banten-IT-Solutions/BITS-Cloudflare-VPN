@@ -5,6 +5,8 @@ compatibility_flags = ["nodejs_compat_v2"]
 
 [vars]
 PRX_BANK_URL = "https://raw.githubusercontent.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/main/proxy.txt"
+# Catatan: SUB_TOKEN tidak disimpan di sini. Set sebagai Cloudflare Worker secret
+# melalui GitHub Actions deploy (deploy.yml) yang membaca dari GitHub Secret SUB_TOKEN.
 
 [assets]
 directory = "./assets"

@@ -19,9 +19,10 @@ import {
   neko,
   base64ToArrayBuffer,
   arrayBufferToHex,
+  sha224Hex,
 } from "./constants";
 
-export async function websocketHandler(request: Request, prxIP: string) {
+export async function websocketHandler(request: Request, prxIP: string, vmessUuid?: string, trojanPasswordHashes?: string[]) {
   const webSocketPair = new WebSocketPair();
   const [client, webSocket] = Object.values(webSocketPair);
 
@@ -67,11 +68,11 @@ export async function websocketHandler(request: Request, prxIP: string) {
           let protocolHeader: any;
 
           if (protocol === atob(horse)) {
-            protocolHeader = readHorseHeader(chunk);
+            protocolHeader = readHorseHeader(chunk, trojanPasswordHashes);
           } else if (protocol === atob(flash)) {
-            protocolHeader = await readStreamHeader(chunk);
+            protocolHeader = await readStreamHeader(chunk, vmessUuid);
           } else if (protocol === atob(neko)) {
-            protocolHeader = readNekoHeader(chunk);
+            protocolHeader = readNekoHeader(chunk, vmessUuid);
           } else {
             throw new Error("Unknown Protocol!");
           }
@@ -487,9 +488,12 @@ async function aesGcmEncrypt(key: Uint8Array, nonce: Uint8Array, data: Uint8Arra
   return new Uint8Array(encrypted);
 }
 
-async function readStreamHeader(buffer: ArrayBuffer) {
+async function readStreamHeader(buffer: ArrayBuffer, vmessUuid?: string) {
   try {
-    const uuidString = "00000000-0000-0000-0000-000000000000";
+    // VMess AEAD auth key is derived from the user UUID + fixed salt.
+    // Use the UUID derived from SUB_TOKEN so links from /api/sub can connect;
+    // fall back to the legacy all-zero UUID for backwards compatibility.
+    const uuidString = vmessUuid || "00000000-0000-0000-0000-000000000000";
     const uuidBytes = new Uint8Array(
       uuidString
         .replace(/-/g, "")
@@ -596,9 +600,22 @@ async function readStreamHeader(buffer: ArrayBuffer) {
   }
 }
 
-function readNekoHeader(buffer: ArrayBuffer) {
+function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
   const version = new Uint8Array(buffer.slice(0, 1));
   let isUDP = false;
+
+  // Strict auth: the VLESS client UUID (bytes 1-16) must match the UUID
+  // derived from SUB_TOKEN. If no expected UUID is configured, skip check.
+  if (expectedUuid) {
+    const clientUuidHex = arrayBufferToHex(buffer.slice(1, 17));
+    const expectedHex = expectedUuid.replace(/-/g, "").toLowerCase();
+    if (clientUuidHex !== expectedHex) {
+      return {
+        hasError: true,
+        message: "Invalid VLESS UUID",
+      };
+    }
+  }
 
   const optLength = new Uint8Array(buffer.slice(17, 18))[0];
 
@@ -667,7 +684,24 @@ function readNekoHeader(buffer: ArrayBuffer) {
   };
 }
 
-function readHorseHeader(buffer: ArrayBuffer) {
+function readHorseHeader(buffer: ArrayBuffer, expectedPasswordHashes?: string[]) {
+  // Strict auth: the Trojan header carries hex(SHA224(password)) in the first
+  // 56 bytes (followed by CRLF at 56-57). Accept if it matches ANY of the
+  // expected hashes:
+  //   - sha224Hex(SUB_TOKEN)            -> client configured with raw SUB_TOKEN
+  //   - sha224Hex(sha224Hex(SUB_TOKEN)) -> client used the hashed sub link password
+  // If no expected hashes are configured, skip the check.
+  if (expectedPasswordHashes && expectedPasswordHashes.length) {
+    const headerHashHex = new TextDecoder().decode(buffer.slice(0, 56)).toLowerCase();
+    const accepted = expectedPasswordHashes.some((h) => h.toLowerCase() === headerHashHex);
+    if (!accepted) {
+      return {
+        hasError: true,
+        message: "Invalid Trojan password",
+      };
+    }
+  }
+
   const dataBuffer = buffer.slice(58);
   if (dataBuffer.byteLength < 6) {
     return {

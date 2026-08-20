@@ -11,17 +11,30 @@ import {
   v2,
   getFlagEmoji,
   shuffleArray,
+  uuidFromToken,
+  sha224Hex,
 } from "../core/constants";
 
 interface Env {
   PRX_BANK_URL?: string;
   KV_PRX_URL?: string;
+  SUB_TOKEN?: string;
 }
 
 // IP rate limiter: Map<clientIp, timestamp[]>
 const rateLimitCache = new Map<string, number[]>();
 const LIMIT_WINDOW_MS = 10 * 1000; // 10 seconds
 const MAX_REQUESTS = 12;           // Max 12 requests per window
+
+// Constant-time string comparison to avoid timing attacks
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
 
 export function createApiRoutes() {
   const app = new Hono<{ Bindings: Env }>();
@@ -87,6 +100,14 @@ export function createApiRoutes() {
   // GET /sub - subscription generator (raw, v2ray, json)
   const subHandler = async (c: any) => {
     try {
+      // Token-protected subscription: only valid with ?token=SUB_TOKEN
+      // Token wajib dikonfigurasi via env/secret (tidak ada hardcoded fallback).
+      const subToken = c.env.SUB_TOKEN;
+      const requestToken = c.req.query("token") || "";
+      if (!subToken || !safeEqual(requestToken, subToken)) {
+        return c.text("Forbidden: invalid or missing token", 403, CORS_HEADER_OPTIONS);
+      }
+
       const url = new URL(c.req.url);
       const domain = url.hostname;
       const serviceName = domain.split(".")[0];
@@ -107,7 +128,11 @@ export function createApiRoutes() {
     }
     shuffleArray(prxList);
 
-    const uuid = crypto.randomUUID();
+    // Static UUID derived deterministically from SUB_TOKEN:
+    // - VLESS/VMess links always use the same UUID (matches relay's VMess AEAD key)
+    // - Trojan links use hex(SHA224(SUB_TOKEN)) as password (hashed, not raw token)
+    const uuid = await uuidFromToken(subToken);
+    const trojanPassword = sha224Hex(subToken);
     const result: string[] = [];
 
     for (const prx of prxList) {
@@ -122,7 +147,8 @@ export function createApiRoutes() {
 
           uri.protocol = protocol;
           uri.port = port.toString();
-          uri.username = uuid;
+          // Trojan uses hashed password (hex SHA224); VLESS/VMess use the static UUID
+          uri.username = protocol === atob(horse) ? trojanPassword : uuid;
 
           uri.searchParams.set("security", port == 443 ? "tls" : "none");
           uri.searchParams.set("sni", port == 80 && protocol == atob("dm1lc3M=") ? "" : domain);

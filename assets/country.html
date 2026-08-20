@@ -500,6 +500,9 @@
         },
 
         generateUUID() {
+          // UUID v4 acak yang valid — hasil build page TIDAK akan connect ke relay
+          // karena relay memvalidasi UUID hasil derive dari SUB_TOKEN.
+          // Kredensial yang benar hanya dari /api/sub (derive dari SUB_TOKEN).
           if (typeof crypto !== 'undefined' && crypto.randomUUID) {
             return crypto.randomUUID();
           }
@@ -529,6 +532,9 @@
           return btoa(unescape(encodeURIComponent(str)));
         },
 
+        // Password Trojan acak — hasil build page TIDAK akan connect ke relay
+        // karena relay memvalidasi hash dari SUB_TOKEN.
+        // Kredensial yang benar hanya dari /api/sub (derive dari SUB_TOKEN).
         generatePassword() {
           const cryptoObj = typeof crypto !== 'undefined' ? crypto : (typeof window !== 'undefined' ? (window.crypto || window.msCrypto) : null);
           if (cryptoObj && cryptoObj.getRandomValues) {

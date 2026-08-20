@@ -3,11 +3,12 @@ import { Hono } from "hono";
 import { websocketHandler } from "./core/relay";
 import { getKVPrxList } from "./core/lists";
 import { createApiRoutes } from "./routes/api";
-import { CORS_HEADER_OPTIONS } from "./core/constants";
+import { CORS_HEADER_OPTIONS, uuidFromToken, sha224Hex } from "./core/constants";
 
 interface Env {
   PRX_BANK_URL?: string;
   KV_PRX_URL?: string;
+  SUB_TOKEN?: string;
   ASSETS: Fetcher;
 }
 
@@ -47,6 +48,19 @@ export default {
 
       // Handle WebSocket upgrade for relay
       if (upgradeHeader === "websocket") {
+        // Strict auth credentials derived from SUB_TOKEN:
+        // - vmessUuid: UUID for VLESS/VMess (VLESS validated in header, VMess via AEAD)
+        // - trojanPasswordHashes: accepted hex(SHA224(password)) values in the
+        //   Trojan header. Accept BOTH forms:
+        //     sha224Hex(SUB_TOKEN)            -> client configured with raw SUB_TOKEN
+        //     sha224Hex(sha224Hex(SUB_TOKEN)) -> client used the hashed link password
+        let vmessUuid: string | undefined;
+        let trojanPasswordHashes: string[] | undefined;
+        if (env.SUB_TOKEN) {
+          vmessUuid = await uuidFromToken(env.SUB_TOKEN);
+          const hashOnce = sha224Hex(env.SUB_TOKEN);
+          trojanPasswordHashes = [hashOnce, sha224Hex(hashOnce)];
+        }
         const prxMatch = url.pathname.match(/^\/(.+[:=-]\d+)$/);
 
         if (url.pathname.length == 3 || url.pathname.match(",")) {
@@ -61,10 +75,10 @@ export default {
 
           const prxIP = kvPrx[prxKey][Math.floor(Math.random() * kvPrx[prxKey].length)];
 
-          return await websocketHandler(request, prxIP);
+          return await websocketHandler(request, prxIP, vmessUuid, trojanPasswordHashes);
         } else if (prxMatch) {
           const prxIP = prxMatch[1];
-          return await websocketHandler(request, prxIP);
+          return await websocketHandler(request, prxIP, vmessUuid, trojanPasswordHashes);
         }
       }
 
