@@ -1,5 +1,5 @@
 // Relay WebSocket handler + protocol parsers (verbatim from worker.js lines 418-1167)
-import { connect } from "cloudflare:sockets";
+import { connect } from 'cloudflare:sockets';
 import {
   DNS_SERVER_ADDRESS,
   DNS_SERVER_PORT,
@@ -19,20 +19,25 @@ import {
   neko,
   base64ToArrayBuffer,
   arrayBufferToHex,
-} from "./constants";
+} from './constants';
 
-export async function websocketHandler(request: Request, prxIP: string, vmessUuid?: string, trojanPasswordHashes?: string[]) {
+export async function websocketHandler(
+  request: Request,
+  prxIP: string,
+  vmessUuid?: string,
+  trojanPasswordHashes?: string[]
+) {
   const webSocketPair = new WebSocketPair();
   const [client, webSocket] = Object.values(webSocketPair);
 
   webSocket.accept();
 
-  let addressLog = "";
-  let portLog = "";
+  let addressLog = '';
+  let portLog = '';
   const log = (info: string, event?: any) => {
-    console.log(`[${addressLog}:${portLog}] ${info}`, event || "");
+    console.log(`[${addressLog}:${portLog}] ${info}`, event || '');
   };
-  const earlyDataHeader = request.headers.get("sec-websocket-protocol") || "";
+  const earlyDataHeader = request.headers.get('sec-websocket-protocol') || '';
 
   const readableWebSocketStream = makeReadableWebSocketStream(webSocket, earlyDataHeader, log);
 
@@ -53,7 +58,7 @@ export async function websocketHandler(request: Request, prxIP: string, vmessUui
               webSocket,
               null,
               log,
-              RELAY_SERVER_UDP,
+              RELAY_SERVER_UDP
             );
           }
           if (remoteSocketWrapper.value) {
@@ -73,11 +78,11 @@ export async function websocketHandler(request: Request, prxIP: string, vmessUui
           } else if (protocol === atob(neko)) {
             protocolHeader = readNekoHeader(chunk, vmessUuid);
           } else {
-            throw new Error("Unknown Protocol!");
+            throw new Error('Unknown Protocol!');
           }
 
           addressLog = protocolHeader.addressRemote;
-          portLog = `${protocolHeader.portRemote} -> ${protocolHeader.isUDP ? "UDP" : "TCP"}`;
+          portLog = `${protocolHeader.portRemote} -> ${protocolHeader.isUDP ? 'UDP' : 'TCP'}`;
 
           if (protocolHeader.hasError) {
             throw new Error(protocolHeader.message);
@@ -88,7 +93,7 @@ export async function websocketHandler(request: Request, prxIP: string, vmessUui
             responseHeader = await generateStreamResponseHeader(
               protocolHeader.responseOptions,
               protocolHeader.encKey,
-              protocolHeader.encIv,
+              protocolHeader.encIv
             );
           }
 
@@ -102,7 +107,7 @@ export async function websocketHandler(request: Request, prxIP: string, vmessUui
                 webSocket,
                 responseHeader,
                 log,
-                RELAY_SERVER_UDP,
+                RELAY_SERVER_UDP
               );
             }
 
@@ -113,7 +118,7 @@ export async function websocketHandler(request: Request, prxIP: string, vmessUui
               webSocket,
               responseHeader,
               log,
-              RELAY_SERVER_UDP,
+              RELAY_SERVER_UDP
             );
           }
 
@@ -125,7 +130,7 @@ export async function websocketHandler(request: Request, prxIP: string, vmessUui
             webSocket,
             responseHeader,
             log,
-            prxIP,
+            prxIP
           );
         },
         close() {
@@ -134,10 +139,10 @@ export async function websocketHandler(request: Request, prxIP: string, vmessUui
         abort(reason) {
           log(`readableWebSocketStream is abort`, JSON.stringify(reason));
         },
-      }),
+      })
     )
-    .catch((err) => {
-      log("readableWebSocketStream pipeTo error", err);
+    .catch(err => {
+      log('readableWebSocketStream pipeTo error', err);
     });
 
   return new Response(null, {
@@ -151,7 +156,11 @@ async function protocolSniffer(buffer: ArrayBuffer) {
     const horseDelimiter = new Uint8Array(buffer.slice(56, 60));
     if (horseDelimiter[0] === 0x0d && horseDelimiter[1] === 0x0a) {
       if (horseDelimiter[2] === 0x01 || horseDelimiter[2] === 0x03 || horseDelimiter[2] === 0x7f) {
-        if (horseDelimiter[3] === 0x01 || horseDelimiter[3] === 0x03 || horseDelimiter[3] === 0x04) {
+        if (
+          horseDelimiter[3] === 0x01 ||
+          horseDelimiter[3] === 0x03 ||
+          horseDelimiter[3] === 0x04
+        ) {
           return atob(horse);
         }
       }
@@ -162,7 +171,11 @@ async function protocolSniffer(buffer: ArrayBuffer) {
     const version = new Uint8Array(buffer.slice(0, 1))[0];
     if (version === 0) {
       const protocolUuid = new Uint8Array(buffer.slice(1, 17));
-      if (arrayBufferToHex(protocolUuid.buffer as ArrayBuffer).match(/^[0-9a-f]{8}[0-9a-f]{4}4[0-9a-f]{3}[89ab][0-9a-f]{3}[0-9a-f]{12}$/i)) {
+      if (
+        arrayBufferToHex(protocolUuid.buffer as ArrayBuffer).match(
+          /^[0-9a-f]{8}[0-9a-f]{4}4[0-9a-f]{3}[89ab][0-9a-f]{3}[0-9a-f]{12}$/i
+        )
+      ) {
         return atob(neko);
       }
     }
@@ -171,7 +184,11 @@ async function protocolSniffer(buffer: ArrayBuffer) {
   return atob(flash);
 }
 
-async function generateStreamResponseHeader(responseOptions: Uint8Array, encKey: Uint8Array, encIv: Uint8Array) {
+async function generateStreamResponseHeader(
+  responseOptions: Uint8Array,
+  encKey: Uint8Array,
+  encIv: Uint8Array
+) {
   try {
     const key = (await sha256(encKey)).slice(0, 16);
     const iv = (await sha256(encIv)).slice(0, 16);
@@ -185,17 +202,17 @@ async function generateStreamResponseHeader(responseOptions: Uint8Array, encKey:
 
     const encryptedLength = await aesGcmEncrypt(lengthKey, lengthIv, lengthData, new Uint8Array(0));
 
-    const headerPayload = new Uint8Array([
-      responseOptions[0],
-      0x00,
-      0x00,
-      0x00,
-    ]);
+    const headerPayload = new Uint8Array([responseOptions[0], 0x00, 0x00, 0x00]);
 
     const payloadKey = (await kdf(key, [SALT_B3])).slice(0, 16);
     const payloadIv = (await kdf(iv, [SALT_B4])).slice(0, 12);
 
-    const encryptedPayload = await aesGcmEncrypt(payloadKey, payloadIv, headerPayload, new Uint8Array(0));
+    const encryptedPayload = await aesGcmEncrypt(
+      payloadKey,
+      payloadIv,
+      headerPayload,
+      new Uint8Array(0)
+    );
 
     const response = new Uint8Array(encryptedLength.length + encryptedPayload.length);
     response.set(encryptedLength, 0);
@@ -203,7 +220,7 @@ async function generateStreamResponseHeader(responseOptions: Uint8Array, encKey:
 
     return response;
   } catch (e) {
-    console.error("Failed to generate stream response:", e);
+    console.error('Failed to generate stream response:', e);
     return new Uint8Array(0);
   }
 }
@@ -216,7 +233,7 @@ function isDestinationSafe(address: string, port: number): boolean {
   const addr = address.trim().toLowerCase();
 
   // Basic Hostname SSRF Checks
-  if (addr === "localhost" || addr.endsWith(".local") || addr.endsWith(".internal")) {
+  if (addr === 'localhost' || addr.endsWith('.local') || addr.endsWith('.internal')) {
     return false;
   }
 
@@ -248,15 +265,15 @@ function isDestinationSafe(address: string, port: number): boolean {
   }
 
   // IPv6 Checks
-  if (addr.includes(":")) {
+  if (addr.includes(':')) {
     // Loopback ::1
-    if (addr === "::1" || addr === "0:0:0:0:0:0:0:1") return false;
+    if (addr === '::1' || addr === '0:0:0:0:0:0:0:1') return false;
     // Link-local fe80::/10
-    if (addr.startsWith("fe80:") || addr.startsWith("fe80::")) return false;
+    if (addr.startsWith('fe80:') || addr.startsWith('fe80::')) return false;
     // Unique local fc00::/7
-    if (addr.startsWith("fc") || addr.startsWith("fd")) return false;
+    if (addr.startsWith('fc') || addr.startsWith('fd')) return false;
     // Unspecified ::
-    if (addr === "::" || addr === "0:0:0:0:0:0:0:0") return false;
+    if (addr === '::' || addr === '0:0:0:0:0:0:0:0') return false;
   }
 
   return true;
@@ -270,7 +287,7 @@ async function handleTCPOutBound(
   webSocket: any,
   responseHeader: any,
   log: any,
-  prxIP: string,
+  prxIP: string
 ) {
   // Validate outbound destination (SSRF Protection)
   if (!isDestinationSafe(addressRemote, portRemote)) {
@@ -295,11 +312,11 @@ async function handleTCPOutBound(
   async function retry() {
     const tcpSocket = await connectAndWrite(
       prxIP.split(/[:=-]/)[0] || addressRemote,
-      parseInt(prxIP.split(/[:=-]/)[1]) || portRemote,
+      parseInt(prxIP.split(/[:=-]/)[1]) || portRemote
     );
     tcpSocket.closed
       .catch((error: any) => {
-        console.log("retry tcpSocket closed error", error);
+        console.log('retry tcpSocket closed error', error);
       })
       .finally(() => {
         safeCloseWebSocket(webSocket);
@@ -312,7 +329,15 @@ async function handleTCPOutBound(
   remoteSocketToWS(tcpSocket, webSocket, responseHeader, retry, log);
 }
 
-async function handleUDPOutbound(targetAddress: string, targetPort: number, dataChunk: ArrayBuffer, webSocket: any, responseHeader: any, log: any, relay: any) {
+async function handleUDPOutbound(
+  targetAddress: string,
+  targetPort: number,
+  dataChunk: ArrayBuffer,
+  webSocket: any,
+  responseHeader: any,
+  log: any,
+  relay: any
+) {
   // Validate outbound destination (SSRF Protection)
   if (!isDestinationSafe(targetAddress, targetPort)) {
     log(`Blocked unsafe UDP connection to ${targetAddress}:${targetPort}`);
@@ -329,7 +354,9 @@ async function handleUDPOutbound(targetAddress: string, targetPort: number, data
     const header = `udp:${targetAddress}:${targetPort}`;
     const headerBuffer = new TextEncoder().encode(header);
     const separator = new Uint8Array([0x7c]);
-    const relayMessage = new Uint8Array(headerBuffer.length + separator.length + dataChunk.byteLength);
+    const relayMessage = new Uint8Array(
+      headerBuffer.length + separator.length + dataChunk.byteLength
+    );
     relayMessage.set(headerBuffer, 0);
     relayMessage.set(separator, headerBuffer.length);
     relayMessage.set(new Uint8Array(dataChunk), headerBuffer.length + separator.length);
@@ -356,7 +383,7 @@ async function handleUDPOutbound(targetAddress: string, targetPort: number, data
         abort(reason) {
           console.error(`UDP connection aborted due to ${reason}`);
         },
-      }),
+      })
     );
   } catch (e: any) {
     console.error(`Error while handling UDP outbound: ${e.message}`);
@@ -367,22 +394,22 @@ function makeReadableWebSocketStream(webSocketServer: any, earlyDataHeader: stri
   let readableStreamCancel = false;
   const stream = new ReadableStream({
     start(controller) {
-      webSocketServer.addEventListener("message", (event: any) => {
+      webSocketServer.addEventListener('message', (event: any) => {
         if (readableStreamCancel) {
           return;
         }
         const message = event.data;
         controller.enqueue(message);
       });
-      webSocketServer.addEventListener("close", () => {
+      webSocketServer.addEventListener('close', () => {
         safeCloseWebSocket(webSocketServer);
         if (readableStreamCancel) {
           return;
         }
         controller.close();
       });
-      webSocketServer.addEventListener("error", (err: any) => {
-        log("webSocketServer has error");
+      webSocketServer.addEventListener('error', (err: any) => {
+        log('webSocketServer has error');
         controller.error(err);
       });
       const { earlyData, error } = base64ToArrayBuffer(earlyDataHeader);
@@ -414,23 +441,32 @@ async function md5(...inputs: ArrayBuffer[]) {
     combined.set(new Uint8Array(input), offset);
     offset += input.byteLength;
   }
-  const hashBuffer = await crypto.subtle.digest("MD5", combined.buffer as ArrayBuffer);
+  const hashBuffer = await crypto.subtle.digest('MD5', combined.buffer as ArrayBuffer);
   return new Uint8Array(hashBuffer);
 }
 
 async function sha256(input: Uint8Array) {
-  const hashBuffer = await crypto.subtle.digest("SHA-256", input.buffer as ArrayBuffer);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', input.buffer as ArrayBuffer);
   return new Uint8Array(hashBuffer);
 }
 
 async function kdf(key: Uint8Array, path: (string | Uint8Array)[]) {
   async function hmacSha256(key: Uint8Array, data: Uint8Array) {
-    const hmacKey = await crypto.subtle.importKey("raw", key.buffer as ArrayBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-    const signature = await crypto.subtle.sign("HMAC", hmacKey, data.buffer as ArrayBuffer);
+    const hmacKey = await crypto.subtle.importKey(
+      'raw',
+      key.buffer as ArrayBuffer,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const signature = await crypto.subtle.sign('HMAC', hmacKey, data.buffer as ArrayBuffer);
     return new Uint8Array(signature);
   }
 
-  async function recursiveHash(keyBytes: Uint8Array, innerHashFn: (data: Uint8Array) => Promise<Uint8Array>) {
+  async function recursiveHash(
+    keyBytes: Uint8Array,
+    innerHashFn: (data: Uint8Array) => Promise<Uint8Array>
+  ) {
     return async (data: Uint8Array) => {
       const ipad = new Uint8Array(64);
       const opad = new Uint8Array(64);
@@ -456,34 +492,69 @@ async function kdf(key: Uint8Array, path: (string | Uint8Array)[]) {
   }
 
   const sha256Hash = async (data: Uint8Array) => {
-    return new Uint8Array(await crypto.subtle.digest("SHA-256", data.buffer as ArrayBuffer));
+    return new Uint8Array(await crypto.subtle.digest('SHA-256', data.buffer as ArrayBuffer));
   };
 
-  let currentHashFn = await recursiveHash(new TextEncoder().encode("VMess AEAD KDF"), sha256Hash);
+  let currentHashFn = await recursiveHash(new TextEncoder().encode('VMess AEAD KDF'), sha256Hash);
 
   for (const salt of path) {
-    const saltBytes = typeof salt === "string" ? new TextEncoder().encode(salt) : new Uint8Array(salt);
+    const saltBytes =
+      typeof salt === 'string' ? new TextEncoder().encode(salt) : new Uint8Array(salt);
     currentHashFn = await recursiveHash(saltBytes, currentHashFn);
   }
 
   return await currentHashFn(key);
 }
 
-async function aesGcmDecrypt(key: Uint8Array, nonce: Uint8Array, data: Uint8Array, aad: Uint8Array) {
-  const cryptoKey = await crypto.subtle.importKey("raw", key.buffer as ArrayBuffer, { name: "AES-GCM" }, false, ["decrypt"]);
+async function aesGcmDecrypt(
+  key: Uint8Array,
+  nonce: Uint8Array,
+  data: Uint8Array,
+  aad: Uint8Array
+) {
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    key.buffer as ArrayBuffer,
+    { name: 'AES-GCM' },
+    false,
+    ['decrypt']
+  );
 
   try {
-    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce.buffer as ArrayBuffer, additionalData: aad.buffer as ArrayBuffer }, cryptoKey, data.buffer as ArrayBuffer);
+    const decrypted = await crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: nonce.buffer as ArrayBuffer,
+        additionalData: aad.buffer as ArrayBuffer,
+      },
+      cryptoKey,
+      data.buffer as ArrayBuffer
+    );
     return new Uint8Array(decrypted);
   } catch (e: any) {
-    throw new Error("AEAD decryption failed: " + e.message);
+    throw new Error('AEAD decryption failed: ' + e.message);
   }
 }
 
-async function aesGcmEncrypt(key: Uint8Array, nonce: Uint8Array, data: Uint8Array, aad: Uint8Array) {
-  const cryptoKey = await crypto.subtle.importKey("raw", key.buffer as ArrayBuffer, { name: "AES-GCM" }, false, ["encrypt"]);
+async function aesGcmEncrypt(
+  key: Uint8Array,
+  nonce: Uint8Array,
+  data: Uint8Array,
+  aad: Uint8Array
+) {
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    key.buffer as ArrayBuffer,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
 
-  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce.buffer as ArrayBuffer, additionalData: aad.buffer as ArrayBuffer }, cryptoKey, data.buffer as ArrayBuffer);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonce.buffer as ArrayBuffer, additionalData: aad.buffer as ArrayBuffer },
+    cryptoKey,
+    data.buffer as ArrayBuffer
+  );
   return new Uint8Array(encrypted);
 }
 
@@ -492,17 +563,17 @@ async function readStreamHeader(buffer: ArrayBuffer, vmessUuid?: string) {
     // VMess AEAD auth key is derived from the user UUID + fixed salt.
     // Use the UUID derived from SUB_TOKEN so links from /api/sub can connect;
     // fall back to the legacy all-zero UUID for backwards compatibility.
-    const uuidString = vmessUuid || "00000000-0000-0000-0000-000000000000";
+    const uuidString = vmessUuid || '00000000-0000-0000-0000-000000000000';
     const uuidBytes = new Uint8Array(
       uuidString
-        .replace(/-/g, "")
+        .replace(/-/g, '')
         .match(/.{1,2}/g)!
-        .map((byte) => parseInt(byte, 16)),
+        .map(byte => parseInt(byte, 16))
     );
 
     const authKey = await md5(
       uuidBytes.buffer,
-      new TextEncoder().encode(atob("YzQ4NjE5ZmUtOGYwMi00OWUwLWI5ZTktZWRmNzYzZTE3ZTIx")).buffer,
+      new TextEncoder().encode(atob('YzQ4NjE5ZmUtOGYwMi00OWUwLWI5ZTktZWRmNzYzZTE3ZTIx')).buffer
     );
 
     const authId = new Uint8Array(buffer.slice(0, 16));
@@ -549,7 +620,7 @@ async function readStreamHeader(buffer: ArrayBuffer, vmessUuid?: string) {
 
     const addressType = view.getUint8(offset);
     offset += 1;
-    let addressRemote = "";
+    let addressRemote = '';
 
     switch (addressType) {
       case 1:
@@ -560,7 +631,9 @@ async function readStreamHeader(buffer: ArrayBuffer, vmessUuid?: string) {
       case 3:
         const domainLength = view.getUint8(offset);
         offset += 1;
-        addressRemote = new TextDecoder().decode(headerPayload.slice(offset, offset + domainLength));
+        addressRemote = new TextDecoder().decode(
+          headerPayload.slice(offset, offset + domainLength)
+        );
         offset += domainLength;
         break;
       case 4:
@@ -568,11 +641,14 @@ async function readStreamHeader(buffer: ArrayBuffer, vmessUuid?: string) {
         for (let i = 0; i < 8; i++) {
           ipv6Parts.push(view.getUint16(offset + i * 2, false).toString(16));
         }
-        addressRemote = ipv6Parts.join(":");
+        addressRemote = ipv6Parts.join(':');
         offset += 16;
         break;
       default:
-        return { hasError: true, message: `Invalid address type: ${addressType} (hex: 0x${addressType.toString(16)})` };
+        return {
+          hasError: true,
+          message: `Invalid address type: ${addressType} (hex: 0x${addressType.toString(16)})`,
+        };
     }
 
     const rawDataIndex = 42 + headerLength + 16;
@@ -594,7 +670,7 @@ async function readStreamHeader(buffer: ArrayBuffer, vmessUuid?: string) {
   } catch (e: any) {
     return {
       hasError: true,
-      message: "Stream header parsing failed: " + e.message,
+      message: 'Stream header parsing failed: ' + e.message,
     };
   }
 }
@@ -607,11 +683,11 @@ function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
   // derived from SUB_TOKEN. If no expected UUID is configured, skip check.
   if (expectedUuid) {
     const clientUuidHex = arrayBufferToHex(buffer.slice(1, 17));
-    const expectedHex = expectedUuid.replace(/-/g, "").toLowerCase();
+    const expectedHex = expectedUuid.replace(/-/g, '').toLowerCase();
     if (clientUuidHex !== expectedHex) {
       return {
         hasError: true,
-        message: "Invalid VLESS UUID",
+        message: 'Invalid VLESS UUID',
       };
     }
   }
@@ -638,25 +714,31 @@ function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
   const addressType = addressBuffer[0];
   let addressLength = 0;
   let addressValueIndex = addressIndex + 1;
-  let addressValue = "";
+  let addressValue = '';
   switch (addressType) {
     case 1:
       addressLength = 4;
-      addressValue = new Uint8Array(buffer.slice(addressValueIndex, addressValueIndex + addressLength)).join(".");
+      addressValue = new Uint8Array(
+        buffer.slice(addressValueIndex, addressValueIndex + addressLength)
+      ).join('.');
       break;
     case 2:
       addressLength = new Uint8Array(buffer.slice(addressValueIndex, addressValueIndex + 1))[0];
       addressValueIndex += 1;
-      addressValue = new TextDecoder().decode(buffer.slice(addressValueIndex, addressValueIndex + addressLength));
+      addressValue = new TextDecoder().decode(
+        buffer.slice(addressValueIndex, addressValueIndex + addressLength)
+      );
       break;
     case 3:
       addressLength = 16;
-      const dataView = new DataView(buffer.slice(addressValueIndex, addressValueIndex + addressLength));
+      const dataView = new DataView(
+        buffer.slice(addressValueIndex, addressValueIndex + addressLength)
+      );
       const ipv6 = [];
       for (let i = 0; i < 8; i++) {
         ipv6.push(dataView.getUint16(i * 2).toString(16));
       }
-      addressValue = ipv6.join(":");
+      addressValue = ipv6.join(':');
       break;
     default:
       return {
@@ -692,11 +774,11 @@ function readHorseHeader(buffer: ArrayBuffer, expectedPasswordHashes?: string[])
   // If no expected hashes are configured, skip the check.
   if (expectedPasswordHashes && expectedPasswordHashes.length) {
     const headerHashHex = new TextDecoder().decode(buffer.slice(0, 56)).toLowerCase();
-    const accepted = expectedPasswordHashes.some((h) => h.toLowerCase() === headerHashHex);
+    const accepted = expectedPasswordHashes.some(h => h.toLowerCase() === headerHashHex);
     if (!accepted) {
       return {
         hasError: true,
-        message: "Invalid Trojan password",
+        message: 'Invalid Trojan password',
       };
     }
   }
@@ -705,7 +787,7 @@ function readHorseHeader(buffer: ArrayBuffer, expectedPasswordHashes?: string[])
   if (dataBuffer.byteLength < 6) {
     return {
       hasError: true,
-      message: "invalid request data",
+      message: 'invalid request data',
     };
   }
 
@@ -715,31 +797,37 @@ function readHorseHeader(buffer: ArrayBuffer, expectedPasswordHashes?: string[])
   if (cmd == 3) {
     isUDP = true;
   } else if (cmd != 1) {
-    throw new Error("Unsupported command type!");
+    throw new Error('Unsupported command type!');
   }
 
   let addressType = view.getUint8(1);
   let addressLength = 0;
   let addressValueIndex = 2;
-  let addressValue = "";
+  let addressValue = '';
   switch (addressType) {
     case 1:
       addressLength = 4;
-      addressValue = new Uint8Array(dataBuffer.slice(addressValueIndex, addressValueIndex + addressLength)).join(".");
+      addressValue = new Uint8Array(
+        dataBuffer.slice(addressValueIndex, addressValueIndex + addressLength)
+      ).join('.');
       break;
     case 3:
       addressLength = new Uint8Array(dataBuffer.slice(addressValueIndex, addressValueIndex + 1))[0];
       addressValueIndex += 1;
-      addressValue = new TextDecoder().decode(dataBuffer.slice(addressValueIndex, addressValueIndex + addressLength));
+      addressValue = new TextDecoder().decode(
+        dataBuffer.slice(addressValueIndex, addressValueIndex + addressLength)
+      );
       break;
     case 4:
       addressLength = 16;
-      const dataView = new DataView(dataBuffer.slice(addressValueIndex, addressValueIndex + addressLength));
+      const dataView = new DataView(
+        dataBuffer.slice(addressValueIndex, addressValueIndex + addressLength)
+      );
       const ipv6 = [];
       for (let i = 0; i < 8; i++) {
         ipv6.push(dataView.getUint16(i * 2).toString(16));
       }
-      addressValue = ipv6.join(":");
+      addressValue = ipv6.join(':');
       break;
     default:
       return {
@@ -770,7 +858,13 @@ function readHorseHeader(buffer: ArrayBuffer, expectedPasswordHashes?: string[])
   };
 }
 
-async function remoteSocketToWS(remoteSocket: any, webSocket: any, responseHeader: any, retry: any, log: any) {
+async function remoteSocketToWS(
+  remoteSocket: any,
+  webSocket: any,
+  responseHeader: any,
+  retry: any,
+  log: any
+) {
   let header = responseHeader;
   let hasIncomingData = false;
   await remoteSocket.readable
@@ -780,7 +874,7 @@ async function remoteSocketToWS(remoteSocket: any, webSocket: any, responseHeade
         async write(chunk: any, controller: any) {
           hasIncomingData = true;
           if (webSocket.readyState !== WS_READY_STATE_OPEN) {
-            controller.error("webSocket.readyState is not open, maybe close");
+            controller.error('webSocket.readyState is not open, maybe close');
           }
           if (header) {
             webSocket.send(await new Blob([header, chunk]).arrayBuffer());
@@ -795,7 +889,7 @@ async function remoteSocketToWS(remoteSocket: any, webSocket: any, responseHeade
         abort(reason: any) {
           console.error(`remoteConnection!.readable abort`, reason);
         },
-      }),
+      })
     )
     .catch((error: any) => {
       console.error(`remoteSocketToWS has exception `, error.stack || error);
@@ -813,7 +907,7 @@ function safeCloseWebSocket(socket: any) {
       socket.close();
     }
   } catch (error) {
-    console.error("safeCloseWebSocket error", error);
+    console.error('safeCloseWebSocket error', error);
   }
 }
 
@@ -828,7 +922,7 @@ export async function checkPrxHealth(prxIP: string, prxPort: string) {
     // not when connection closes (socket.closed), which can take a long time.
     await Promise.race([
       socket.opened,
-      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), timeoutMs)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs)),
     ]);
 
     try {

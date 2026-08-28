@@ -1,142 +1,193 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id" class="dark scroll-smooth">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BITS Cloudflare VPN</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
-<script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        bg: '#050014',
-      },
-      animation: {
-        'fade-in': 'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
-        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
-        'float': 'float 6s ease-in-out infinite',
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BITS Cloudflare VPN</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              bg: '#050014',
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+              'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+              float: 'float 6s ease-in-out infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0) scale(1)' },
+                '50%': { transform: 'translateY(-20px) scale(1.05)' },
+              },
+            },
+          },
         },
-        slideUp: {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' }
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0) scale(1)' },
-          '50%': { transform: 'translateY(-20px) scale(1.05)' }
-        }
+      };
+    </script>
+    <style>
+      body {
+        background-color: #050014;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+        background-size: 32px 32px;
+        color: white;
+        overflow-x: hidden;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
       }
-    }
-  }
-}
-</script>
-<style>
-  body {
-    background-color: #050014;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
-    background-size: 32px 32px;
-    color: white;
-    overflow-x: hidden;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  }
-  .gradient-text {
-    background: linear-gradient(135deg, #a78bfa 0%, #e879f9 50%, #fcd34d 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .gradient-bg {
-    background: linear-gradient(135deg, #4f46e5 0%, #d946ef 100%);
-  }
-  .glass-card {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.4) 100%);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-  }
-  .blob {
-    position: absolute;
-    filter: blur(80px);
-    opacity: 0.4;
-    z-index: -1;
-    border-radius: 50%;
-  }
-  
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 8px; }
-  ::-webkit-scrollbar-track { background: #050014; }
-  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: #475569; }
-</style>
-</head>
-<body class="antialiased relative">
+      .gradient-text {
+        background: linear-gradient(135deg, #a78bfa 0%, #e879f9 50%, #fcd34d 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .gradient-bg {
+        background: linear-gradient(135deg, #4f46e5 0%, #d946ef 100%);
+      }
+      .glass-card {
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.4) 100%);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      }
+      .blob {
+        position: absolute;
+        filter: blur(80px);
+        opacity: 0.4;
+        z-index: -1;
+        border-radius: 50%;
+      }
 
-  <!-- Background Blobs -->
-  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-    <div class="blob bg-indigo-600/40 w-[600px] h-[600px] -top-[200px] -left-[100px] animate-float"></div>
-    <div class="blob bg-fuchsia-600/30 w-[500px] h-[500px] top-[20%] -right-[150px] animate-float" style="animation-delay: -2s;"></div>
-    <div class="blob bg-amber-500/20 w-[400px] h-[400px] bottom-0 left-[20%] animate-float" style="animation-delay: -4s;"></div>
-  </div>
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #050014;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+      }
+    </style>
+  </head>
+  <body class="antialiased relative">
+    <!-- Background Blobs -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <div
+        class="blob bg-indigo-600/40 w-[600px] h-[600px] -top-[200px] -left-[100px] animate-float"
+      ></div>
+      <div
+        class="blob bg-fuchsia-600/30 w-[500px] h-[500px] top-[20%] -right-[150px] animate-float"
+        style="animation-delay: -2s"
+      ></div>
+      <div
+        class="blob bg-amber-500/20 w-[400px] h-[400px] bottom-0 left-[20%] animate-float"
+        style="animation-delay: -4s"
+      ></div>
+    </div>
 
-  <div class="relative z-10">
+    <div class="relative z-10">
+      <main>
+        <!-- Hero Section -->
+        <section
+          class="pt-40 pb-20 px-6 min-h-[90vh] flex flex-col justify-center items-center text-center"
+        >
+          <div class="animate-slide-up">
+            <h1
+              class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.2]"
+            >
+              BITS
+              <span class="gradient-text block mt-2">Cloudflare VPN</span>
+            </h1>
 
-    <main>
-      <!-- Hero Section -->
-      <section class="pt-40 pb-20 px-6 min-h-[90vh] flex flex-col justify-center items-center text-center">
-        <div class="animate-slide-up">
-          <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.2]">
-            BITS
-            <span class="gradient-text block mt-2">Cloudflare VPN</span>
-          </h1>
-          
-          <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Relay WebSocket canggih menggunakan teknologi Serverless Workers. Kecepatan optimal dari server edge terdekat, tanpa biaya server tambahan.
-          </p>
-          
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-
-            <!-- Provider / Build -->
-            <a href="/build" class="group relative flex flex-col items-center justify-center gap-2 rounded-2xl px-6 py-9 glass-card border border-slate-700/60 overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-indigo-400/70 hover:shadow-[0_20px_50px_-12px_rgba(99,102,241,0.5)]">
-              <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"></span>
-              <span class="text-lg font-bold tracking-wide text-indigo-300">Provider</span>
-              <span class="text-xs text-slate-400">Build Provider / Server</span>
-              <span class="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full border border-indigo-400/40 bg-indigo-500/10 text-indigo-300 mt-1.5">Buka</span>
-            </a>
-
-            <!-- Country -->
-            <a href="/country" class="group relative flex flex-col items-center justify-center gap-2 rounded-2xl px-6 py-9 glass-card border border-slate-700/60 overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-400/70 hover:shadow-[0_20px_50px_-12px_rgba(16,185,129,0.45)]">
-              <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"></span>
-              <span class="text-lg font-bold tracking-wide text-emerald-300">Country</span>
-              <span class="text-xs text-slate-400">Build Server Berdasarkan Negara</span>
-              <span class="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full border border-emerald-400/40 bg-emerald-500/10 text-emerald-300 mt-1.5">Buka</span>
-            </a>
-
-            <!-- Convert -->
-            <a href="/convert" class="group relative flex flex-col items-center justify-center gap-2 rounded-2xl px-6 py-9 glass-card border border-slate-700/60 overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-amber-400/70 hover:shadow-[0_20px_50px_-12px_rgba(245,158,11,0.45)]">
-              <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"></span>
-              <span class="text-lg font-bold tracking-wide text-amber-300">Convert</span>
-              <span class="text-xs text-slate-400">Protocols ↔ Clash Converter</span>
-              <span class="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full border border-amber-400/40 bg-amber-500/10 text-amber-300 mt-1.5">Buka</span>
-            </a>
-          </div>
-          
-          <!-- Credit Footer -->
-          <div class="mt-16 text-center animate-fade-in" style="animation-delay: 0.5s;">
-            <p class="text-sm text-slate-400">
-              Developed with ❤️ by Banten IT Solutions
+            <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+              Relay WebSocket canggih menggunakan teknologi Serverless Workers. Kecepatan optimal
+              dari server edge terdekat, tanpa biaya server tambahan.
             </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+              <!-- Provider / Build -->
+              <a
+                href="/build"
+                class="group relative flex flex-col items-center justify-center gap-2 rounded-2xl px-6 py-9 glass-card border border-slate-700/60 overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-indigo-400/70 hover:shadow-[0_20px_50px_-12px_rgba(99,102,241,0.5)]"
+              >
+                <span
+                  class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"
+                ></span>
+                <span class="text-lg font-bold tracking-wide text-indigo-300">Provider</span>
+                <span class="text-xs text-slate-400">Build Provider / Server</span>
+                <span
+                  class="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full border border-indigo-400/40 bg-indigo-500/10 text-indigo-300 mt-1.5"
+                  >Buka</span
+                >
+              </a>
+
+              <!-- Country -->
+              <a
+                href="/country"
+                class="group relative flex flex-col items-center justify-center gap-2 rounded-2xl px-6 py-9 glass-card border border-slate-700/60 overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-400/70 hover:shadow-[0_20px_50px_-12px_rgba(16,185,129,0.45)]"
+              >
+                <span
+                  class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"
+                ></span>
+                <span class="text-lg font-bold tracking-wide text-emerald-300">Country</span>
+                <span class="text-xs text-slate-400">Build Server Berdasarkan Negara</span>
+                <span
+                  class="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full border border-emerald-400/40 bg-emerald-500/10 text-emerald-300 mt-1.5"
+                  >Buka</span
+                >
+              </a>
+
+              <!-- Convert -->
+              <a
+                href="/convert"
+                class="group relative flex flex-col items-center justify-center gap-2 rounded-2xl px-6 py-9 glass-card border border-slate-700/60 overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-amber-400/70 hover:shadow-[0_20px_50px_-12px_rgba(245,158,11,0.45)]"
+              >
+                <span
+                  class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"
+                ></span>
+                <span class="text-lg font-bold tracking-wide text-amber-300">Convert</span>
+                <span class="text-xs text-slate-400">Protocols ↔ Clash Converter</span>
+                <span
+                  class="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full border border-amber-400/40 bg-amber-500/10 text-amber-300 mt-1.5"
+                  >Buka</span
+                >
+              </a>
+            </div>
+
+            <!-- Credit Footer -->
+            <div class="mt-16 text-center animate-fade-in" style="animation-delay: 0.5s">
+              <p class="text-sm text-slate-400">Developed with ❤️ by Banten IT Solutions</p>
+            </div>
           </div>
-        </div>
-      </section>
-    </main>
-
-  </div>
-
-</body>
+        </section>
+      </main>
+    </div>
+  </body>
 </html>

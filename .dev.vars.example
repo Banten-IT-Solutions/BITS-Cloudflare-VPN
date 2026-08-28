@@ -1,0 +1,9 @@
+# Copy to `.dev.vars` for `wrangler dev` (gitignored).
+# Only contains SECRETS — vars (PRX_BANK_URL, KV_PRX_URL) are already available
+# through the generated wrangler.jsonc (from `bun run cf:config`).
+#
+# After copying, set SUB_TOKEN to a random value for local testing:
+#   echo "$(openssl rand -base64 48)" > .dev.vars
+# or edit this file directly.
+
+SUB_TOKEN=dev-local-sub-token-change-me

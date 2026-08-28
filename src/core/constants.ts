@@ -1,45 +1,45 @@
 // Constants from worker.js (lines 1-45 + helpers)
 
-export const horse = "dHJvamFu";
-export const flash = "dm1lc3M=";
-export const neko = "dmxlc3M=";
-export const v2 = "djJyYXk=";
+export const horse = 'dHJvamFu';
+export const flash = 'dm1lc3M=';
+export const neko = 'dmxlc3M=';
+export const v2 = 'djJyYXk=';
 
 export const PROTOCOLS = [atob(neko), atob(horse), atob(flash)];
 export const KV_PRX_URL =
-  "https://raw.githubusercontent.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/main/KV.json";
+  'https://raw.githubusercontent.com/Banten-IT-Solutions/BITS-VPN-Cloudflare/main/KV.json';
 export const PRX_BANK_URL =
-  "https://raw.githubusercontent.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/main/proxy.txt";
-export const DNS_SERVER_ADDRESS = "8.8.8.8";
+  'https://raw.githubusercontent.com/Banten-IT-Solutions/BITS-VPN-Cloudflare/main/proxy.txt';
+export const DNS_SERVER_ADDRESS = '8.8.8.8';
 export const DNS_SERVER_PORT = 53;
 export const RELAY_SERVER_UDP = {
-  host: "udp-relay.hobihaus.space",
+  host: 'udp-relay.hobihaus.space',
   port: 7300,
 };
 export const WS_READY_STATE_OPEN = 1;
 export const WS_READY_STATE_CLOSING = 2;
 export const CORS_HEADER_OPTIONS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
-  "Access-Control-Max-Age": "86400",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,HEAD,POST,OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
 // VMess AEAD salt constants
-export const SALT_A1 = atob("Vk1lc3MgSGVhZGVyIEFFQUQgS2V5X0xlbmd0aA==");
-export const SALT_A2 = atob("Vk1lc3MgSGVhZGVyIEFFQUQgTm9uY2VfTGVuZ3Ro");
-export const SALT_A3 = atob("Vk1lc3MgSGVhZGVyIEFFQUQgS2V5");
-export const SALT_A4 = atob("Vk1lc3MgSGVhZGVyIEFFQUQgTm9uY2U=");
-export const SALT_B1 = atob("QUVBRCBSZXNwIEhlYWRlciBMZW4gS2V5");
-export const SALT_B2 = atob("QUVBRCBSZXNwIEhlYWRlciBMZW4gSVY=");
-export const SALT_B3 = atob("QUVBRCBSZXNwIEhlYWRlciBLZXk=");
-export const SALT_B4 = atob("QUVBRCBSZXNwIEhlYWRlciBJVg==");
+export const SALT_A1 = atob('Vk1lc3MgSGVhZGVyIEFFQUQgS2V5X0xlbmd0aA==');
+export const SALT_A2 = atob('Vk1lc3MgSGVhZGVyIEFFQUQgTm9uY2VfTGVuZ3Ro');
+export const SALT_A3 = atob('Vk1lc3MgSGVhZGVyIEFFQUQgS2V5');
+export const SALT_A4 = atob('Vk1lc3MgSGVhZGVyIEFFQUQgTm9uY2U=');
+export const SALT_B1 = atob('QUVBRCBSZXNwIEhlYWRlciBMZW4gS2V5');
+export const SALT_B2 = atob('QUVBRCBSZXNwIEhlYWRlciBMZW4gSVY=');
+export const SALT_B3 = atob('QUVBRCBSZXNwIEhlYWRlciBLZXk=');
+export const SALT_B4 = atob('QUVBRCBSZXNwIEhlYWRlciBJVg==');
 
 // Helper functions
 export function getFlagEmoji(isoCode: string): string {
   const codePoints = isoCode
     .toUpperCase()
-    .split("")
-    .map((char) => 127397 + char.charCodeAt(0));
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
   return String.fromCodePoint(...codePoints);
 }
 
@@ -50,14 +50,14 @@ export function getFlagEmoji(isoCode: string): string {
  */
 export async function uuidFromToken(token: string): Promise<string> {
   const data = new TextEncoder().encode(token);
-  const hash = await crypto.subtle.digest("SHA-256", data);
+  const hash = await crypto.subtle.digest('SHA-256', data);
   const bytes = new Uint8Array(hash).slice(0, 16);
 
   // Set version (4) and variant (10xx) bits so the result is a valid UUID v4
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
 
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
@@ -82,8 +82,14 @@ function rotr(x: number, n: number): number {
  * but the Trojan protocol hashes the password with SHA-224.
  */
 export function sha224Hex(message: string): string {
-  let H0 = 0xc1059ed8, H1 = 0x367cd507, H2 = 0x3070dd17, H3 = 0xf70e5939,
-      H4 = 0xffc00b31, H5 = 0x68581511, H6 = 0x64f98fa7, H7 = 0xbefa4fa4;
+  let H0 = 0xc1059ed8,
+    H1 = 0x367cd507,
+    H2 = 0x3070dd17,
+    H3 = 0xf70e5939,
+    H4 = 0xffc00b31,
+    H5 = 0x68581511,
+    H6 = 0x64f98fa7,
+    H7 = 0xbefa4fa4;
 
   const bytes = new TextEncoder().encode(message);
   const ml = bytes.length * 8;
@@ -105,7 +111,14 @@ export function sha224Hex(message: string): string {
       const s1 = rotr(w[t - 2], 17) ^ rotr(w[t - 2], 19) ^ (w[t - 2] >>> 10);
       w[t] = (w[t - 16] + s0 + w[t - 7] + s1) | 0;
     }
-    let a = H0, b = H1, c = H2, d = H3, e = H4, f = H5, g = H6, h = H7;
+    let a = H0,
+      b = H1,
+      c = H2,
+      d = H3,
+      e = H4,
+      f = H5,
+      g = H6,
+      h = H7;
     for (let t = 0; t < 64; t++) {
       const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
       const ch = (e & f) ^ (~e & g);
@@ -113,13 +126,26 @@ export function sha224Hex(message: string): string {
       const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
       const maj = (a & b) ^ (a & c) ^ (b & c);
       const temp2 = (S0 + maj) | 0;
-      h = g; g = f; f = e; e = (d + temp1) | 0; d = c; c = b; b = a; a = (temp1 + temp2) | 0;
+      h = g;
+      g = f;
+      f = e;
+      e = (d + temp1) | 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (temp1 + temp2) | 0;
     }
-    H0 = (H0 + a) | 0; H1 = (H1 + b) | 0; H2 = (H2 + c) | 0; H3 = (H3 + d) | 0;
-    H4 = (H4 + e) | 0; H5 = (H5 + f) | 0; H6 = (H6 + g) | 0; H7 = (H7 + h) | 0;
+    H0 = (H0 + a) | 0;
+    H1 = (H1 + b) | 0;
+    H2 = (H2 + c) | 0;
+    H3 = (H3 + d) | 0;
+    H4 = (H4 + e) | 0;
+    H5 = (H5 + f) | 0;
+    H6 = (H6 + g) | 0;
+    H7 = (H7 + h) | 0;
   }
 
-  return [H0, H1, H2, H3, H4, H5, H6].map((x) => (x >>> 0).toString(16).padStart(8, "0")).join("");
+  return [H0, H1, H2, H3, H4, H5, H6].map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
 }
 
 export function shuffleArray<T>(array: T[]): void {
@@ -136,9 +162,9 @@ export function base64ToArrayBuffer(base64Str: string): { earlyData?: ArrayBuffe
     return { error: null };
   }
   try {
-    base64Str = base64Str.replace(/-/g, "+").replace(/_/g, "/");
+    base64Str = base64Str.replace(/-/g, '+').replace(/_/g, '/');
     const decode = atob(base64Str);
-    const arryBuffer = Uint8Array.from(decode, (c) => c.charCodeAt(0));
+    const arryBuffer = Uint8Array.from(decode, c => c.charCodeAt(0));
     return { earlyData: arryBuffer.buffer, error: null };
   } catch (error) {
     return { error };
@@ -146,5 +172,5 @@ export function base64ToArrayBuffer(base64Str: string): { earlyData?: ArrayBuffe
 }
 
 export function arrayBufferToHex(buffer: ArrayBuffer): string {
-  return [...new Uint8Array(buffer)].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return [...new Uint8Array(buffer)].map(x => x.toString(16).padStart(2, '0')).join('');
 }

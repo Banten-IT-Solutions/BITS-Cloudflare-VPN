@@ -1,51 +1,77 @@
-name: 🚀 Deploy Cloudflare
-run-name: Deploy ${{ inputs.ref || github.sha }}
+name: '🚀 Deploy'
 
 on:
+  # Manual trigger — deploy directly via workflow_dispatch.
+  # Pushes to main do NOT auto-deploy; trigger Run workflow from the Actions tab.
+  # No environment values are committed to the repo.
   workflow_dispatch:
-    inputs:
-      ref:
-        description: 'Git ref (branch/tag/commit) to deploy'
-        default: 'main'
-        required: false
 
-permissions:
-  contents: read
-
+# All config injected from GitHub Vars/Secrets
+# (Settings → Secrets and variables → Actions). Non-sensitive values use
+# GitHub Variables; sensitive values (API token, SUB_TOKEN) use GitHub Secrets.
 env:
-  GIT_REF: ${{ github.event.inputs.ref || github.sha }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  NODE_NO_WARNINGS: 1
+  WORKER_NAME: ${{ vars.WORKER_NAME || secrets.WORKER_NAME }}
+  PRX_BANK_URL: ${{ vars.PRX_BANK_URL || secrets.PRX_BANK_URL }}
+  KV_PRX_URL: ${{ vars.KV_PRX_URL || secrets.KV_PRX_URL }}
+  APP_DOMAIN: ${{ vars.APP_DOMAIN || secrets.APP_DOMAIN }}
+  WC_DOMAIN: ${{ vars.WC_DOMAIN || secrets.WC_DOMAIN }}
+  APP_URL: ${{ vars.APP_URL || secrets.APP_URL || format('https://{0}', vars.APP_DOMAIN || secrets.APP_DOMAIN) }}
+  SUB_TOKEN: ${{ secrets.SUB_TOKEN }}
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
-    name: ✅ Deploy worker to Cloudflare
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    concurrency:
-      group: deploy-cf-worker
-      cancel-in-progress: false
-
+    name: '☁️ Deploy to Cloudflare'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: 🏞️ Checkout repository
+      - name: '📥 Checkout'
         uses: actions/checkout@v7.0.1
-        with:
-          ref: ${{ env.GIT_REF }}
-          fetch-depth: 0
 
-      - name: 🟣 Setup Bun
+      - name: '🟣 Setup Bun'
         uses: oven-sh/setup-bun@v2.2.0
 
-      - name: 📚 Publish worker (wrangler)
+      - name: '📦 Install dependencies'
+        run: bun install --frozen-lockfile
+
+      - name: '🔍 Typecheck'
+        run: bun run types
+
+      - name: '🔧 Generate wrangler.jsonc'
+        run: bun run cf:config
+
+      - name: '🚀 Deploy Worker'
         uses: cloudflare/wrangler-action@v4.0.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          secrets: |
-            SUB_TOKEN
-        env:
-          GIT_COMMIT_ID: ${{ env.GIT_REF }}
-          # Dari GitHub Secret -> dipasang sebagai Cloudflare Worker secret "SUB_TOKEN"
-          SUB_TOKEN: ${{ secrets.SUB_TOKEN }}
+          # config is in the generated wrangler.jsonc — no extra args needed
 
-      - name: 🎉 Deployment summary
+      - name: '🔐 Sync Secrets'
         run: |
-          echo "::notice::🚀 Deployed ${GIT_REF} to Cloudflare Workers (name=yuliana.my.id + *.yuliana.my.id)"
+          set -euo pipefail
+          node -e '
+            const fs = require("fs");
+            const secrets = {};
+            for (const k of ["SUB_TOKEN"]) {
+              if (process.env[k]) secrets[k] = process.env[k];
+            }
+            if (Object.keys(secrets).length) {
+              fs.writeFileSync(".worker-secrets.json", JSON.stringify(secrets));
+              console.log("Secrets to put:", Object.keys(secrets).join(", "));
+            } else {
+              console.log("No secrets to put");
+            }
+          '
+          if [ -f .worker-secrets.json ]; then
+            head -c 200 .worker-secrets.json; echo
+            npx wrangler secret bulk .worker-secrets.json --config wrangler.jsonc
+            rm -f .worker-secrets.json
+          fi

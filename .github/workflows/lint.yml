@@ -3,10 +3,10 @@ name: 🧪 Lint
 on:
   push:
     paths:
-      - ".github/workflows/**"
+      - '.github/workflows/**'
   pull_request:
     paths:
-      - ".github/workflows/**"
+      - '.github/workflows/**'
 
 permissions:
   contents: read
@@ -23,7 +23,7 @@ jobs:
 
       - name: 📥 Download actionlint
         id: get_actionlint
-        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12
         shell: bash
 
       - name: 🔍 Run actionlint

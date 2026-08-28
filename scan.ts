@@ -1,4 +1,4 @@
-import tls from "tls";
+import tls from 'tls';
 
 interface ProxyStruct {
   address: string;
@@ -23,11 +23,11 @@ interface ProxyTestResult {
 
 let myGeoIpString: any = null;
 
-const KV_PAIR_PROXY_FILE = "./KV.json";
-const RAW_PROXY_LIST_FILE = "./raw.txt";
-const PROXY_LIST_FILE = "./proxy.txt";
-const IP_RESOLVER_DOMAIN = "myip.ipeek.workers.dev";
-const IP_RESOLVER_PATH = "/";
+const KV_PAIR_PROXY_FILE = './KV.json';
+const RAW_PROXY_LIST_FILE = './raw.txt';
+const PROXY_LIST_FILE = './proxy.txt';
+const IP_RESOLVER_DOMAIN = 'myip.ipeek.workers.dev';
+const IP_RESOLVER_PATH = '/';
 const CONCURRENCY = 99;
 
 const CHECK_QUEUE: string[] = [];
@@ -42,33 +42,39 @@ async function sendRequest(host: string, path: string, proxy: any = null) {
 
     const socket = tls.connect(options, () => {
       const request =
-        `GET ${path} HTTP/1.1\r\n` + `Host: ${host}\r\n` + `User-Agent: Mozilla/5.0\r\n` + `Connection: close\r\n\r\n`;
+        `GET ${path} HTTP/1.1\r\n` +
+        `Host: ${host}\r\n` +
+        `User-Agent: Mozilla/5.0\r\n` +
+        `Connection: close\r\n\r\n`;
       socket.write(request);
     });
 
-    let responseBody = "";
+    let responseBody = '';
 
     const timeout = setTimeout(() => {
       socket.destroy();
-      reject(new Error("socket timeout"));
+      reject(new Error('socket timeout'));
     }, 5000);
 
-    socket.on("data", (data: Buffer) => (responseBody += data.toString()));
-    socket.on("end", () => {
+    socket.on('data', (data: Buffer) => (responseBody += data.toString()));
+    socket.on('end', () => {
       clearTimeout(timeout);
-      const body = responseBody.split("\r\n\r\n")[1] || "";
+      const body = responseBody.split('\r\n\r\n')[1] || '';
       resolve(body);
     });
-    socket.on("error", (error: Error) => {
+    socket.on('error', (error: Error) => {
       // console.log(error);
       reject(error);
     });
   });
 }
 
-export async function checkProxy(proxyAddress: string, proxyPort: number): Promise<ProxyTestResult> {
+export async function checkProxy(
+  proxyAddress: string,
+  proxyPort: number
+): Promise<ProxyTestResult> {
   let result: ProxyTestResult = {
-    message: "Unknown error",
+    message: 'Unknown error',
     error: true,
   };
 
@@ -78,7 +84,9 @@ export async function checkProxy(proxyAddress: string, proxyPort: number): Promi
     const start = new Date().getTime();
     const [ipinfo, myip] = await Promise.all([
       sendRequest(IP_RESOLVER_DOMAIN, IP_RESOLVER_PATH, proxyInfo),
-      myGeoIpString == null ? sendRequest(IP_RESOLVER_DOMAIN, IP_RESOLVER_PATH, null) : myGeoIpString,
+      myGeoIpString == null
+        ? sendRequest(IP_RESOLVER_DOMAIN, IP_RESOLVER_PATH, null)
+        : myGeoIpString,
     ]);
     const finish = new Date().getTime();
 
@@ -110,9 +118,9 @@ export async function checkProxy(proxyAddress: string, proxyPort: number): Promi
 async function readProxyList(): Promise<ProxyStruct[]> {
   const proxyList: ProxyStruct[] = [];
 
-  const proxyListString = (await Bun.file(RAW_PROXY_LIST_FILE).text()).split("\n");
+  const proxyListString = (await Bun.file(RAW_PROXY_LIST_FILE).text()).split('\n');
   for (const proxy of proxyListString) {
-    const [address, port, country, org] = proxy.split(",");
+    const [address, port, country, org] = proxy.split(',');
     proxyList.push({
       address,
       port: parseInt(port),
@@ -139,7 +147,9 @@ async function readProxyList(): Promise<ProxyStruct[]> {
     if (!proxyChecked.includes(proxyKey)) {
       proxyChecked.push(proxyKey);
       try {
-        uniqueRawProxies.push(`${proxy.address},${proxy.port},${proxy.country},${proxy.org.replaceAll(/[+]/g, " ")}`);
+        uniqueRawProxies.push(
+          `${proxy.address},${proxy.port},${proxy.country},${proxy.org.replaceAll(/[+]/g, ' ')}`
+        );
       } catch (e: any) {
         continue;
       }
@@ -149,7 +159,7 @@ async function readProxyList(): Promise<ProxyStruct[]> {
 
     CHECK_QUEUE.push(proxyKey);
     checkProxy(proxy.address, proxy.port)
-      .then((res) => {
+      .then(res => {
         if (!res.error && res.result?.proxyip === true && res.result.country) {
           activeProxyList.push(
             `${res.result?.proxy},${res.result?.port},${res.result?.country},${res.result?.asOrganization}`
@@ -181,17 +191,17 @@ async function readProxyList(): Promise<ProxyStruct[]> {
   uniqueRawProxies.sort(sortByCountry);
   activeProxyList.sort(sortByCountry);
 
-  await Bun.write(KV_PAIR_PROXY_FILE, JSON.stringify(kvPair, null, "  "));
-  await Bun.write(RAW_PROXY_LIST_FILE, uniqueRawProxies.join("\n"));
-  await Bun.write(PROXY_LIST_FILE, activeProxyList.join("\n"));
+  await Bun.write(KV_PAIR_PROXY_FILE, JSON.stringify(kvPair, null, '  '));
+  await Bun.write(RAW_PROXY_LIST_FILE, uniqueRawProxies.join('\n'));
+  await Bun.write(PROXY_LIST_FILE, activeProxyList.join('\n'));
 
   console.log(`Process time: ${(Bun.nanoseconds() / 1000000000).toFixed(2)} seconds`);
   process.exit(0);
 })();
 
 function sortByCountry(a: string, b: string) {
-  a = a.split(",")[2];
-  b = b.split(",")[2];
+  a = a.split(',')[2];
+  b = b.split(',')[2];
 
   return a.localeCompare(b);
 }

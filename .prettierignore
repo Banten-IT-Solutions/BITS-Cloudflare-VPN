@@ -1,0 +1,12 @@
+node_modules
+dist
+.wrangler
+bun.lockb
+pnpm-lock.yaml
+package-lock.json
+*.min.js
+*.min.css
+wrangler.template.jsonc
+wrangler.jsonc
+.dev.vars
+.env

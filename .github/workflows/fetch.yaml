@@ -2,7 +2,7 @@ name: 🔄 Weekly Proxy Fetch & Scan
 
 on:
   schedule:
-    - cron: "0 0 * * 0" # Berjalan setiap hari Minggu pukul 00:00 UTC
+    - cron: '0 0 * * 0' # Berjalan setiap hari Minggu pukul 00:00 UTC
   workflow_dispatch: # Memungkinkan eksekusi manual via GitHub UI
 
 permissions:
@@ -46,12 +46,12 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add raw.txt proxy.txt KV.json
-          
+
           if git diff --cached --quiet; then
             echo "::notice::✅ No changes detected in proxies database"
             exit 0
           fi
-          
+
           git commit -m "chore(cron): weekly clean IP fetch and proxy scan update"
           echo "::notice::📤 Publishing updated proxy lists..."
           git fetch origin main

@@ -1,5 +1,5 @@
 {
-  "name": "BITS-Cloudflare-VPN",
+  "name": "bits-vpn-cloudflare",
   "version": "2.0.0",
   "description": "High-performance Serverless VPN Relay for VLESS, VMess, and Trojan over Cloudflare Workers.",
   "keywords": [
@@ -27,10 +27,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Banten-IT-Solutions/BITS-Cloudflare-VPN.git"
+    "url": "git+https://github.com/Banten-IT-Solutions/BITS-VPN-Cloudflare.git"
   },
   "bugs": {
-    "url": "https://github.com/Banten-IT-Solutions/BITS-Cloudflare-VPN/issues"
+    "url": "https://github.com/Banten-IT-Solutions/BITS-VPN-Cloudflare/issues"
   },
   "homepage": "https://bits.co.id",
   "main": "src/index.ts",
@@ -46,25 +46,41 @@
     "scan.ts"
   ],
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "cf:config": "bun scripts/gen-wrangler.mjs",
+    "dev": "bun run cf:config && wrangler dev",
+    "build": "bun run cf:config",
+    "deploy": "bun run cf:config && wrangler deploy",
     "fetch": "bun run fetch.ts",
     "scan": "bun run scan.ts",
     "test": "bun test src/core/relay.test.ts || bun run src/core/relay.test.ts",
-    "types": "tsc --noEmit"
+    "types": "tsc --noEmit",
+    "check": "bun run types",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "simple-git-hooks"
   },
   "engines": {
     "node": ">=20",
     "bun": ">=1.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260808.1",
-    "@types/bun": "latest",
-    "@types/node": "^26.1.2",
+    "@cloudflare/workers-types": "^5.20260828.1",
+    "@types/bun": "^1.4.0",
+    "@types/node": "^26.4.0",
+    "prettier": "3.9.6",
+    "lint-staged": "17.4.1",
+    "simple-git-hooks": "2.13.1",
     "typescript": "^7.0.2",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.127.0"
   },
   "dependencies": {
-    "hono": "^4.13.1"
+    "hono": "^4.13.5"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "lint-staged",
+    "pre-push": "bun run check && bun run build"
+  },
+  "lint-staged": {
+    "*.{js,ts,json,css,md}": "prettier --write"
   }
 }

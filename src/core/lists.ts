@@ -1,5 +1,5 @@
 // Proxy list fetchers from worker.js (lines 46-88)
-import { KV_PRX_URL, PRX_BANK_URL } from "./constants";
+import { KV_PRX_URL, PRX_BANK_URL } from './constants';
 
 export interface ProxyEntry {
   prxIP: string;
@@ -18,9 +18,11 @@ const kvPrxCache = new Map<string, CacheEntry<Record<string, string[]>>>();
 const prxListCache = new Map<string, CacheEntry<ProxyEntry[]>>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-export async function getKVPrxList(kvPrxUrl: string = KV_PRX_URL): Promise<Record<string, string[]>> {
+export async function getKVPrxList(
+  kvPrxUrl: string = KV_PRX_URL
+): Promise<Record<string, string[]>> {
   if (!kvPrxUrl) {
-    throw new Error("No URL Provided!");
+    throw new Error('No URL Provided!');
   }
 
   // Check cache
@@ -36,7 +38,7 @@ export async function getKVPrxList(kvPrxUrl: string = KV_PRX_URL): Promise<Recor
     },
   } as any);
   if (kvPrx.status == 200) {
-    const data = await kvPrx.json() as Record<string, string[]>;
+    const data = (await kvPrx.json()) as Record<string, string[]>;
     kvPrxCache.set(kvPrxUrl, { data, expiresAt: Date.now() + CACHE_TTL_MS });
     return data;
   } else {
@@ -57,7 +59,7 @@ export async function getPrxList(prxBankUrl: string = PRX_BANK_URL): Promise<Pro
    * 1.1.1.1,443,SG,Cloudflare Inc.
    */
   if (!prxBankUrl) {
-    throw new Error("No URL Provided!");
+    throw new Error('No URL Provided!');
   }
 
   // Check cache
@@ -73,17 +75,17 @@ export async function getPrxList(prxBankUrl: string = PRX_BANK_URL): Promise<Pro
     },
   } as any);
   if (prxBank.status == 200) {
-    const text = (await prxBank.text()) || "";
+    const text = (await prxBank.text()) || '';
 
-    const prxString = text.split("\n").filter(Boolean);
+    const prxString = text.split('\n').filter(Boolean);
     const data = prxString
-      .map((entry) => {
-        const [prxIP, prxPort, country, org] = entry.split(",");
+      .map(entry => {
+        const [prxIP, prxPort, country, org] = entry.split(',');
         return {
-          prxIP: prxIP || "Unknown",
-          prxPort: prxPort || "Unknown",
-          country: country || "Unknown",
-          org: org || "Unknown Org",
+          prxIP: prxIP || 'Unknown',
+          prxPort: prxPort || 'Unknown',
+          country: country || 'Unknown',
+          org: org || 'Unknown Org',
         };
       })
       .filter(Boolean);

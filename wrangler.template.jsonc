@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // wrangler.template.jsonc — placeholder values are substituted by `bun run cf:config` from .env (local) or env vars (CI). Do not deploy this file directly.
+  "name": "${WORKER_NAME}",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-08-28",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Runtime vars — non-sensitive config sourced from .env / CI vars
+  //   PRX_BANK_URL  — remote proxy list source (proxy.txt)
+  //   KV_PRX_URL    — country bucket KV source (KV.json)
+  "vars": {
+    "PRX_BANK_URL": "${PRX_BANK_URL}",
+    "KV_PRX_URL": "${KV_PRX_URL}"
+  },
+
+  // Static assets — served free from Workers Assets binding
+  "assets": {
+    "directory": "./assets",
+    "binding": "ASSETS"
+  },
+
+  // Custom domains — zone must be active in your Cloudflare account
+  //   APP_DOMAIN  : main domain (e.g. yuliana.my.id)
+  //   WC_DOMAIN   : second custom domain used for wildcard/SNI host (e.g. support.zoom.us.yuliana.my.id)
+  "routes": [
+    { "pattern": "${APP_DOMAIN}", "custom_domain": true },
+    { "pattern": "${WC_DOMAIN}", "custom_domain": true }
+  ],
+
+  "unsafe": {
+    "metadata": {
+      "observability": { "enabled": true }
+    }
+  },
+  "observability": { "logs": { "enabled": true } }
+}

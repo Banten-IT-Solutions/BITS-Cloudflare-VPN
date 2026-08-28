@@ -1,17 +1,41 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
+      day: 'monday'
+      time: '02:30'
     open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'root'
     commit-message:
-      prefix: "🤖 ci"
+      prefix: 'chore(deps):'
+    groups:
+      dev-deps:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
 
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: 'weekly'
+      day: 'monday'
+      time: '03:00'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'github-actions'
     commit-message:
-      prefix: "📦 deps"
+      prefix: 'chore(deps):'
+    groups:
+      workflows:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'

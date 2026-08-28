@@ -1,444 +1,561 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id" class="dark scroll-smooth">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Country Proxy Build — BITS Cloudflare VPN</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
-<script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        bg: '#050014',
-      },
-      animation: {
-        'fade-in': 'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
-        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
-        'float': 'float 6s ease-in-out infinite',
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Country Proxy Build — BITS Cloudflare VPN</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              bg: '#050014',
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+              'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+              float: 'float 6s ease-in-out infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0) scale(1)' },
+                '50%': { transform: 'translateY(-20px) scale(1.05)' },
+              },
+            },
+          },
         },
-        slideUp: {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' }
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0) scale(1)' },
-          '50%': { transform: 'translateY(-20px) scale(1.05)' }
-        }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
+    <style>
+      body {
+        background-color: #050014;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+        background-size: 32px 32px;
+        color: white;
+        overflow-x: hidden;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
       }
-    }
-  }
-}
-</script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
-<style>
-  body {
-    background-color: #050014;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
-    background-size: 32px 32px;
-    color: white;
-    overflow-x: hidden;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  }
-  .gradient-bg {
-    background: linear-gradient(135deg, #4f46e5 0%, #d946ef 100%);
-  }
-  .blob {
-    position: absolute;
-    filter: blur(80px);
-    opacity: 0.4;
-    z-index: -1;
-    border-radius: 50%;
-  }
-  .glass-card {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.4) 100%);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-  }
-  [x-cloak] { display: none; }
-  .country-card {
-    transition: all 0.15s ease;
-    cursor: pointer;
-    user-select: none;
-  }
-  .country-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(99, 102, 241, 0.5);
-  }
-  .country-card.selected {
-    background: linear-gradient(145deg, rgba(79, 70, 229, 0.18) 0%, rgba(67, 56, 202, 0.18) 100%);
-    border-color: rgba(99, 102, 241, 0.7);
-    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4), 0 8px 24px 0 rgba(0, 0, 0, 0.3);
-  }
-</style>
-</head>
-<body class="antialiased relative" x-data="countryApp()" x-init="init()">
+      .gradient-bg {
+        background: linear-gradient(135deg, #4f46e5 0%, #d946ef 100%);
+      }
+      .blob {
+        position: absolute;
+        filter: blur(80px);
+        opacity: 0.4;
+        z-index: -1;
+        border-radius: 50%;
+      }
+      .glass-card {
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.4) 100%);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      }
+      [x-cloak] {
+        display: none;
+      }
+      .country-card {
+        transition: all 0.15s ease;
+        cursor: pointer;
+        user-select: none;
+      }
+      .country-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(99, 102, 241, 0.5);
+      }
+      .country-card.selected {
+        background: linear-gradient(
+          145deg,
+          rgba(79, 70, 229, 0.18) 0%,
+          rgba(67, 56, 202, 0.18) 100%
+        );
+        border-color: rgba(99, 102, 241, 0.7);
+        box-shadow:
+          0 0 0 1px rgba(99, 102, 241, 0.4),
+          0 8px 24px 0 rgba(0, 0, 0, 0.3);
+      }
+    </style>
+  </head>
+  <body class="antialiased relative" x-data="countryApp()" x-init="init()">
+    <!-- Background Blobs -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <div
+        class="blob bg-indigo-600/40 w-[600px] h-[600px] -top-[200px] -left-[100px] animate-float"
+      ></div>
+      <div
+        class="blob bg-fuchsia-600/30 w-[500px] h-[500px] top-[20%] -right-[150px] animate-float"
+        style="animation-delay: -2s"
+      ></div>
+      <div
+        class="blob bg-amber-500/20 w-[400px] h-[400px] bottom-0 left-[20%] animate-float"
+        style="animation-delay: -4s"
+      ></div>
+    </div>
 
-  <!-- Background Blobs -->
-  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-    <div class="blob bg-indigo-600/40 w-[600px] h-[600px] -top-[200px] -left-[100px] animate-float"></div>
-    <div class="blob bg-fuchsia-600/30 w-[500px] h-[500px] top-[20%] -right-[150px] animate-float" style="animation-delay: -2s;"></div>
-    <div class="blob bg-amber-500/20 w-[400px] h-[400px] bottom-0 left-[20%] animate-float" style="animation-delay: -4s;"></div>
-  </div>
-
-  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-12 min-h-screen">
-
-    <main class="space-y-6">
-
-      <!-- Country Grid Card -->
-      <section class="glass-card rounded-3xl p-6 animate-slide-up">
-        <!-- Title -->
-        <div class="flex items-center justify-center gap-4 mb-5">
-          <span class="hidden sm:block h-px w-12 bg-gradient-to-r from-transparent to-indigo-400/70"></span>
-          <h2 class="text-2xl sm:text-3xl font-extrabold tracking-wide bg-gradient-to-r from-indigo-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
-            Pilih Negara
-          </h2>
-          <span class="hidden sm:block h-px w-12 bg-gradient-to-l from-transparent to-fuchsia-400/70"></span>
-        </div>
-
-        <!-- Country cards (multi-select dengan klik, tanpa checkbox) - 8 per baris -->
-        <div x-show="!loading" x-cloak class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
-          <template x-for="c in filteredCountries" :key="c.code">
-            <button @click="toggleCountry(c.code)"
-              :class="selectedCodes.includes(c.code) ? 'selected' : ''"
-              class="country-card relative glass-card rounded-xl px-1.5 py-2.5 flex flex-col items-center gap-0.5 text-center border">
-              <!-- Check badge -->
-              <span x-show="selectedCodes.includes(c.code)"
-                class="absolute top-1 right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] leading-none font-bold">✓</span>
-              <span class="text-2xl leading-none drop-shadow" x-text="getFlagEmoji(c.code)"></span>
-              <span class="text-[11px] font-bold tracking-wide" x-text="c.code"></span>
-              <span class="text-[9px] text-slate-500" x-text="c.count"></span>
-            </button>
-          </template>
-        </div>
-
-        <!-- Empty / loading states -->
-        <div x-show="!loading && filteredCountries.length === 0" x-cloak class="text-center py-8 text-sm text-slate-500">
-          Tidak ada negara ditemukan.
-        </div>
-        <div x-show="loading" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
-          <template x-for="i in 20" :key="i">
-            <div class="glass-card rounded-xl px-3 py-3 flex flex-col items-center gap-1 animate-pulse">
-              <span class="w-6 h-6 rounded-full bg-slate-800"></span>
-              <span class="h-2.5 w-7 rounded bg-slate-800"></span>
-              <span class="h-2 w-5 rounded bg-slate-800"></span>
-            </div>
-          </template>
-        </div>
-      </section>
-
-      <!-- Build Configuration Button -->
-      <div x-show="selectedCodes.length > 0" x-cloak class="animate-slide-up">
-        <button @click="showDialog = true"
-          class="w-full py-4 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 hover:scale-[1.02] rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg">
-          <span class="text-lg leading-none">⚙️</span>
-          <span>Build Configuration</span>
-          <span class="text-xs font-semibold opacity-90">(<span x-text="selectedCodes.length"></span> Countries)</span>
-        </button>
-      </div>
-
-      <!-- Config Dialog -->
-      <div x-show="showDialog" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" style="background:rgba(0,0,0,0.8)">
-        <div @click.away="showDialog = false" class="glass-card rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto animate-slide-up">
-          <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-3">
-              <span class="w-5 h-5 text-purple-400">🎛️</span>
-              <h3 class="text-lg font-bold">Config Options</h3>
-            </div>
-            <button @click="showDialog = false" class="text-slate-400 hover:text-slate-100 transition">
-              <span class="w-5 h-5">✕</span>
-            </button>
+    <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-12 min-h-screen">
+      <main class="space-y-6">
+        <!-- Country Grid Card -->
+        <section class="glass-card rounded-3xl p-6 animate-slide-up">
+          <!-- Title -->
+          <div class="flex items-center justify-center gap-4 mb-5">
+            <span
+              class="hidden sm:block h-px w-12 bg-gradient-to-r from-transparent to-indigo-400/70"
+            ></span>
+            <h2
+              class="text-2xl sm:text-3xl font-extrabold tracking-wide bg-gradient-to-r from-indigo-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent"
+            >
+              Pilih Negara
+            </h2>
+            <span
+              class="hidden sm:block h-px w-12 bg-gradient-to-l from-transparent to-fuchsia-400/70"
+            ></span>
           </div>
 
-          <!-- Selected summary (bendera saja, tanpa pembungkus) -->
-          <div class="flex justify-center mb-5 gap-1">
-            <template x-for="code in selectedCodes" :key="code">
-              <span class="text-lg leading-none" x-text="getFlagEmoji(code)"></span>
+          <!-- Country cards (multi-select dengan klik, tanpa checkbox) - 8 per baris -->
+          <div
+            x-show="!loading"
+            x-cloak
+            class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2"
+          >
+            <template x-for="c in filteredCountries" :key="c.code">
+              <button
+                @click="toggleCountry(c.code)"
+                :class="selectedCodes.includes(c.code) ? 'selected' : ''"
+                class="country-card relative glass-card rounded-xl px-1.5 py-2.5 flex flex-col items-center gap-0.5 text-center border"
+              >
+                <!-- Check badge -->
+                <span
+                  x-show="selectedCodes.includes(c.code)"
+                  class="absolute top-1 right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] leading-none font-bold"
+                  >✓</span
+                >
+                <span
+                  class="text-2xl leading-none drop-shadow"
+                  x-text="getFlagEmoji(c.code)"
+                ></span>
+                <span class="text-[11px] font-bold tracking-wide" x-text="c.code"></span>
+                <span class="text-[9px] text-slate-500" x-text="c.count"></span>
+              </button>
             </template>
           </div>
 
-          <div class="space-y-5">
-            <!-- Protocols -->
-            <div>
-              <label class="block text-xs text-slate-400 font-medium mb-3">Protocols</label>
-              <div class="grid grid-cols-3 gap-3">
-                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                  :class="config.proto === 'vless' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'">
-                  <input type="radio" x-model="config.proto" value="vless" class="sr-only">
-                  <span class="w-5 h-5 text-indigo-400">🔗</span>
-                  <span class="text-sm font-semibold">VLESS</span>
-                </label>
-                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                  :class="config.proto === 'vmess' ? 'border-purple-500 bg-purple-500/10' : 'hover:border-slate-700'">
-                  <input type="radio" x-model="config.proto" value="vmess" class="sr-only">
-                  <span class="w-5 h-5 text-purple-400">📡</span>
-                  <span class="text-sm font-semibold">VMess</span>
-                </label>
-                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                  :class="config.proto === 'trojan' ? 'border-emerald-500 bg-emerald-500/10' : 'hover:border-slate-700'">
-                  <input type="radio" x-model="config.proto" value="trojan" class="sr-only">
-                  <span class="w-5 h-5 text-emerald-400">🏹</span>
-                  <span class="text-sm font-semibold">Trojan</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Mode -->
-            <div>
-              <label class="block text-xs text-slate-400 font-medium mb-3">Mode</label>
-              <div class="grid grid-cols-2 gap-3">
-                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                  :class="config.mode === 'sni' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'">
-                  <input type="radio" x-model="config.mode" value="sni" class="sr-only">
-                  <span class="w-5 h-5 text-indigo-400">🛡️</span>
-                  <span class="text-sm font-semibold">SNI</span>
-                </label>
-                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                  :class="config.mode === 'cdn' ? 'border-purple-500 bg-purple-500/10' : 'hover:border-slate-700'">
-                  <input type="radio" x-model="config.mode" value="cdn" class="sr-only">
-                  <span class="w-5 h-5 text-purple-400">☁️</span>
-                  <span class="text-sm font-semibold">CDN</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Domain -->
-            <div>
-              <label class="block text-xs text-slate-400 font-medium mb-2">Domain</label>
-              <input x-model="config.bug" type="text" placeholder="support.zoom.us"
-                class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none text-sm transition">
-            </div>
-
-            <!-- Wildcard -->
-            <div>
-              <label class="block text-xs text-slate-400 font-medium mb-3">Wildcard</label>
-              <div class="grid grid-cols-2 gap-3">
-                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                  :class="config.wildcard === 'no' ? 'border-slate-500 bg-slate-500/10' : 'hover:border-slate-700'">
-                  <input type="radio" x-model="config.wildcard" value="no" class="sr-only">
-                  <span class="w-5 h-5 text-slate-400">🚫</span>
-                  <span class="text-sm font-semibold">Non Wildcard</span>
-                </label>
-                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                  :class="config.wildcard === 'yes' ? 'border-amber-500 bg-amber-500/10' : 'hover:border-slate-700'">
-                  <input type="radio" x-model="config.wildcard" value="yes" class="sr-only">
-                  <span class="w-5 h-5 text-amber-400">✳️</span>
-                  <span class="text-sm font-semibold">Wildcard</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Port -->
-            <div>
-              <label class="block text-xs text-slate-400 font-medium mb-3">Port</label>
-              <div class="grid grid-cols-2 gap-3">
-                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                  :class="config.port === '443' ? 'border-emerald-500 bg-emerald-500/10' : 'hover:border-slate-700'">
-                  <input type="radio" x-model="config.port" value="443" class="sr-only">
-                  <span class="w-5 h-5 text-emerald-400">🔒</span>
-                  <span class="text-sm font-semibold">443 (TLS)</span>
-                </label>
-                <label class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                  :class="config.port === '80' ? 'border-orange-500 bg-orange-500/10' : 'hover:border-slate-700'">
-                  <input type="radio" x-model="config.port" value="80" class="sr-only">
-                  <span class="w-5 h-5 text-orange-400">🔓</span>
-                  <span class="text-sm font-semibold">80 (Plain)</span>
-                </label>
-              </div>
-            </div>
+          <!-- Empty / loading states -->
+          <div
+            x-show="!loading && filteredCountries.length === 0"
+            x-cloak
+            class="text-center py-8 text-sm text-slate-500"
+          >
+            Tidak ada negara ditemukan.
           </div>
+          <div
+            x-show="loading"
+            class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2"
+          >
+            <template x-for="i in 20" :key="i">
+              <div
+                class="glass-card rounded-xl px-3 py-3 flex flex-col items-center gap-1 animate-pulse"
+              >
+                <span class="w-6 h-6 rounded-full bg-slate-800"></span>
+                <span class="h-2.5 w-7 rounded bg-slate-800"></span>
+                <span class="h-2 w-5 rounded bg-slate-800"></span>
+              </div>
+            </template>
+          </div>
+        </section>
 
-          <button @click="buildConfig()" :disabled="!config.bug || building"
-            class="w-full mt-6 py-4 gradient-bg hover:scale-[1.02] rounded-2xl font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-            <span class="w-5 h-5" :class="{'animate-spin': building}">🚀</span>
-            <span x-text="building ? 'Building Configurations...' : 'Generate VPN Config'"></span>
+        <!-- Build Configuration Button -->
+        <div x-show="selectedCodes.length > 0" x-cloak class="animate-slide-up">
+          <button
+            @click="showDialog = true"
+            class="w-full py-4 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 hover:scale-[1.02] rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg"
+          >
+            <span class="text-lg leading-none">⚙️</span>
+            <span>Build Configuration</span>
+            <span class="text-xs font-semibold opacity-90"
+              >(<span x-text="selectedCodes.length"></span> Countries)</span
+            >
           </button>
         </div>
-      </div>
 
-      <!-- Output Results -->
-      <section x-show="result.uri" x-cloak class="glass-card rounded-3xl p-6 animate-slide-up">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-            <span class="w-5 h-5">✅</span>
-          </div>
-          <h2 class="text-lg font-bold">Output Configurations</h2>
-        </div>
-
-        <div class="space-y-4">
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <label class="text-sm text-slate-400 flex items-center gap-2">
-                <span class="w-4 h-4">🔗</span>
-                <span x-text="config.proto === 'vmess' ? 'VMess URIs' : (config.proto === 'trojan' ? 'Trojan URIs' : 'VLESS URIs')"></span>
-              </label>
-              <button @click="copyText(result.uri)"
-                class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1">
-                <span class="w-4 h-4">📋</span> Copy
+        <!-- Config Dialog -->
+        <div
+          x-show="showDialog"
+          x-cloak
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          style="background: rgba(0, 0, 0, 0.8)"
+        >
+          <div
+            @click.away="showDialog = false"
+            class="glass-card rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto animate-slide-up"
+          >
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <span class="w-5 h-5 text-purple-400">🎛️</span>
+                <h3 class="text-lg font-bold">Config Options</h3>
+              </div>
+              <button
+                @click="showDialog = false"
+                class="text-slate-400 hover:text-slate-100 transition"
+              >
+                <span class="w-5 h-5">✕</span>
               </button>
             </div>
-            <textarea readonly x-model="result.uri" rows="8"
-              class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 font-mono text-xs resize-none focus:outline-none"></textarea>
-          </div>
 
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <label class="text-sm text-slate-400 flex items-center gap-2">
-                <span class="w-4 h-4">📄</span> Clash YAML
-              </label>
-              <button @click="copyText(result.yaml)"
-                class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1">
-                <span class="w-4 h-4">📋</span> Copy
-              </button>
+            <!-- Selected summary (bendera saja, tanpa pembungkus) -->
+            <div class="flex justify-center mb-5 gap-1">
+              <template x-for="code in selectedCodes" :key="code">
+                <span class="text-lg leading-none" x-text="getFlagEmoji(code)"></span>
+              </template>
             </div>
-            <textarea readonly x-model="result.yaml" rows="12"
-              class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 font-mono text-xs resize-none focus:outline-none"></textarea>
+
+            <div class="space-y-5">
+              <!-- Protocols -->
+              <div>
+                <label class="block text-xs text-slate-400 font-medium mb-3">Protocols</label>
+                <div class="grid grid-cols-3 gap-3">
+                  <label
+                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                    :class="config.proto === 'vless' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'"
+                  >
+                    <input type="radio" x-model="config.proto" value="vless" class="sr-only" />
+                    <span class="w-5 h-5 text-indigo-400">🔗</span>
+                    <span class="text-sm font-semibold">VLESS</span>
+                  </label>
+                  <label
+                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                    :class="config.proto === 'vmess' ? 'border-purple-500 bg-purple-500/10' : 'hover:border-slate-700'"
+                  >
+                    <input type="radio" x-model="config.proto" value="vmess" class="sr-only" />
+                    <span class="w-5 h-5 text-purple-400">📡</span>
+                    <span class="text-sm font-semibold">VMess</span>
+                  </label>
+                  <label
+                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                    :class="config.proto === 'trojan' ? 'border-emerald-500 bg-emerald-500/10' : 'hover:border-slate-700'"
+                  >
+                    <input type="radio" x-model="config.proto" value="trojan" class="sr-only" />
+                    <span class="w-5 h-5 text-emerald-400">🏹</span>
+                    <span class="text-sm font-semibold">Trojan</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Mode -->
+              <div>
+                <label class="block text-xs text-slate-400 font-medium mb-3">Mode</label>
+                <div class="grid grid-cols-2 gap-3">
+                  <label
+                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                    :class="config.mode === 'sni' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'"
+                  >
+                    <input type="radio" x-model="config.mode" value="sni" class="sr-only" />
+                    <span class="w-5 h-5 text-indigo-400">🛡️</span>
+                    <span class="text-sm font-semibold">SNI</span>
+                  </label>
+                  <label
+                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                    :class="config.mode === 'cdn' ? 'border-purple-500 bg-purple-500/10' : 'hover:border-slate-700'"
+                  >
+                    <input type="radio" x-model="config.mode" value="cdn" class="sr-only" />
+                    <span class="w-5 h-5 text-purple-400">☁️</span>
+                    <span class="text-sm font-semibold">CDN</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Domain -->
+              <div>
+                <label class="block text-xs text-slate-400 font-medium mb-2">Domain</label>
+                <input
+                  x-model="config.bug"
+                  type="text"
+                  placeholder="support.zoom.us"
+                  class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none text-sm transition"
+                />
+              </div>
+
+              <!-- Wildcard -->
+              <div>
+                <label class="block text-xs text-slate-400 font-medium mb-3">Wildcard</label>
+                <div class="grid grid-cols-2 gap-3">
+                  <label
+                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                    :class="config.wildcard === 'no' ? 'border-slate-500 bg-slate-500/10' : 'hover:border-slate-700'"
+                  >
+                    <input type="radio" x-model="config.wildcard" value="no" class="sr-only" />
+                    <span class="w-5 h-5 text-slate-400">🚫</span>
+                    <span class="text-sm font-semibold">Non Wildcard</span>
+                  </label>
+                  <label
+                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                    :class="config.wildcard === 'yes' ? 'border-amber-500 bg-amber-500/10' : 'hover:border-slate-700'"
+                  >
+                    <input type="radio" x-model="config.wildcard" value="yes" class="sr-only" />
+                    <span class="w-5 h-5 text-amber-400">✳️</span>
+                    <span class="text-sm font-semibold">Wildcard</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Port -->
+              <div>
+                <label class="block text-xs text-slate-400 font-medium mb-3">Port</label>
+                <div class="grid grid-cols-2 gap-3">
+                  <label
+                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                    :class="config.port === '443' ? 'border-emerald-500 bg-emerald-500/10' : 'hover:border-slate-700'"
+                  >
+                    <input type="radio" x-model="config.port" value="443" class="sr-only" />
+                    <span class="w-5 h-5 text-emerald-400">🔒</span>
+                    <span class="text-sm font-semibold">443 (TLS)</span>
+                  </label>
+                  <label
+                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
+                    :class="config.port === '80' ? 'border-orange-500 bg-orange-500/10' : 'hover:border-slate-700'"
+                  >
+                    <input type="radio" x-model="config.port" value="80" class="sr-only" />
+                    <span class="w-5 h-5 text-orange-400">🔓</span>
+                    <span class="text-sm font-semibold">80 (Plain)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <button
+              @click="buildConfig()"
+              :disabled="!config.bug || building"
+              class="w-full mt-6 py-4 gradient-bg hover:scale-[1.02] rounded-2xl font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <span class="w-5 h-5" :class="{'animate-spin': building}">🚀</span>
+              <span x-text="building ? 'Building Configurations...' : 'Generate VPN Config'"></span>
+            </button>
           </div>
         </div>
-      </section>
 
-    </main>
+        <!-- Output Results -->
+        <section x-show="result.uri" x-cloak class="glass-card rounded-3xl p-6 animate-slide-up">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+              <span class="w-5 h-5">✅</span>
+            </div>
+            <h2 class="text-lg font-bold">Output Configurations</h2>
+          </div>
 
-    <!-- Footer -->
-    <footer class="mt-6 text-center animate-fade-in" style="animation-delay: 0.3s;">
-      <p class="text-sm text-slate-400">
-        Developed with ❤️ by Banten IT Solutions
-      </p>
-    </footer>
-  </div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm text-slate-400 flex items-center gap-2">
+                  <span class="w-4 h-4">🔗</span>
+                  <span
+                    x-text="config.proto === 'vmess' ? 'VMess URIs' : (config.proto === 'trojan' ? 'Trojan URIs' : 'VLESS URIs')"
+                  ></span>
+                </label>
+                <button
+                  @click="copyText(result.uri)"
+                  class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1"
+                >
+                  <span class="w-4 h-4">📋</span> Copy
+                </button>
+              </div>
+              <textarea
+                readonly
+                x-model="result.uri"
+                rows="8"
+                class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 font-mono text-xs resize-none focus:outline-none"
+              ></textarea>
+            </div>
 
-  <script>
-    function countryApp() {
-      return {
-        countries: [],
-        selectedCodes: [],
-        filters: { q: '' },
-        loading: true,
-        building: false,
-        showDialog: false,
-        config: { mode: 'sni', bug: 'support.zoom.us', wildcard: 'no', port: '443', proto: 'vless' },
-        result: { uri: '', yaml: '' },
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm text-slate-400 flex items-center gap-2">
+                  <span class="w-4 h-4">📄</span> Clash YAML
+                </label>
+                <button
+                  @click="copyText(result.yaml)"
+                  class="px-3 py-1.5 text-xs glass-card rounded-lg border border-slate-700 hover:border-indigo-500/50 transition flex items-center gap-1"
+                >
+                  <span class="w-4 h-4">📋</span> Copy
+                </button>
+              </div>
+              <textarea
+                readonly
+                x-model="result.yaml"
+                rows="12"
+                class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 font-mono text-xs resize-none focus:outline-none"
+              ></textarea>
+            </div>
+          </div>
+        </section>
+      </main>
 
-        init() {
-          this.loadCountries();
-        },
+      <!-- Footer -->
+      <footer class="mt-6 text-center animate-fade-in" style="animation-delay: 0.3s">
+        <p class="text-sm text-slate-400">Developed with ❤️ by Banten IT Solutions</p>
+      </footer>
+    </div>
 
-        get filteredCountries() {
-          const q = this.filters.q.trim().toUpperCase();
-          if (!q) return this.countries;
-          return this.countries.filter(c => c.code.includes(q));
-        },
+    <script>
+      function countryApp() {
+        return {
+          countries: [],
+          selectedCodes: [],
+          filters: { q: '' },
+          loading: true,
+          building: false,
+          showDialog: false,
+          config: {
+            mode: 'sni',
+            bug: 'support.zoom.us',
+            wildcard: 'no',
+            port: '443',
+            proto: 'vless',
+          },
+          result: { uri: '', yaml: '' },
 
-        async loadCountries() {
-          this.loading = true;
-          try {
-            const res = await fetch('/api/countries');
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            this.countries = data.countries || [];
-            this.countries.sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));
-          } catch (e) {
-            console.error(e);
-            alert('Gagal memuat daftar negara');
-          } finally {
-            this.loading = false;
-          }
-        },
+          init() {
+            this.loadCountries();
+          },
 
-        toggleCountry(code) {
-          const idx = this.selectedCodes.indexOf(code);
-          if (idx !== -1) this.selectedCodes.splice(idx, 1);
-          else this.selectedCodes.push(code);
-          this.result.uri = '';
-          this.result.yaml = '';
-        },
+          get filteredCountries() {
+            const q = this.filters.q.trim().toUpperCase();
+            if (!q) return this.countries;
+            return this.countries.filter(c => c.code.includes(q));
+          },
 
-        buildConfig() {
-          this.building = true;
-          setTimeout(() => {
-            const hostname = location.hostname;
-            const { mode, bug, wildcard, port, proto } = this.config;
-
-            const cleanBug = bug.replace(/[^a-zA-Z0-9.-]/g, '').trim();
-            if (!cleanBug) {
-              alert('Invalid Domain!');
-              this.building = false;
-              return;
+          async loadCountries() {
+            this.loading = true;
+            try {
+              const res = await fetch('/api/countries');
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              const data = await res.json();
+              this.countries = data.countries || [];
+              this.countries.sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));
+            } catch (e) {
+              console.error(e);
+              alert('Gagal memuat daftar negara');
+            } finally {
+              this.loading = false;
             }
-            const cleanPort = port === '80' ? '80' : '443';
+          },
 
-            let server, servername, host;
-            if (mode === 'sni') {
-              if (wildcard === 'yes') {
-                server = `${cleanBug}.${hostname}`;
-                servername = cleanBug;
-                host = cleanBug;
-              } else {
-                server = hostname;
-                servername = cleanBug;
-                host = cleanBug;
+          toggleCountry(code) {
+            const idx = this.selectedCodes.indexOf(code);
+            if (idx !== -1) this.selectedCodes.splice(idx, 1);
+            else this.selectedCodes.push(code);
+            this.result.uri = '';
+            this.result.yaml = '';
+          },
+
+          buildConfig() {
+            this.building = true;
+            setTimeout(() => {
+              const hostname = location.hostname;
+              const { mode, bug, wildcard, port, proto } = this.config;
+
+              const cleanBug = bug.replace(/[^a-zA-Z0-9.-]/g, '').trim();
+              if (!cleanBug) {
+                alert('Invalid Domain!');
+                this.building = false;
+                return;
               }
-            } else {
-              if (wildcard === 'yes') {
-                server = cleanBug;
-                servername = `${cleanBug}.${hostname}`;
-                host = `${cleanBug}.${hostname}`;
+              const cleanPort = port === '80' ? '80' : '443';
+
+              let server, servername, host;
+              if (mode === 'sni') {
+                if (wildcard === 'yes') {
+                  server = `${cleanBug}.${hostname}`;
+                  servername = cleanBug;
+                  host = cleanBug;
+                } else {
+                  server = hostname;
+                  servername = cleanBug;
+                  host = cleanBug;
+                }
               } else {
-                server = cleanBug;
-                servername = hostname;
-                host = hostname;
+                if (wildcard === 'yes') {
+                  server = cleanBug;
+                  servername = `${cleanBug}.${hostname}`;
+                  host = `${cleanBug}.${hostname}`;
+                } else {
+                  server = cleanBug;
+                  servername = hostname;
+                  host = hostname;
+                }
               }
-            }
 
-            const tls = cleanPort === '443';
-            const uris = [];
-            const proxiesYaml = [];
-            const yamlEscape = (str) => str.replace(/"/g, '\\"');
+              const tls = cleanPort === '443';
+              const uris = [];
+              const proxiesYaml = [];
+              const yamlEscape = str => str.replace(/"/g, '\\"');
 
-            // Satu config per negara + 1 config gabungan bila lebih dari 1 negara terpilih
-            const targets = [];
-            this.selectedCodes.forEach(code => {
-              targets.push({ code, path: `/${code}`, label: `${this.getFlagEmoji(code)} ${code}` });
-            });
-            if (this.selectedCodes.length > 1) {
-              const codes = this.selectedCodes.join(',');
-              const flags = this.selectedCodes.map(c => this.getFlagEmoji(c)).join('');
-              targets.push({ code: this.selectedCodes.join('+'), path: `/${codes}`, label: `${flags} ${this.selectedCodes.join('+')}` });
-            }
+              // Satu config per negara + 1 config gabungan bila lebih dari 1 negara terpilih
+              const targets = [];
+              this.selectedCodes.forEach(code => {
+                targets.push({
+                  code,
+                  path: `/${code}`,
+                  label: `${this.getFlagEmoji(code)} ${code}`,
+                });
+              });
+              if (this.selectedCodes.length > 1) {
+                const codes = this.selectedCodes.join(',');
+                const flags = this.selectedCodes.map(c => this.getFlagEmoji(c)).join('');
+                targets.push({
+                  code: this.selectedCodes.join('+'),
+                  path: `/${codes}`,
+                  label: `${flags} ${this.selectedCodes.join('+')}`,
+                });
+              }
 
-            targets.forEach(target => {
-              const uuid = this.generateUUID();
-              const label = `${target.label} WS ${tls ? 'TLS' : 'NTLS'} [BITS Cloudflare VPN]`;
-              const safeHash = encodeURIComponent(label);
-              const wsPath = target.path;
-              const tlsQuery = tls ? `&sni=${servername}` : '';
-              const netQuery = `type=ws&host=${host}&path=${encodeURIComponent(wsPath)}`;
+              targets.forEach(target => {
+                const uuid = this.generateUUID();
+                const label = `${target.label} WS ${tls ? 'TLS' : 'NTLS'} [BITS Cloudflare VPN]`;
+                const safeHash = encodeURIComponent(label);
+                const wsPath = target.path;
+                const tlsQuery = tls ? `&sni=${servername}` : '';
+                const netQuery = `type=ws&host=${host}&path=${encodeURIComponent(wsPath)}`;
 
-              if (proto === 'vmess') {
-                const vmess = {
-                  v: '2',
-                  ps: label,
-                  add: server,
-                  port: cleanPort,
-                  id: uuid,
-                  aid: '0',
-                  scy: 'auto',
-                  net: 'ws',
-                  type: '',
-                  host: host,
-                  path: wsPath,
-                  tls: tls ? 'tls' : 'none',
-                  sni: tls ? servername : ''
-                };
-                uris.push('vmess://' + this.encodeBase64(JSON.stringify(vmess)));
-                proxiesYaml.push(`  - name: "${yamlEscape(label)}"
+                if (proto === 'vmess') {
+                  const vmess = {
+                    v: '2',
+                    ps: label,
+                    add: server,
+                    port: cleanPort,
+                    id: uuid,
+                    aid: '0',
+                    scy: 'auto',
+                    net: 'ws',
+                    type: '',
+                    host: host,
+                    path: wsPath,
+                    tls: tls ? 'tls' : 'none',
+                    sni: tls ? servername : '',
+                  };
+                  uris.push('vmess://' + this.encodeBase64(JSON.stringify(vmess)));
+                  proxiesYaml.push(`  - name: "${yamlEscape(label)}"
     type: vmess
     server: ${server}
     port: ${cleanPort}
@@ -454,10 +571,12 @@
       headers:
         Host: ${host}
     udp: true`);
-              } else if (proto === 'trojan') {
-                const password = this.generatePassword();
-                uris.push(`trojan://${password}@${server}:${cleanPort}?security=${tls ? 'tls' : 'none'}${tlsQuery}&${netQuery}#${safeHash}`);
-                proxiesYaml.push(`  - name: "${yamlEscape(label)}"
+                } else if (proto === 'trojan') {
+                  const password = this.generatePassword();
+                  uris.push(
+                    `trojan://${password}@${server}:${cleanPort}?security=${tls ? 'tls' : 'none'}${tlsQuery}&${netQuery}#${safeHash}`
+                  );
+                  proxiesYaml.push(`  - name: "${yamlEscape(label)}"
     type: trojan
     server: ${server}
     port: ${cleanPort}
@@ -471,9 +590,11 @@
       headers:
         Host: ${host}
     udp: true`);
-              } else {
-                uris.push(`vless://${uuid}@${server}:${cleanPort}?encryption=none&security=${tls ? 'tls' : 'none'}${tlsQuery}&${netQuery}#${safeHash}`);
-                proxiesYaml.push(`  - name: "${yamlEscape(label)}"
+                } else {
+                  uris.push(
+                    `vless://${uuid}@${server}:${cleanPort}?encryption=none&security=${tls ? 'tls' : 'none'}${tlsQuery}&${netQuery}#${safeHash}`
+                  );
+                  proxiesYaml.push(`  - name: "${yamlEscape(label)}"
     server: ${server}
     port: ${cleanPort}
     type: vless
@@ -488,95 +609,116 @@
       headers:
         Host: ${host}
     udp: true`);
-              }
+                }
+              });
+
+              this.result.uri = uris.join('\n');
+              this.result.yaml = `proxies:\n${proxiesYaml.join('\n')}`;
+              this.showDialog = false;
+              this.building = false;
+              setTimeout(
+                () =>
+                  document
+                    .querySelector('textarea[readonly]')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+                300
+              );
+            }, 200);
+          },
+
+          generateUUID() {
+            // UUID v4 acak yang valid — hasil build page TIDAK akan connect ke relay
+            // karena relay memvalidasi UUID hasil derive dari SUB_TOKEN.
+            // Kredensial yang benar hanya dari /api/sub (derive dari SUB_TOKEN).
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+              return crypto.randomUUID();
+            }
+            const cryptoObj =
+              typeof crypto !== 'undefined'
+                ? crypto
+                : typeof window !== 'undefined'
+                  ? window.crypto || window.msCrypto
+                  : null;
+            if (cryptoObj && cryptoObj.getRandomValues) {
+              const buf = new Uint8Array(16);
+              cryptoObj.getRandomValues(buf);
+              buf[6] = (buf[6] & 0x0f) | 0x40;
+              buf[8] = (buf[8] & 0x3f) | 0x80;
+              const hex = Array.from(buf)
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+              return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+              const r = (Math.random() * 16) | 0;
+              const v = c === 'x' ? r : (r & 0x3) | 0x8;
+              return v.toString(16);
             });
+          },
 
-            this.result.uri = uris.join('\n');
-            this.result.yaml = `proxies:\n${proxiesYaml.join('\n')}`;
-            this.showDialog = false;
-            this.building = false;
-            setTimeout(() => document.querySelector('textarea[readonly]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
-          }, 200);
-        },
+          encodeBase64(str) {
+            if (typeof TextEncoder !== 'undefined') {
+              const bytes = new TextEncoder().encode(str);
+              let bin = '';
+              bytes.forEach(b => (bin += String.fromCharCode(b)));
+              return btoa(bin);
+            }
+            return btoa(unescape(encodeURIComponent(str)));
+          },
 
-        generateUUID() {
-          // UUID v4 acak yang valid — hasil build page TIDAK akan connect ke relay
-          // karena relay memvalidasi UUID hasil derive dari SUB_TOKEN.
+          // Password Trojan acak — hasil build page TIDAK akan connect ke relay
+          // karena relay memvalidasi hash dari SUB_TOKEN.
           // Kredensial yang benar hanya dari /api/sub (derive dari SUB_TOKEN).
-          if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-            return crypto.randomUUID();
-          }
-          const cryptoObj = typeof crypto !== 'undefined' ? crypto : (typeof window !== 'undefined' ? (window.crypto || window.msCrypto) : null);
-          if (cryptoObj && cryptoObj.getRandomValues) {
-            const buf = new Uint8Array(16);
-            cryptoObj.getRandomValues(buf);
-            buf[6] = (buf[6] & 0x0f) | 0x40;
-            buf[8] = (buf[8] & 0x3f) | 0x80;
-            const hex = Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
-            return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-          }
-          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-          });
-        },
+          generatePassword() {
+            const cryptoObj =
+              typeof crypto !== 'undefined'
+                ? crypto
+                : typeof window !== 'undefined'
+                  ? window.crypto || window.msCrypto
+                  : null;
+            if (cryptoObj && cryptoObj.getRandomValues) {
+              const bytes = cryptoObj.getRandomValues(new Uint8Array(16));
+              return Array.from(bytes)
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+            }
+            return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+          },
 
-        encodeBase64(str) {
-          if (typeof TextEncoder !== 'undefined') {
-            const bytes = new TextEncoder().encode(str);
-            let bin = '';
-            bytes.forEach(b => bin += String.fromCharCode(b));
-            return btoa(bin);
-          }
-          return btoa(unescape(encodeURIComponent(str)));
-        },
+          getFlagEmoji(code) {
+            if (!code || code.length !== 2) return '🌐';
+            const upper = code.toUpperCase();
+            return String.fromCodePoint(...[...upper].map(ch => 0x1f1e6 - 65 + ch.charCodeAt(0)));
+          },
 
-        // Password Trojan acak — hasil build page TIDAK akan connect ke relay
-        // karena relay memvalidasi hash dari SUB_TOKEN.
-        // Kredensial yang benar hanya dari /api/sub (derive dari SUB_TOKEN).
-        generatePassword() {
-          const cryptoObj = typeof crypto !== 'undefined' ? crypto : (typeof window !== 'undefined' ? (window.crypto || window.msCrypto) : null);
-          if (cryptoObj && cryptoObj.getRandomValues) {
-            const bytes = cryptoObj.getRandomValues(new Uint8Array(16));
-            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-          }
-          return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-        },
+          copyText(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard
+                .writeText(text)
+                .then(() => alert('✅ Copied to clipboard!'))
+                .catch(() => this.fallbackCopy(text));
+            } else {
+              this.fallbackCopy(text);
+            }
+          },
 
-        getFlagEmoji(code) {
-          if (!code || code.length !== 2) return '🌐';
-          const upper = code.toUpperCase();
-          return String.fromCodePoint(...[...upper].map(ch => 0x1F1E6 - 65 + ch.charCodeAt(0)));
-        },
-
-        copyText(text) {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text)
-              .then(() => alert('✅ Copied to clipboard!'))
-              .catch(() => this.fallbackCopy(text));
-          } else {
-            this.fallbackCopy(text);
-          }
-        },
-
-        fallbackCopy(text) {
-          const textarea = document.createElement('textarea');
-          textarea.value = text;
-          textarea.style.position = 'fixed';
-          textarea.style.opacity = '0';
-          document.body.appendChild(textarea);
-          textarea.select();
-          try {
-            document.execCommand('copy');
-            alert('✅ Copied to clipboard!');
-          } catch {
-            alert('❌ Failed to copy');
-          }
-          document.body.removeChild(textarea);
-        }
-      };
-    }
-  </script>
-</body>
+          fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+              document.execCommand('copy');
+              alert('✅ Copied to clipboard!');
+            } catch {
+              alert('❌ Failed to copy');
+            }
+            document.body.removeChild(textarea);
+          },
+        };
+      }
+    </script>
+  </body>
 </html>
