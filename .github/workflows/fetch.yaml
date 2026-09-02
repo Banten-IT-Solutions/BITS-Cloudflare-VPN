@@ -30,6 +30,8 @@ jobs:
 
       - name: 📦 Install dependencies
         run: bun install --frozen-lockfile
+        env:
+          SKIP_SIMPLE_GIT_HOOKS: "1"
 
       - name: 🌐 Fetch clean IPs
         run: |
@@ -42,6 +44,8 @@ jobs:
           bun run scan
 
       - name: 📤 Publish results to Main
+        env:
+          SKIP_SIMPLE_GIT_HOOKS: "1"
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -52,8 +56,8 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore(cron): weekly clean IP fetch and proxy scan update"
+          git commit --no-verify -m "chore(cron): weekly clean IP fetch and proxy scan update"
           echo "::notice::📤 Publishing updated proxy lists..."
           git fetch origin main
           git rebase origin/main
-          git push origin main
+          git push --no-verify origin main

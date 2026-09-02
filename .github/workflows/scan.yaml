@@ -29,6 +29,8 @@ jobs:
         uses: oven-sh/setup-bun@v2.2.0
 
       - name: 👀 Start scan
+        env:
+          SKIP_SIMPLE_GIT_HOOKS: "1"
         run: |
           echo "::notice::🛰️ Scanning proxy list ..."
           bun install --frozen-lockfile
@@ -36,6 +38,8 @@ jobs:
 
       - name: 📤 Publish result
         if: ${{ success() }}
+        env:
+          SKIP_SIMPLE_GIT_HOOKS: "1"
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -44,10 +48,10 @@ jobs:
             echo "::notice::✅ No changes in proxy list, nothing to commit"
             exit 0
           fi
-          git commit -m "Update proxy list"
+          git commit --no-verify -m "Update proxy list"
           echo "::notice::📤 Proxy list updated and published"
           # Rebase di atas main terbaru (untuk menghindari "stale info" ketika
           # ada commit lain yang sudah masuk sebelum workflow ini selesai)
           git fetch origin main
           git rebase origin/main
-          git push origin main
+          git push --no-verify origin main
