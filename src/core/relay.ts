@@ -19,13 +19,18 @@ import {
   neko,
   base64ToArrayBuffer,
   arrayBufferToHex,
+  sha224Hex,
 } from './constants';
+import { MuxRelay } from './mux';
+import { SmuxRelay } from './smux';
+import type { SmuxSocket } from './smux';
+import { SMUX_MUX_ADDR } from './smuxframes';
 
 export async function websocketHandler(
   request: Request,
   prxIP: string,
   vmessUuid?: string,
-  trojanPasswordHashes?: string[]
+  subToken?: string
 ) {
   const webSocketPair = new WebSocketPair();
   const [client, webSocket] = Object.values(webSocketPair);
@@ -45,11 +50,23 @@ export async function websocketHandler(
     value: null as any,
   };
   let isDNS = false;
+  let isMux = false;
+  let muxRelay: MuxRelay | null = null;
+  let isSmux = false;
+  let smuxRelay: SmuxRelay | null = null;
 
   readableWebSocketStream
     .pipeTo(
       new WritableStream({
         async write(chunk, controller) {
+          if (isMux) {
+            muxRelay!.feed(chunk);
+            return;
+          }
+          if (isSmux) {
+            smuxRelay!.feed(chunk);
+            return;
+          }
           if (isDNS) {
             return handleUDPOutbound(
               DNS_SERVER_ADDRESS,
@@ -72,7 +89,11 @@ export async function websocketHandler(
           let protocolHeader: any;
 
           if (protocol === atob(horse)) {
-            protocolHeader = readHorseHeader(chunk, trojanPasswordHashes);
+            // Lazy: sha224 only on Trojan connections, not every VLESS/VMess handshake.
+            const hashes = subToken
+              ? [sha224Hex(subToken), sha224Hex(sha224Hex(subToken))]
+              : undefined;
+            protocolHeader = readHorseHeader(chunk, hashes);
           } else if (protocol === atob(flash)) {
             protocolHeader = await readStreamHeader(chunk, vmessUuid);
           } else if (protocol === atob(neko)) {
@@ -86,6 +107,63 @@ export async function websocketHandler(
 
           if (protocolHeader.hasError) {
             throw new Error(protocolHeader.message);
+          }
+
+          if (protocolHeader.isMux) {
+            isMux = true;
+            addressLog = 'mux';
+            portLog = 'mux';
+            muxRelay = new MuxRelay(webSocket, prxIP, log);
+            if (protocolHeader.rawClientData.byteLength) {
+              muxRelay.feed(protocolHeader.rawClientData);
+            }
+            return;
+          }
+
+          // sing-box multiplex (smux). The VLESS header destination is the magic
+          // `sp.mux.sing-box.arpa:444`; the real per-stream targets arrive inside
+          // smux StreamRequest frames over the same WS.
+          if (protocolHeader.isSmux) {
+            isSmux = true;
+            addressLog = 'smux';
+            portLog = 'smux';
+            smuxRelay = new SmuxRelay(webSocket, prxIP, log, async (host, port, firstData) => {
+              if (!isDestinationSafe(host, port)) {
+                log(`blocked unsafe smux stream ${host}:${port}`);
+                return null;
+              }
+              const parts = prxIP.split(/[:=-]/);
+              const relayHost = parts[0] || host;
+              const relayPort = Number(parts[1]) || port;
+              // Direct connect to the real destination; fall back to the relay
+              // target once if the direct dial fails.
+              try {
+                const tcpSocket = connect({ hostname: host, port });
+                await tcpSocket.opened;
+                const w = tcpSocket.writable.getWriter();
+                await w.write(firstData);
+                w.releaseLock();
+                return tcpSocket as SmuxSocket;
+              } catch (e: any) {
+                log('smux direct dial failed', e?.message);
+                if (relayHost === host && relayPort === port) return null;
+                try {
+                  const rsock = connect({ hostname: relayHost, port: relayPort });
+                  await rsock.opened;
+                  const w = rsock.writable.getWriter();
+                  await w.write(firstData);
+                  w.releaseLock();
+                  return rsock as SmuxSocket;
+                } catch (e2: any) {
+                  log('smux relay dial failed', e2?.message);
+                  return null;
+                }
+              }
+            });
+            if (protocolHeader.rawClientData.byteLength) {
+              smuxRelay.feed(protocolHeader.rawClientData);
+            }
+            return;
           }
 
           let responseHeader = protocolHeader.version;
@@ -135,9 +213,13 @@ export async function websocketHandler(
         },
         close() {
           log(`readableWebSocketStream is close`);
+          muxRelay?.closeAll();
+          smuxRelay?.closeAll();
         },
         abort(reason) {
           log(`readableWebSocketStream is abort`, JSON.stringify(reason));
+          muxRelay?.closeAll();
+          smuxRelay?.closeAll();
         },
       })
     )
@@ -678,6 +760,7 @@ async function readStreamHeader(buffer: ArrayBuffer, vmessUuid?: string) {
 function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
   const version = new Uint8Array(buffer.slice(0, 1));
   let isUDP = false;
+  let isMux = false;
 
   // Strict auth: the VLESS client UUID (bytes 1-16) must match the UUID
   // derived from SUB_TOKEN. If no expected UUID is configured, skip check.
@@ -698,6 +781,8 @@ function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
   if (cmd === 1) {
   } else if (cmd === 2) {
     isUDP = true;
+  } else if (cmd === 3) {
+    isMux = true;
   } else {
     return {
       hasError: true,
@@ -762,6 +847,8 @@ function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
     rawClientData: buffer.slice(addressValueIndex + addressLength),
     version: new Uint8Array([version[0], 0]),
     isUDP: isUDP,
+    isMux: isMux,
+    isSmux: addressValue.toLowerCase() === SMUX_MUX_ADDR && cmd === 1,
   };
 }
 

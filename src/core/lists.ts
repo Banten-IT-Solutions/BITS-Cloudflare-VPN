@@ -8,15 +8,39 @@ export interface ProxyEntry {
   org: string;
 }
 
-// TTL cache: Map<url, {data, expiresAt}>
-interface CacheEntry<T> {
-  data: T;
-  expiresAt: number;
+const CACHE_TTL_S = 300; // 5 minutes
+const cache = (globalThis as any).caches?.default as Cache | undefined;
+
+async function readCached(url: string): Promise<string | null> {
+  if (!cache) return null;
+  const res = await cache.match(url);
+  if (!res) return null;
+  return await res.text();
 }
 
-const kvPrxCache = new Map<string, CacheEntry<Record<string, string[]>>>();
-const prxListCache = new Map<string, CacheEntry<ProxyEntry[]>>();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+async function fetchTextWithCache(url: string, fallback: string): Promise<string> {
+  const hit = await readCached(url);
+  if (hit !== null) return hit;
+
+  const resp = await fetch(url, { cf: { cacheTtl: CACHE_TTL_S, cacheEverything: true } } as any);
+  if (resp.status == 200) {
+    const text = await resp.text();
+    if (cache) {
+      await cache.put(
+        url,
+        new Response(text, {
+          headers: {
+            'content-type': 'text/plain',
+            'cache-control': `public, max-age=${CACHE_TTL_S}`,
+          },
+        })
+      );
+    }
+    return text;
+  }
+
+  return (await readCached(url)) ?? fallback;
+}
 
 export async function getKVPrxList(
   kvPrxUrl: string = KV_PRX_URL
@@ -25,27 +49,10 @@ export async function getKVPrxList(
     throw new Error('No URL Provided!');
   }
 
-  // Check cache
-  const cached = kvPrxCache.get(kvPrxUrl);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data;
-  }
-
-  const kvPrx = await fetch(kvPrxUrl, {
-    cf: {
-      cacheTtl: 300,
-      cacheEverything: true,
-    },
-  } as any);
-  if (kvPrx.status == 200) {
-    const data = (await kvPrx.json()) as Record<string, string[]>;
-    kvPrxCache.set(kvPrxUrl, { data, expiresAt: Date.now() + CACHE_TTL_MS });
-    return data;
-  } else {
-    // Return cached data if available (stale-while-revalidate pattern)
-    if (cached) {
-      return cached.data;
-    }
+  const text = await fetchTextWithCache(kvPrxUrl, '{}');
+  try {
+    return JSON.parse(text) as Record<string, string[]>;
+  } catch {
     return {};
   }
 }
@@ -62,42 +69,17 @@ export async function getPrxList(prxBankUrl: string = PRX_BANK_URL): Promise<Pro
     throw new Error('No URL Provided!');
   }
 
-  // Check cache
-  const cached = prxListCache.get(prxBankUrl);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data;
-  }
-
-  const prxBank = await fetch(prxBankUrl, {
-    cf: {
-      cacheTtl: 300,
-      cacheEverything: true,
-    },
-  } as any);
-  if (prxBank.status == 200) {
-    const text = (await prxBank.text()) || '';
-
-    const prxString = text.split('\n').filter(Boolean);
-    const data = prxString
-      .map(entry => {
-        const [prxIP, prxPort, country, org] = entry.split(',');
-        return {
-          prxIP: prxIP || 'Unknown',
-          prxPort: prxPort || 'Unknown',
-          country: country || 'Unknown',
-          org: org || 'Unknown Org',
-        };
-      })
-      .filter(Boolean);
-
-    prxListCache.set(prxBankUrl, { data, expiresAt: Date.now() + CACHE_TTL_MS });
-    return data;
-  }
-
-  // Return stale cache if available
-  if (cached) {
-    return cached.data;
-  }
-
-  return [];
+  const text = await fetchTextWithCache(prxBankUrl, '');
+  return text
+    .split('\n')
+    .filter(Boolean)
+    .map(entry => {
+      const [prxIP, prxPort, country, org] = entry.split(',');
+      return {
+        prxIP: prxIP || 'Unknown',
+        prxPort: prxPort || 'Unknown',
+        country: country || 'Unknown',
+        org: org || 'Unknown Org',
+      };
+    });
 }
