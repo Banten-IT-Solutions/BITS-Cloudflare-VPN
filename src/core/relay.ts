@@ -294,7 +294,6 @@ export async function websocketHandler(
         },
         close() {
           clearHeaderTimer();
-          log(`readableWebSocketStream is close`);
           muxRelay?.closeAll();
           smuxRelay?.closeAll();
         },
@@ -465,7 +464,6 @@ async function handleTCPOutBound(
       port: port,
     });
     remoteSocket.value = tcpSocket;
-    log(`connected to ${address}:${port}`);
     const writer = tcpSocket.writable.getWriter();
     await writer.write(rawClientData);
     writer.releaseLock();
@@ -589,7 +587,6 @@ function makeReadableWebSocketStream(webSocketServer: any, earlyDataHeader: stri
       if (readableStreamCancel) {
         return;
       }
-      log(`ReadableStream was canceled, due to ${reason}`);
       readableStreamCancel = true;
       safeCloseWebSocket(webSocketServer);
     },
@@ -1070,9 +1067,7 @@ async function remoteSocketToWS(
             webSocket.send(chunk);
           }
         },
-        close() {
-          log(`remoteConnection!.readable is close with hasIncomingData is ${hasIncomingData}`);
-        },
+        close() {},
         abort(reason: any) {
           console.error(`remoteConnection!.readable abort`, reason);
         },
@@ -1083,7 +1078,6 @@ async function remoteSocketToWS(
       safeCloseWebSocket(webSocket);
     });
   if (hasIncomingData === false && retry) {
-    log(`retry`);
     retry();
   }
 }
