@@ -93,8 +93,14 @@ export async function websocketHandler(
             if (need !== 0 && (need < 0 || headerBuf.length < need)) {
               if (!headerLogged) {
                 headerLogged = true;
+                const uuidHex =
+                  headerBuf.length >= 17
+                    ? Array.from(headerBuf.slice(1, 17))
+                        .map(b => b.toString(16).padStart(2, '0'))
+                        .join('')
+                    : 'n/a';
                 log(
-                  `short handshake first=${incoming.length}B buffered=${headerBuf.length}B from ${clientIp} ua=${clientUa.slice(0, 120)} — waiting for full header`
+                  `short handshake first=${incoming.length}B buffered=${headerBuf.length}B uuid=${uuidHex} from ${clientIp} ua=${clientUa.slice(0, 120)} — waiting for full header`
                 );
               }
               if (!headerTimer) {
