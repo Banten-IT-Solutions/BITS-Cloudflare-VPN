@@ -289,7 +289,14 @@ async function handleTCPOutBound(
     remoteSocketToWS(tcpSocket, webSocket, responseHeader, null);
   }
 
-  const tcpSocket = await connectAndWrite(addressRemote, portRemote);
+  let tcpSocket;
+  try {
+    tcpSocket = await connectAndWrite(addressRemote, portRemote);
+  } catch {
+    // Direct dial failed — fall back to relay instead of hanging / dying.
+    await retry();
+    return;
+  }
 
   remoteSocketToWS(tcpSocket, webSocket, responseHeader, retry);
 }
