@@ -21,10 +21,6 @@ import {
   arrayBufferToHex,
   sha224Hex,
 } from './constants';
-import { MuxRelay } from './mux';
-import { SmuxRelay } from './smux';
-import type { SmuxSocket } from './smux';
-import { SMUX_MUX_ADDR } from './smuxframes';
 import {
   vlessHeaderLength,
   concatBytes,
@@ -59,10 +55,6 @@ export async function websocketHandler(
     value: null as any,
   };
   let isDNS = false;
-  let isMux = false;
-  let muxRelay: MuxRelay | null = null;
-  let isSmux = false;
-  let smuxRelay: SmuxRelay | null = null;
 
   // Pre-parse handshake buffer: accumulate short first WS messages until the
   // full VLESS header is present (prevents RangeError on split handshakes).
@@ -87,7 +79,8 @@ export async function websocketHandler(
             headerBuf = headerBuf ? concatBytes(headerBuf, incoming) : incoming;
             if (headerBuf.length > MAX_HANDSHAKE_BYTES) {
               clearHeaderTimer();
-              throw new Error('handshake too large');
+              safeCloseWebSocket(webSocket);
+              return;
             }
             const need = vlessHeaderLength(headerBuf);
             if (need !== 0 && (need < 0 || headerBuf.length < need)) {
@@ -119,14 +112,6 @@ export async function websocketHandler(
             chunk = headerBuf.slice().buffer as ArrayBuffer;
             headerParsed = true;
           }
-          if (isMux) {
-            muxRelay!.feed(chunk);
-            return;
-          }
-          if (isSmux) {
-            smuxRelay!.feed(chunk);
-            return;
-          }
           if (isDNS) {
             return handleUDPOutbound(
               DNS_SERVER_ADDRESS,
@@ -146,115 +131,21 @@ export async function websocketHandler(
           }
 
           const protocol = await protocolSniffer(chunk);
-          let protocolHeader: any;
-
-          if (protocol === atob(horse)) {
-            // Lazy: sha224 only on Trojan connections, not every VLESS/VMess handshake.
-            const hashes = subToken
-              ? [sha224Hex(subToken), sha224Hex(sha224Hex(subToken))]
-              : undefined;
-            protocolHeader = readHorseHeader(chunk, hashes);
-          } else if (protocol === atob(flash)) {
-            protocolHeader = await readStreamHeader(chunk, vmessUuid);
-          } else if (protocol === atob(neko)) {
-            protocolHeader = readNekoHeader(chunk, vmessUuid);
-          } else {
-            throw new Error('Unknown Protocol!');
+          if (protocol !== atob(neko)) {
+            safeCloseWebSocket(webSocket);
+            return;
           }
+          const protocolHeader: any = readNekoHeader(chunk, vmessUuid);
 
           addressLog = protocolHeader.addressRemote;
           portLog = `${protocolHeader.portRemote} -> ${protocolHeader.isUDP ? 'UDP' : 'TCP'}`;
 
           if (protocolHeader.hasError) {
-            // Diagnostic: for STRUCTURAL errors (not auth failures) on a buffered
-            // handshake, dump the raw bytes so we can fingerprint the sender.
-            // Never dump on Invalid-UUID (would leak client secrets into logs).
-            if (headerBuf && !String(protocolHeader.message || '').includes('Invalid VLESS UUID')) {
-              const dump = Array.from(headerBuf.slice(0, 64))
-                .map(b => b.toString(16).padStart(2, '0'))
-                .join('');
-              log(
-                `bad handshake ${headerBuf.length}B hex=${dump} from ${clientIp} ua=${clientUa.slice(0, 80)}`
-              );
-            }
-            throw new Error(protocolHeader.message);
-          }
-
-          if (protocolHeader.isMux) {
-            isMux = true;
-            addressLog = 'mux';
-            portLog = 'mux';
-            muxRelay = new MuxRelay(webSocket, prxIP, log);
-            webSocket.send(protocolHeader.version);
-            if (protocolHeader.rawClientData.byteLength) {
-              muxRelay.feed(protocolHeader.rawClientData);
-            }
+            safeCloseWebSocket(webSocket);
             return;
           }
 
-          // sing-box multiplex (smux). The VLESS header destination is the magic
-          // `sp.mux.sing-box.arpa:444`; the real per-stream targets arrive inside
-          // smux StreamRequest frames over the same WS.
-          if (protocolHeader.isSmux) {
-            isSmux = true;
-            addressLog = 'smux';
-            portLog = 'smux';
-            smuxRelay = new SmuxRelay(
-              webSocket,
-              prxIP,
-              log,
-              async (host, port, firstData) => {
-                if (!isDestinationSafe(host, port)) {
-                  log(`blocked unsafe smux stream ${host}:${port}`);
-                  return null;
-                }
-                const parts = prxIP.split(/[:=-]/);
-                const relayHost = parts[0] || host;
-                const relayPort = Number(parts[1]) || port;
-                // Direct connect to the real destination; fall back to the relay
-                // target once if the direct dial fails.
-                try {
-                  const tcpSocket = connect({ hostname: host, port });
-                  await tcpSocket.opened;
-                  const w = tcpSocket.writable.getWriter();
-                  await w.write(firstData);
-                  w.releaseLock();
-                  return tcpSocket as SmuxSocket;
-                } catch (e: any) {
-                  log('smux direct dial failed', e?.message);
-                  if (relayHost === host && relayPort === port) return null;
-                  try {
-                    const rsock = connect({ hostname: relayHost, port: relayPort });
-                    await rsock.opened;
-                    const w = rsock.writable.getWriter();
-                    await w.write(firstData);
-                    w.releaseLock();
-                    return rsock as SmuxSocket;
-                  } catch (e2: any) {
-                    log('smux relay dial failed', e2?.message);
-                    return null;
-                  }
-                }
-              },
-              RELAY_SERVER_UDP
-            );
-            // Send VLESS response header (2 bytes: [version, 0]) before any smux frames.
-            // Without it sing-box rejects the connection with "unknown version: 1".
-            webSocket.send(protocolHeader.version);
-            if (protocolHeader.rawClientData.byteLength) {
-              await smuxRelay.feed(protocolHeader.rawClientData);
-            }
-            return;
-          }
-
-          let responseHeader = protocolHeader.version;
-          if (protocol === atob(flash) && protocolHeader.needsResponse) {
-            responseHeader = await generateStreamResponseHeader(
-              protocolHeader.responseOptions,
-              protocolHeader.encKey,
-              protocolHeader.encIv
-            );
-          }
+          const responseHeader = protocolHeader.version;
 
           if (protocolHeader.isUDP) {
             if (protocolHeader.portRemote === 53) {
@@ -294,13 +185,9 @@ export async function websocketHandler(
         },
         close() {
           clearHeaderTimer();
-          muxRelay?.closeAll();
-          smuxRelay?.closeAll();
         },
         abort(reason) {
           log(`readableWebSocketStream is abort`, JSON.stringify(reason));
-          muxRelay?.closeAll();
-          smuxRelay?.closeAll();
         },
       })
     )
@@ -314,22 +201,7 @@ export async function websocketHandler(
   });
 }
 
-async function protocolSniffer(buffer: ArrayBuffer) {
-  if (buffer.byteLength >= 62) {
-    const horseDelimiter = new Uint8Array(buffer.slice(56, 60));
-    if (horseDelimiter[0] === 0x0d && horseDelimiter[1] === 0x0a) {
-      if (horseDelimiter[2] === 0x01 || horseDelimiter[2] === 0x03 || horseDelimiter[2] === 0x7f) {
-        if (
-          horseDelimiter[3] === 0x01 ||
-          horseDelimiter[3] === 0x03 ||
-          horseDelimiter[3] === 0x04
-        ) {
-          return atob(horse);
-        }
-      }
-    }
-  }
-
+function protocolSniffer(buffer: ArrayBuffer): string | null {
   if (buffer.byteLength >= 18) {
     const version = new Uint8Array(buffer.slice(0, 1))[0];
     if (version === 0) {
@@ -343,8 +215,7 @@ async function protocolSniffer(buffer: ArrayBuffer) {
       }
     }
   }
-
-  return atob(flash);
+  return null;
 }
 
 async function generateStreamResponseHeader(
@@ -839,7 +710,6 @@ async function readStreamHeader(buffer: ArrayBuffer, vmessUuid?: string) {
 function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
   const version = new Uint8Array(buffer.slice(0, 1));
   let isUDP = false;
-  let isMux = false;
 
   // Strict auth: the VLESS client UUID (bytes 1-16) must match the UUID
   // derived from SUB_TOKEN. If no expected UUID is configured, skip check.
@@ -860,30 +730,10 @@ function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
   if (cmd === 1) {
   } else if (cmd === 2) {
     isUDP = true;
-  } else if (cmd === 3) {
-    isMux = true;
   } else {
     return {
       hasError: true,
       message: `command ${cmd} is not supported`,
-    };
-  }
-  // Xray Mux.cool: the VLESS header ends right after cmd. What follows are
-  // mux frames (session/status/len), NOT port+address — never parse them as
-  // TCP or valid mux sessions die with 'invalid addressType'.
-  if (cmd === 3) {
-    const muxDataIndex = 18 + optLength + 1;
-    return {
-      hasError: false,
-      addressRemote: 'mux',
-      addressType: 0,
-      portRemote: 0,
-      rawDataIndex: muxDataIndex,
-      rawClientData: buffer.slice(muxDataIndex),
-      version: new Uint8Array([version[0], 0]),
-      isUDP: false,
-      isMux: true,
-      isSmux: false,
     };
   }
   const portIndex = 18 + optLength + 1;
@@ -944,8 +794,6 @@ function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
     rawClientData: buffer.slice(addressValueIndex + addressLength),
     version: new Uint8Array([version[0], 0]),
     isUDP: isUDP,
-    isMux: isMux,
-    isSmux: addressValue.toLowerCase() === SMUX_MUX_ADDR && cmd === 1,
   };
 }
 
