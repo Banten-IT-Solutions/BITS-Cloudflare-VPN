@@ -61,7 +61,7 @@ export class SmuxRelay {
     private relay: { host: string; port: number }
   ) {}
 
-  async feed(chunk: ArrayBuffer | Uint8Array): Promise<void> {
+  feed(chunk: ArrayBuffer | Uint8Array): void {
     if (this.closed) return;
     this.smux.feed(chunk);
 
@@ -86,7 +86,7 @@ export class SmuxRelay {
 
     let frame: SmuxFrame | null;
     while ((frame = this.smux.next())) {
-      await this.handleFrame(frame);
+      this.handleFrame(frame).catch((e: any) => this.log('smux frame error', e?.message));
     }
   }
 

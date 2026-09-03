@@ -124,7 +124,7 @@ export async function websocketHandler(
             return;
           }
           if (isSmux) {
-            await smuxRelay!.feed(chunk);
+            smuxRelay!.feed(chunk);
             return;
           }
           if (isDNS) {
