@@ -16,10 +16,14 @@ export function vlessHeaderLength(buf: Uint8Array): number {
   if (buf[0] !== 0) return 0;
   const opt = buf[17];
   const cmdIdx = 18 + opt;
-  // need cmd(1) + port(2) + addrType(1) to decide the address length
-  if (buf.length < cmdIdx + 4) return -1;
+  // need the cmd byte itself first
+  if (buf.length < cmdIdx + 1) return -1;
   const cmd = buf[cmdIdx];
-  if (cmd !== 1 && cmd !== 2 && cmd !== 3) return 0;
+  // Xray Mux.cool: nothing follows the VLESS header except mux frames.
+  if (cmd === 3) return cmdIdx + 1;
+  // TCP/UDP: need cmd(1) + port(2) + addrType(1) to decide the address length
+  if (buf.length < cmdIdx + 4) return -1;
+  if (cmd !== 1 && cmd !== 2) return 0;
   const addrType = buf[cmdIdx + 3];
   if (addrType === 1) return cmdIdx + 3 + 1 + 4; // IPv4
   if (addrType === 3) return cmdIdx + 3 + 1 + 16; // IPv6

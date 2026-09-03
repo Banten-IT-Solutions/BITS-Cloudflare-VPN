@@ -861,6 +861,24 @@ function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
       message: `command ${cmd} is not supported`,
     };
   }
+  // Xray Mux.cool: the VLESS header ends right after cmd. What follows are
+  // mux frames (session/status/len), NOT port+address — never parse them as
+  // TCP or valid mux sessions die with 'invalid addressType'.
+  if (cmd === 3) {
+    const muxDataIndex = 18 + optLength + 1;
+    return {
+      hasError: false,
+      addressRemote: 'mux',
+      addressType: 0,
+      portRemote: 0,
+      rawDataIndex: muxDataIndex,
+      rawClientData: buffer.slice(muxDataIndex),
+      version: new Uint8Array([version[0], 0]),
+      isUDP: false,
+      isMux: true,
+      isSmux: false,
+    };
+  }
   const portIndex = 18 + optLength + 1;
   const portBuffer = buffer.slice(portIndex, portIndex + 2);
   const portRemote = new DataView(portBuffer).getUint16(0);

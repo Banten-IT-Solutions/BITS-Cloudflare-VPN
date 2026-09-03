@@ -69,6 +69,17 @@ try {
   const withOpt = new Uint8Array([0, ...UUID_OK, 2, 0xaa, 0xbb, 1, 0x01, 0xbb, 1, 2, 3, 4]);
   assert.strictEqual(vlessHeaderLength(withOpt), 28, 'opt=2 IPv4 → 28');
 
+  // 9b. Mux.cool (cmd=3): header ends right after cmd — no port/addr.
+  // 19B prefix is already complete.
+  const mux19 = buildHeader(UUID_OK, 0, 3, 0, []).slice(0, 19);
+  assert.strictEqual(mux19.length, 19);
+  assert.strictEqual(vlessHeaderLength(mux19), 19, 'mux 19B → 19');
+  const muxOpt = new Uint8Array([0, ...UUID_OK, 2, 0xaa, 0xbb, 3]);
+  assert.strictEqual(vlessHeaderLength(muxOpt), 21, 'mux opt=2 → 21');
+  // Extra mux-frame bytes after the header do not change the need.
+  const muxPlus = new Uint8Array([...buildHeader(UUID_OK, 0, 3, 0, []), 0x00, 0x2a]);
+  assert.strictEqual(vlessHeaderLength(muxPlus), 19, 'mux + frames → 19');
+
   // 10. Bad cmd → legacy path (parser throws 'not supported' as before)
   const badCmd = buildHeader(UUID_OK, 0, 7, 443, [1, 1, 2, 3, 4]);
   assert.strictEqual(vlessHeaderLength(badCmd), 0, 'bad cmd → 0');
