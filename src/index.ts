@@ -36,7 +36,6 @@ app.notFound(c => c.json({ error: 'Not found' }, 404, CORS_HEADER_OPTIONS));
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
-      console.log('DEBUG fetch called', request.url);
       const url = new URL(request.url);
 
       // Redirect HTTP to HTTPS (except for local development)
