@@ -17,6 +17,8 @@ import {
   HANDSHAKE_TIMEOUT_MS,
 } from './header';
 
+const VLESS_PROTO = atob(neko);
+
 export async function websocketHandler(request: Request, prxIP: string, expectedUuid?: string) {
   const webSocketPair = new WebSocketPair();
   const [client, webSocket] = Object.values(webSocketPair);
@@ -96,7 +98,7 @@ export async function websocketHandler(request: Request, prxIP: string, expected
           }
 
           const protocol = protocolSniffer(chunk);
-          if (protocol !== atob(neko)) {
+          if (protocol !== VLESS_PROTO) {
             safeCloseWebSocket(webSocket);
             return;
           }
@@ -118,7 +120,7 @@ export async function websocketHandler(request: Request, prxIP: string, expected
               return handleUDPOutbound(
                 DNS_SERVER_ADDRESS,
                 DNS_SERVER_PORT,
-                chunk,
+                protocolHeader.rawClientData,
                 webSocket,
                 responseHeader,
                 log,
@@ -129,7 +131,7 @@ export async function websocketHandler(request: Request, prxIP: string, expected
             return handleUDPOutbound(
               protocolHeader.addressRemote,
               protocolHeader.portRemote,
-              chunk,
+              protocolHeader.rawClientData,
               webSocket,
               responseHeader,
               log,
@@ -172,11 +174,31 @@ function protocolSniffer(buffer: ArrayBuffer): string | null {
           /^[0-9a-f]{8}[0-9a-f]{4}4[0-9a-f]{3}[89ab][0-9a-f]{3}[0-9a-f]{12}$/i
         )
       ) {
-        return atob(neko);
+        return VLESS_PROTO;
       }
     }
   }
   return null;
+}
+
+function isReservedIPv4(o1: number, o2: number): boolean {
+  // 127.0.0.0/8 (Loopback)
+  if (o1 === 127) return true;
+  // 10.0.0.0/8 (Private)
+  if (o1 === 10) return true;
+  // 172.16.0.0/12 (Private)
+  if (o1 === 172 && o2 >= 16 && o2 <= 31) return true;
+  // 192.168.0.0/16 (Private)
+  if (o1 === 192 && o2 === 168) return true;
+  // 169.254.0.0/16 (Link-Local)
+  if (o1 === 169 && o2 === 254) return true;
+  // 100.64.0.0/10 (Carrier-Grade NAT)
+  if (o1 === 100 && o2 >= 64 && o2 <= 127) return true;
+  // 0.0.0.0/8 (Current network)
+  if (o1 === 0) return true;
+  // Multicast & Broadcast
+  if (o1 >= 224) return true;
+  return false;
 }
 
 function isDestinationSafe(address: string, port: number): boolean {
@@ -197,25 +219,7 @@ function isDestinationSafe(address: string, port: number): boolean {
   if (match) {
     const octets = match.slice(1).map(x => parseInt(x, 10));
     if (octets.some(o => o < 0 || o > 255)) return false;
-
-    const [o1, o2] = octets;
-
-    // 127.0.0.0/8 (Loopback)
-    if (o1 === 127) return false;
-    // 10.0.0.0/8 (Private)
-    if (o1 === 10) return false;
-    // 172.16.0.0/12 (Private)
-    if (o1 === 172 && o2 >= 16 && o2 <= 31) return false;
-    // 192.168.0.0/16 (Private)
-    if (o1 === 192 && o2 === 168) return false;
-    // 169.254.0.0/16 (Link-Local)
-    if (o1 === 169 && o2 === 254) return false;
-    // 100.64.0.0/10 (Carrier-Grade NAT)
-    if (o1 === 100 && o2 >= 64 && o2 <= 127) return false;
-    // 0.0.0.0/8 (Current network)
-    if (o1 === 0) return false;
-    // Multicast & Broadcast
-    if (o1 >= 224) return false;
+    if (isReservedIPv4(octets[0], octets[1])) return false;
   }
 
   // IPv6 Checks
@@ -228,6 +232,12 @@ function isDestinationSafe(address: string, port: number): boolean {
     if (addr.startsWith('fc') || addr.startsWith('fd')) return false;
     // Unspecified ::
     if (addr === '::' || addr === '0:0:0:0:0:0:0:0') return false;
+    // IPv4-mapped IPv6 (::ffff:a.b.c.d) — check embedded IPv4.
+    const groups = addr.split(':');
+    if (groups.length === 8 && groups[5] === 'ffff' && groups.slice(0, 5).every(g => g === '0')) {
+      const hi = parseInt(groups[6] || '0', 16) || 0;
+      if (isReservedIPv4((hi >> 8) & 0xff, hi & 0xff)) return false;
+    }
   }
 
   return true;
@@ -263,10 +273,14 @@ async function handleTCPOutBound(
   }
 
   async function retry() {
-    const tcpSocket = await connectAndWrite(
-      prxIP.split(/[:=-]/)[0] || addressRemote,
-      parseInt(prxIP.split(/[:=-]/)[1]) || portRemote
-    );
+    const [relayHost = addressRemote, relayPortStr] = prxIP.split(/[:=-]/);
+    const relayPort = parseInt(relayPortStr) || portRemote;
+    if (!isDestinationSafe(relayHost, relayPort)) {
+      log(`Blocked unsafe relay ${relayHost}:${relayPort}`);
+      safeCloseWebSocket(webSocket);
+      return;
+    }
+    const tcpSocket = await connectAndWrite(relayHost, relayPort);
     tcpSocket.closed
       .catch(() => {})
       .finally(() => {

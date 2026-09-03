@@ -52,11 +52,11 @@ export default {
 
       // Handle WebSocket upgrade for relay
       if (upgradeHeader === 'websocket') {
-        // VLESS auth UUID derived from SUB_TOKEN (validated in relay header).
-        let expectedUuid: string | undefined;
-        if (env.SUB_TOKEN) {
-          expectedUuid = await uuidFromToken(env.SUB_TOKEN);
+        if (!env.SUB_TOKEN) {
+          return new Response('Forbidden: SUB_TOKEN not configured', { status: 403 });
         }
+        // VLESS auth UUID derived from SUB_TOKEN (validated in relay header).
+        const expectedUuid = await uuidFromToken(env.SUB_TOKEN);
         const prxMatch = url.pathname.match(/^\/(.+[:=-]\d+)$/);
 
         if (url.pathname.length == 3 || url.pathname.match(',')) {

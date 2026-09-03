@@ -1,4 +1,4 @@
-// Proxy list fetchers from worker.js (lines 46-88)
+// Proxy list fetchers (KV buckets + flat proxy bank).
 import { KV_PRX_URL, PRX_BANK_URL } from './constants';
 
 export interface ProxyEntry {
