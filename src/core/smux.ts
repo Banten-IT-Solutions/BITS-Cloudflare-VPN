@@ -66,8 +66,14 @@ export class SmuxRelay {
     if (!this.handshakeDone) {
       const r = readMuxRequest(this.smux.peek(), 0);
       if (!r) return; // need more bytes
+      // Diagnostic: log the handshake so we can confirm which protocol the client
+      // actually requests (0=smux, 1=yamux, 2=h2mux). sing-box defaults to h2mux(2).
+      this.log('smux handshake version', `${r.req.version} protocol=${r.req.protocol}`);
       if (r.req.protocol !== MUX_PROTO_SMX) {
-        this.log('smux unsupported protocol', r.req.protocol);
+        this.log(
+          'smux unsupported protocol',
+          `proto=${r.req.protocol} (0=smux,1=yamux,2=h2mux). Set multiplex.protocol="smux" on the client, or this worker cannot multiplex.`
+        );
         this.closeWS();
         return;
       }
@@ -115,6 +121,7 @@ export class SmuxRelay {
           this.log('smux udp stream rejected', `${sr.req.host}:${sr.req.port}`);
           return;
         }
+        this.log('smux open stream', `${f.sid} -> ${sr.req.host}:${sr.req.port}`);
         const firstData = merged.subarray(sr.next);
         const socket = await this.dial(sr.req.host, sr.req.port, firstData);
         if (!socket) {
