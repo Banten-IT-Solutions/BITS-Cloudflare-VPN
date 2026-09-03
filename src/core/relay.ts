@@ -185,6 +185,7 @@ export async function websocketHandler(
             addressLog = 'mux';
             portLog = 'mux';
             muxRelay = new MuxRelay(webSocket, prxIP, log);
+            webSocket.send(protocolHeader.version);
             if (protocolHeader.rawClientData.byteLength) {
               muxRelay.feed(protocolHeader.rawClientData);
             }
@@ -237,6 +238,9 @@ export async function websocketHandler(
               },
               RELAY_SERVER_UDP
             );
+            // Send VLESS response header (2 bytes: [version, 0]) before any smux frames.
+            // Without it sing-box rejects the connection with "unknown version: 1".
+            webSocket.send(protocolHeader.version);
             if (protocolHeader.rawClientData.byteLength) {
               smuxRelay.feed(protocolHeader.rawClientData);
             }
