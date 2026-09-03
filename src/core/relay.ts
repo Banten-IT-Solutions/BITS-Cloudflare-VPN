@@ -124,7 +124,7 @@ export async function websocketHandler(
             return;
           }
           if (isSmux) {
-            smuxRelay!.feed(chunk);
+            await smuxRelay!.feed(chunk);
             return;
           }
           if (isDNS) {
@@ -242,7 +242,7 @@ export async function websocketHandler(
             // Without it sing-box rejects the connection with "unknown version: 1".
             webSocket.send(protocolHeader.version);
             if (protocolHeader.rawClientData.byteLength) {
-              smuxRelay.feed(protocolHeader.rawClientData);
+              await smuxRelay.feed(protocolHeader.rawClientData);
             }
             return;
           }
