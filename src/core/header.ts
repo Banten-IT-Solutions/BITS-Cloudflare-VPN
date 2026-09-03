@@ -19,8 +19,6 @@ export function vlessHeaderLength(buf: Uint8Array): number {
   // need the cmd byte itself first
   if (buf.length < cmdIdx + 1) return -1;
   const cmd = buf[cmdIdx];
-  // Xray Mux.cool: nothing follows the VLESS header except mux frames.
-  if (cmd === 3) return cmdIdx + 1;
   // TCP/UDP: need cmd(1) + port(2) + addrType(1) to decide the address length
   if (buf.length < cmdIdx + 4) return -1;
   if (cmd !== 1 && cmd !== 2) return 0;

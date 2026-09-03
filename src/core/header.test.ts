@@ -54,33 +54,22 @@ try {
   assert.strictEqual(dom.length, 28);
   assert.strictEqual(vlessHeaderLength(dom), 28, 'domain full → 28');
 
-  // 8. smux magic host (20-char domain, port 444) → 43
-  const muxHost = 'sp.mux.sing-box.arpa';
-  assert.strictEqual(muxHost.length, 20);
-  const smux = buildHeader(UUID_OK, 0, 1, 444, [
+  // 8. 20-char domain header → 43
+  const longHost = 'a'.repeat(20);
+  assert.strictEqual(longHost.length, 20);
+  const longDom = buildHeader(UUID_OK, 0, 1, 443, [
     2,
-    muxHost.length,
-    ...Array.from(muxHost).map(c => c.charCodeAt(0)),
+    longHost.length,
+    ...Array.from(longHost).map(c => c.charCodeAt(0)),
   ]);
-  assert.strictEqual(smux.length, 43);
-  assert.strictEqual(vlessHeaderLength(smux), 43, 'smux header → 43');
+  assert.strictEqual(longDom.length, 43);
+  assert.strictEqual(vlessHeaderLength(longDom), 43, '20-char domain → 43');
 
   // 9. Options present (opt=2): cmd shifts → IPv4 total 28
   const withOpt = new Uint8Array([0, ...UUID_OK, 2, 0xaa, 0xbb, 1, 0x01, 0xbb, 1, 2, 3, 4]);
   assert.strictEqual(vlessHeaderLength(withOpt), 28, 'opt=2 IPv4 → 28');
 
-  // 9b. Mux.cool (cmd=3): header ends right after cmd — no port/addr.
-  // 19B prefix is already complete.
-  const mux19 = buildHeader(UUID_OK, 0, 3, 0, []).slice(0, 19);
-  assert.strictEqual(mux19.length, 19);
-  assert.strictEqual(vlessHeaderLength(mux19), 19, 'mux 19B → 19');
-  const muxOpt = new Uint8Array([0, ...UUID_OK, 2, 0xaa, 0xbb, 3]);
-  assert.strictEqual(vlessHeaderLength(muxOpt), 21, 'mux opt=2 → 21');
-  // Extra mux-frame bytes after the header do not change the need.
-  const muxPlus = new Uint8Array([...buildHeader(UUID_OK, 0, 3, 0, []), 0x00, 0x2a]);
-  assert.strictEqual(vlessHeaderLength(muxPlus), 19, 'mux + frames → 19');
-
-  // 10. Bad cmd → legacy path (parser throws 'not supported' as before)
+  // 10. Bad cmd → legacy path (cmd 3 rejected as unsupported)
   const badCmd = buildHeader(UUID_OK, 0, 7, 443, [1, 1, 2, 3, 4]);
   assert.strictEqual(vlessHeaderLength(badCmd), 0, 'bad cmd → 0');
 
