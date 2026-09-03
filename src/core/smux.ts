@@ -123,7 +123,9 @@ export class SmuxRelay {
         }
         this.log('smux open stream', `${f.sid} -> ${sr.req.host}:${sr.req.port}`);
         const firstData = merged.subarray(sr.next);
-        const socket = await this.dial(sr.req.host, sr.req.port, firstData);
+        // dial() writes firstData to the new socket. Bound the wait so a hung
+        // connect becomes a clean FIN (fast fail) instead of a hung stream.
+        const socket = await withTimeout(this.dial(sr.req.host, sr.req.port, firstData), 8000);
         if (!socket) {
           this.send(buildSmuxFrame(SMUX_CMD_FIN, f.sid));
           this.streams.delete(f.sid);
@@ -133,10 +135,9 @@ export class SmuxRelay {
         ctx.bridged = true;
         ctx.pending = new Uint8Array(0);
         this.pump(ctx);
-        // any payload bytes beyond the StreamRequest must still go downstream
-        if (firstData.length > 0 && firstData.byteLength > 0) {
-          await this.writeToSession(ctx, firstData);
-        }
+        // NOTE: do NOT re-write firstData here — dial() already wrote it.
+        // Writing it twice corrupts the TLS handshake (duplicate ClientHello)
+        // and stalls the remote, which hung every stream (all dl=0, timeout).
         return;
       }
       // already bridged: payload is raw stream data
@@ -225,4 +226,14 @@ function toUint8(chunk: unknown): Uint8Array {
   if (chunk instanceof Uint8Array) return chunk;
   if (chunk instanceof ArrayBuffer) return new Uint8Array(chunk);
   return new Uint8Array((chunk as ArrayBuffer) ?? new ArrayBuffer(0));
+}
+
+// Resolve with null if the promise does not settle within ms. Used to bound
+// outbound dials so a hung connect cannot hang a multiplexed stream forever.
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  let timer: any;
+  const gate = new Promise<null>(resolve => {
+    timer = setTimeout(() => resolve(null), ms);
+  });
+  return Promise.race([p.then(v => (clearTimeout(timer), v)), gate]);
 }
