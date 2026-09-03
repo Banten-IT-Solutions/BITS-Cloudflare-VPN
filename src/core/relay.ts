@@ -198,39 +198,45 @@ export async function websocketHandler(
             isSmux = true;
             addressLog = 'smux';
             portLog = 'smux';
-            smuxRelay = new SmuxRelay(webSocket, prxIP, log, async (host, port, firstData) => {
-              if (!isDestinationSafe(host, port)) {
-                log(`blocked unsafe smux stream ${host}:${port}`);
-                return null;
-              }
-              const parts = prxIP.split(/[:=-]/);
-              const relayHost = parts[0] || host;
-              const relayPort = Number(parts[1]) || port;
-              // Direct connect to the real destination; fall back to the relay
-              // target once if the direct dial fails.
-              try {
-                const tcpSocket = connect({ hostname: host, port });
-                await tcpSocket.opened;
-                const w = tcpSocket.writable.getWriter();
-                await w.write(firstData);
-                w.releaseLock();
-                return tcpSocket as SmuxSocket;
-              } catch (e: any) {
-                log('smux direct dial failed', e?.message);
-                if (relayHost === host && relayPort === port) return null;
-                try {
-                  const rsock = connect({ hostname: relayHost, port: relayPort });
-                  await rsock.opened;
-                  const w = rsock.writable.getWriter();
-                  await w.write(firstData);
-                  w.releaseLock();
-                  return rsock as SmuxSocket;
-                } catch (e2: any) {
-                  log('smux relay dial failed', e2?.message);
+            smuxRelay = new SmuxRelay(
+              webSocket,
+              prxIP,
+              log,
+              async (host, port, firstData) => {
+                if (!isDestinationSafe(host, port)) {
+                  log(`blocked unsafe smux stream ${host}:${port}`);
                   return null;
                 }
-              }
-            });
+                const parts = prxIP.split(/[:=-]/);
+                const relayHost = parts[0] || host;
+                const relayPort = Number(parts[1]) || port;
+                // Direct connect to the real destination; fall back to the relay
+                // target once if the direct dial fails.
+                try {
+                  const tcpSocket = connect({ hostname: host, port });
+                  await tcpSocket.opened;
+                  const w = tcpSocket.writable.getWriter();
+                  await w.write(firstData);
+                  w.releaseLock();
+                  return tcpSocket as SmuxSocket;
+                } catch (e: any) {
+                  log('smux direct dial failed', e?.message);
+                  if (relayHost === host && relayPort === port) return null;
+                  try {
+                    const rsock = connect({ hostname: relayHost, port: relayPort });
+                    await rsock.opened;
+                    const w = rsock.writable.getWriter();
+                    await w.write(firstData);
+                    w.releaseLock();
+                    return rsock as SmuxSocket;
+                  } catch (e2: any) {
+                    log('smux relay dial failed', e2?.message);
+                    return null;
+                  }
+                }
+              },
+              RELAY_SERVER_UDP
+            );
             if (protocolHeader.rawClientData.byteLength) {
               smuxRelay.feed(protocolHeader.rawClientData);
             }

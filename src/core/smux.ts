@@ -15,6 +15,7 @@
 //   Add UDP-over-smux datagram relaying only if QUIC/DoQ over smux is needed.
 // ponytail: yamux/h2mux protocols are rejected (set `protocol: smux` in the client).
 // ponytail: no periodic smux NOP keepalive is emitted (WS ping covers liveness).
+import { connect } from 'cloudflare:sockets';
 import { WS_READY_STATE_OPEN } from './constants';
 import {
   SmuxStream,
@@ -56,7 +57,8 @@ export class SmuxRelay {
     private webSocket: any,
     private prxIP: string,
     private log: (msg: string, ev?: any) => void,
-    private dial: DialFn
+    private dial: DialFn,
+    private relay: { host: string; port: number }
   ) {}
 
   feed(chunk: ArrayBuffer | Uint8Array): void {
@@ -114,11 +116,14 @@ export class SmuxRelay {
           ctx.pending = merged;
           return;
         }
-        // ponytail: UDP streams are rejected (see class header).
         if (sr.req.network === 'udp') {
-          this.send(buildSmuxFrame(SMUX_CMD_FIN, f.sid));
+          const udpPayload = merged.subarray(sr.next);
+          this.log(
+            'smux udp stream',
+            `${f.sid} -> ${sr.req.host}:${sr.req.port} ${udpPayload.length}B`
+          );
+          this.relayUDP(f.sid, sr.req.host, sr.req.port, udpPayload);
           this.streams.delete(f.sid);
-          this.log('smux udp stream rejected', `${sr.req.host}:${sr.req.port}`);
           return;
         }
         this.log('smux open stream', `${f.sid} -> ${sr.req.host}:${sr.req.port}`);
@@ -219,6 +224,42 @@ export class SmuxRelay {
       } catch {}
     }
     this.streams.clear();
+  }
+
+  // Relay a single UDP packet over smux: open TCP to relay, send `udp:host:port|payload`,
+  // read response, send PSH back, then FIN.
+  private async relayUDP(
+    sid: number,
+    host: string,
+    port: number,
+    payload: Uint8Array
+  ): Promise<void> {
+    try {
+      const tcpSocket = connect({ hostname: this.relay.host, port: this.relay.port });
+      const header = `udp:${host}:${port}`;
+      const headerBuf = new TextEncoder().encode(header);
+      const sep = new Uint8Array([0x7c]);
+      const msg = new Uint8Array(headerBuf.length + sep.length + payload.length);
+      msg.set(headerBuf);
+      msg.set(sep, headerBuf.length);
+      msg.set(payload, headerBuf.length + sep.length);
+      const writer = tcpSocket.writable.getWriter();
+      await writer.write(msg);
+      writer.releaseLock();
+      // Read response from relay
+      const reader = tcpSocket.readable.getReader();
+      const { value: resp } = await reader.read();
+      reader.releaseLock();
+      try {
+        tcpSocket.close();
+      } catch {}
+      if (resp && resp.byteLength > 0) {
+        this.send(buildSmuxFrame(SMUX_CMD_PSH, sid, new Uint8Array(resp)));
+      }
+    } catch (e: any) {
+      this.log('smux udp relay error', e?.message);
+    }
+    this.send(buildSmuxFrame(SMUX_CMD_FIN, sid));
   }
 }
 
