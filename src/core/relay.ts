@@ -25,6 +25,12 @@ import { MuxRelay } from './mux';
 import { SmuxRelay } from './smux';
 import type { SmuxSocket } from './smux';
 import { SMUX_MUX_ADDR } from './smuxframes';
+import {
+  vlessHeaderLength,
+  concatBytes,
+  MAX_HANDSHAKE_BYTES,
+  HANDSHAKE_TIMEOUT_MS,
+} from './header';
 
 export async function websocketHandler(
   request: Request,
@@ -43,6 +49,9 @@ export async function websocketHandler(
     console.log(`[${addressLog}:${portLog}] ${info}`, event || '');
   };
   const earlyDataHeader = request.headers.get('sec-websocket-protocol') || '';
+  // Source identification for short/broken handshakes (storm diagnosis).
+  const clientIp = request.headers.get('cf-connecting-ip') || 'unknown-ip';
+  const clientUa = request.headers.get('user-agent') || 'unknown-ua';
 
   const readableWebSocketStream = makeReadableWebSocketStream(webSocket, earlyDataHeader, log);
 
@@ -55,10 +64,55 @@ export async function websocketHandler(
   let isSmux = false;
   let smuxRelay: SmuxRelay | null = null;
 
+  // Pre-parse handshake buffer: accumulate short first WS messages until the
+  // full VLESS header is present (prevents RangeError on split handshakes).
+  let headerParsed = false;
+  let headerBuf: Uint8Array | null = null;
+  let headerLogged = false;
+  let headerTimer: any = null;
+  const clearHeaderTimer = () => {
+    if (headerTimer) {
+      clearTimeout(headerTimer);
+      headerTimer = null;
+    }
+  };
+
   readableWebSocketStream
     .pipeTo(
       new WritableStream({
         async write(chunk, controller) {
+          if (!headerParsed) {
+            const incoming =
+              typeof chunk === 'string' ? new TextEncoder().encode(chunk) : new Uint8Array(chunk);
+            headerBuf = headerBuf ? concatBytes(headerBuf, incoming) : incoming;
+            if (headerBuf.length > MAX_HANDSHAKE_BYTES) {
+              clearHeaderTimer();
+              throw new Error('handshake too large');
+            }
+            const need = vlessHeaderLength(headerBuf);
+            if (need !== 0 && (need < 0 || headerBuf.length < need)) {
+              if (!headerLogged) {
+                headerLogged = true;
+                log(
+                  `short handshake first=${incoming.length}B buffered=${headerBuf.length}B from ${clientIp} ua=${clientUa.slice(0, 120)} — waiting for full header`
+                );
+              }
+              if (!headerTimer) {
+                headerTimer = setTimeout(() => {
+                  log(
+                    `handshake timeout buffered=${headerBuf?.length || 0}B from ${clientIp} ua=${clientUa.slice(0, 120)}`
+                  );
+                  try {
+                    webSocket.close();
+                  } catch {}
+                }, HANDSHAKE_TIMEOUT_MS);
+              }
+              return;
+            }
+            clearHeaderTimer();
+            chunk = headerBuf.slice().buffer as ArrayBuffer;
+            headerParsed = true;
+          }
           if (isMux) {
             muxRelay!.feed(chunk);
             return;
@@ -212,6 +266,7 @@ export async function websocketHandler(
           );
         },
         close() {
+          clearHeaderTimer();
           log(`readableWebSocketStream is close`);
           muxRelay?.closeAll();
           smuxRelay?.closeAll();
