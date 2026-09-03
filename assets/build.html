@@ -364,7 +364,7 @@
               <!-- Protocols (paling atas) -->
               <div>
                 <label class="block text-xs text-slate-400 font-medium mb-3">Protocols</label>
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 gap-3">
                   <label
                     class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
                     :class="config.proto === 'vless' ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-slate-700'"
@@ -372,22 +372,6 @@
                     <input type="radio" x-model="config.proto" value="vless" class="sr-only" />
                     <span class="w-5 h-5 text-indigo-400">🔗</span>
                     <span class="text-sm font-semibold">VLESS</span>
-                  </label>
-                  <label
-                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                    :class="config.proto === 'vmess' ? 'border-purple-500 bg-purple-500/10' : 'hover:border-slate-700'"
-                  >
-                    <input type="radio" x-model="config.proto" value="vmess" class="sr-only" />
-                    <span class="w-5 h-5 text-purple-400">📡</span>
-                    <span class="text-sm font-semibold">VMess</span>
-                  </label>
-                  <label
-                    class="flex items-center justify-center gap-2 py-3 glass-card rounded-xl cursor-pointer border border-transparent transition"
-                    :class="config.proto === 'trojan' ? 'border-emerald-500 bg-emerald-500/10' : 'hover:border-slate-700'"
-                  >
-                    <input type="radio" x-model="config.proto" value="trojan" class="sr-only" />
-                    <span class="w-5 h-5 text-emerald-400">🏹</span>
-                    <span class="text-sm font-semibold">Trojan</span>
                   </label>
                 </div>
               </div>
@@ -498,9 +482,7 @@
               <div class="flex items-center justify-between mb-2">
                 <label class="text-sm text-slate-400 flex items-center gap-2">
                   <span class="w-4 h-4">🔗</span>
-                  <span
-                    x-text="config.proto === 'vmess' ? 'VMess URIs' : (config.proto === 'trojan' ? 'Trojan URIs' : 'VLESS URIs')"
-                  ></span>
+                  <span x-text="'VLESS URIs'"></span>
                 </label>
                 <button
                   @click="copyText(result.uri)"
@@ -725,60 +707,7 @@
                 const tlsQuery = tls ? `&sni=${servername}` : '';
                 const netQuery = `type=ws&host=${host}&path=${encodeURIComponent(wsPath)}`;
 
-                if (proto === 'vmess') {
-                  const vmess = {
-                    v: '2',
-                    ps: label,
-                    add: server,
-                    port: cleanPort,
-                    id: uuid,
-                    aid: '0',
-                    scy: 'auto',
-                    net: 'ws',
-                    type: '',
-                    host: host,
-                    path: wsPath,
-                    tls: tls ? 'tls' : 'none',
-                    sni: tls ? servername : '',
-                  };
-                  uris.push('vmess://' + this.encodeBase64(JSON.stringify(vmess)));
-                  proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
-    type: vmess
-    server: ${server}
-    port: ${cleanPort}
-    uuid: ${uuid}
-    alterId: 0
-    cipher: auto
-    tls: ${tls}
-    skip-cert-verify: true
-    servername: ${servername}
-    network: ws
-    ws-opts:
-      path: ${wsPath}
-      headers:
-        Host: ${host}
-    udp: true`);
-                } else if (proto === 'trojan') {
-                  const password = this.generatePassword();
-                  uris.push(
-                    `trojan://${password}@${server}:${cleanPort}?security=${tls ? 'tls' : 'none'}${tlsQuery}&${netQuery}#${safeHash}`
-                  );
-                  proxiesYaml.push(`  - name: "${yamlEscape(orgName)}"
-    type: trojan
-    server: ${server}
-    port: ${cleanPort}
-    password: ${password}
-    tls: ${tls}
-    sni: ${servername}
-    skip-cert-verify: true
-    network: ws
-    ws-opts:
-      path: ${wsPath}
-      headers:
-        Host: ${host}
-    udp: true`);
-                } else {
-                  // vless (default)
+                {
                   uris.push(
                     `vless://${uuid}@${server}:${cleanPort}?encryption=none&security=${tls ? 'tls' : 'none'}${tlsQuery}&${netQuery}#${safeHash}`
                   );
@@ -842,36 +771,6 @@
               const v = c === 'x' ? r : (r & 0x3) | 0x8;
               return v.toString(16);
             });
-          },
-
-          // Encode JSON ke base64 (UTF-8 aman) — untuk URI vmess://
-          encodeBase64(str) {
-            if (typeof TextEncoder !== 'undefined') {
-              const bytes = new TextEncoder().encode(str);
-              let bin = '';
-              bytes.forEach(b => (bin += String.fromCharCode(b)));
-              return btoa(bin);
-            }
-            return btoa(unescape(encodeURIComponent(str)));
-          },
-
-          // Password Trojan acak — hasil build page TIDAK akan connect ke relay
-          // karena relay memvalidasi hash dari SUB_TOKEN.
-          // Kredensial yang benar hanya dari /api/sub (derive dari SUB_TOKEN).
-          generatePassword() {
-            const cryptoObj =
-              typeof crypto !== 'undefined'
-                ? crypto
-                : typeof window !== 'undefined'
-                  ? window.crypto || window.msCrypto
-                  : null;
-            if (cryptoObj && cryptoObj.getRandomValues) {
-              const bytes = cryptoObj.getRandomValues(new Uint8Array(16));
-              return Array.from(bytes)
-                .map(b => b.toString(16).padStart(2, '0'))
-                .join('');
-            }
-            return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
           },
 
           getFlagEmoji(countryCode) {

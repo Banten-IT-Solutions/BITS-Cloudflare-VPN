@@ -168,7 +168,7 @@
                 >
               </h1>
               <p class="text-sm text-slate-400 mt-2">
-                Konversi VLESS, VMess &amp; Trojan URI ke Clash YAML dan sebaliknya.
+                Konversi VLESS URI ke Clash YAML dan sebaliknya.
               </p>
             </div>
             <span
@@ -225,7 +225,7 @@
               <div class="flex items-center justify-between mb-2">
                 <label class="text-sm text-slate-400 flex items-center gap-2">
                   <span class="w-4 h-4">📥</span>
-                  <span x-show="dir === 'v2c'">VLESS / VMess / Trojan URIs</span>
+                  <span x-show="dir === 'v2c'">VLESS URIs</span>
                   <span x-show="dir === 'c2v'" x-cloak>Clash YAML</span>
                 </label>
                 <div class="flex items-center gap-2">
@@ -248,7 +248,7 @@
                 rows="16"
                 spellcheck="false"
                 x-cloak
-                :placeholder="dir === 'v2c' ? 'Tempel VLESS / VMess / Trojan URI di sini, satu per baris…' : 'Tempel YAML Clash (proxies: [...]) di sini…'"
+                :placeholder="dir === 'v2c' ? 'Tempel VLESS URI di sini, satu per baris…' : 'Tempel YAML Clash (proxies: [...]) di sini…'"
                 class="w-full px-4 py-3 glass-card rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none font-mono text-xs resize-y transition"
               ></textarea>
             </div>
@@ -259,7 +259,7 @@
                 <label class="text-sm text-slate-400 flex items-center gap-2">
                   <span class="w-4 h-4" :class="dir === 'v2c' ? '' : 'text-purple-400'">📄</span>
                   <span x-show="dir === 'v2c'">Clash YAML</span>
-                  <span x-show="dir === 'c2v'" x-cloak>VLESS / VMess / Trojan URIs</span>
+                  <span x-show="dir === 'c2v'" x-cloak>VLESS URIs</span>
                 </label>
                 <div class="flex items-center gap-2">
                   <button
@@ -336,41 +336,9 @@
 
     <script>
       function convertApp() {
-        // ---------- Base64 (UTF-8 safe) helpers ----------
-        const fromB64 = b64 => {
-          let b = b64.replace(/-/g, '+').replace(/_/g, '/');
-          const pad = b.length % 4;
-          if (pad) b += '='.repeat(4 - pad);
-          const bin = atob(b);
-          const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
-          return new TextDecoder().decode(bytes);
-        };
-        const toB64 = str => {
-          const bytes = new TextEncoder().encode(str);
-          let bin = '';
-          bytes.forEach(b => (bin += String.fromCharCode(b)));
-          return btoa(bin);
-        };
-
-        // ---------- Sample data (VLESS + VMess + Trojan) ----------
-        const VMESS_JSON = {
-          v: '2',
-          ps: '🇮🇩 Org VMess WS TLS [BITS Cloudflare VPN]',
-          add: 'yuliana.my.id',
-          port: '443',
-          id: '7f6e5d4c-3b2a-1f0e-9d8c-7b6a5f4e3d2c',
-          aid: '0',
-          scy: 'auto',
-          net: 'ws',
-          host: 'yuliana.my.id',
-          path: '/1.2.3.4-443',
-          tls: 'tls',
-          sni: 'yuliana.my.id',
-        };
+        // ---------- Sample data (VLESS) ----------
         const URIS_SAMPLE = [
-          'vless://550e8400-e29b-41d4-a716-446655440000@yuliana.my.id:443?encryption=none&security=tls&sni=yuliana.my.id&type=ws&host=yuliana.my.id&path=%2F1.2.3.4-443#%F0%9F%87%AE%F0%9F%87%B9%20Org%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D',
-          'vmess://' + toB64(JSON.stringify(VMESS_JSON)),
-          'trojan://Trojan471-Demo@yuliana.my.id:443?sni=yuliana.my.id&security=tls&type=ws&host=yuliana.my.id&path=%2F1.2.3.4-443#%F0%9F%87%BA%F0%9F%87%B8%20Org%20Trojan%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D',
+          'vless://550e8400-e29b-41d4-a716-446655440000@yuliana.my.id:443?encryption=none&security=tls&sni=yuliana.my.id&type=ws&host=yuliana.my.id&path=%2F1.2.3.4-443#%F0%9F%87%9F%F0%9F%87%B5%20Org%20WS%20TLS%20%5BBITS%20Cloudflare%20VPN%5D',
         ].join('\n');
 
         const CLASH_SAMPLE = `proxies:
@@ -382,35 +350,6 @@
     tls: true
     skip-cert-verify: true
     servername: yuliana.my.id
-    network: ws
-    ws-opts:
-      path: /1.2.3.4-443
-      headers:
-        Host: yuliana.my.id
-    udp: true
-  - name: "🇮🇩 Org VMess WS TLS"
-    type: vmess
-    server: yuliana.my.id
-    port: 443
-    uuid: 7f6e5d4c-3b2a-1f0e-9d8c-7b6a5f4e3d2c
-    alterId: 0
-    cipher: auto
-    tls: true
-    skip-cert-verify: true
-    servername: yuliana.my.id
-    network: ws
-    ws-opts:
-      path: /1.2.3.4-443
-      headers:
-        Host: yuliana.my.id
-    udp: true
-  - name: "🇺🇸 Org Trojan WS TLS"
-    type: trojan
-    server: yuliana.my.id
-    port: 443
-    password: 2.471-Demo
-    sni: yuliana.my.id
-    skip-cert-verify: true
     network: ws
     ws-opts:
       path: /1.2.3.4-443
@@ -496,26 +435,17 @@
               const line = raw.trim();
               if (!line || line.startsWith('#')) return;
 
-              let scheme;
-              if (/^vless:\/\//i.test(line)) scheme = 'vless';
-              else if (/^vmess:\/\//i.test(line)) scheme = 'vmess';
-              else if (/^trojan:\/\//i.test(line)) scheme = 'trojan';
-              if (!scheme) {
+              if (!/^vless:\/\//i.test(line)) {
                 this.skipped++;
                 return;
               }
 
               try {
-                const block =
-                  scheme === 'vless'
-                    ? this.vlessLine(line)
-                    : scheme === 'vmess'
-                      ? this.vmessLine(line)
-                      : this.trojanLine(line);
+                const block = this.vlessLine(line);
                 out.push(block);
               } catch (e) {
                 this.errorCount++;
-                this.errorList.push(`Baris ${i + 1} (${scheme}): ${e.message || e}`);
+                this.errorList.push(`Baris ${i + 1} (vless): ${e.message || e}`);
               }
             });
 
@@ -609,119 +539,6 @@
             return p.join('\n');
           },
 
-          // --- VMess ---
-          vmessLine(line) {
-            let payload = line.replace(/^vmess:\/\//i, '');
-            const idx = payload.indexOf('#');
-            if (idx !== -1) payload = payload.slice(0, idx);
-            if (!payload.trim()) throw new Error('payload VMess kosong');
-
-            let j;
-            try {
-              j = JSON.parse(fromB64(payload));
-            } catch (e) {
-              throw new Error('base64 JSON VMess tidak valid');
-            }
-
-            const server = j.add || '';
-            const port = j.port != null ? j.port : '443';
-            const id = j.id || j.uuid || '';
-            const aid = j.aid != null ? j.aid : '0';
-            const cipher = j.scy || 'auto';
-            const tls =
-              String(j.tls || '').toLowerCase() === 'tls' || j.tls === true || j.tls === 'true';
-            const network = j.net || 'tcp';
-            const host = j.host || '';
-            const path = j.path || '';
-            const sni = j.sni || '';
-            const fp = j.fp || '';
-            const alpn = j.alpn || '';
-            const name = j.ps || `${server}:${port}`;
-
-            const p = [`  - name: "${this.yamlEscape(name)}"`];
-            p.push(`    type: vmess`);
-            p.push(`    server: ${server}`);
-            p.push(`    port: ${port}`);
-            p.push(`    uuid: ${id}`);
-            p.push(`    alterId: ${aid}`);
-            p.push(`    cipher: ${cipher}`);
-            if (tls) {
-              p.push(`    tls: true`);
-              p.push(`    skip-cert-verify: true`);
-              p.push(`    servername: ${sni || host || server}`);
-              if (fp) p.push(`    client-fingerprint: ${fp}`);
-              if (alpn)
-                p.push(
-                  `    alpn: [${alpn
-                    .split(',')
-                    .map(s => s.trim())
-                    .join(', ')}]`
-                );
-            } else {
-              p.push(`    tls: false`);
-            }
-            p.push(...this.commonWsOpts(network, host, path));
-            p.push(`    udp: true`);
-            return p.join('\n');
-          },
-
-          // --- Trojan ---
-          trojanLine(line) {
-            const url = new URL(line);
-            const password = url.username;
-            const server = url.hostname;
-            const port = url.port || '443';
-            const params = url.searchParams;
-            let remark = '';
-            try {
-              remark = decodeURIComponent(url.hash.replace('#', ''));
-            } catch (e) {
-              /* biarkan kosong */
-            }
-
-            const security = (params.get('security') || 'tls').toLowerCase();
-            const network = params.get('type') || 'tcp';
-            const host = params.get('host') || '';
-            let path = params.get('path') || '';
-            try {
-              path = decodeURIComponent(path);
-            } catch (e) {
-              /* biarkan mentah */
-            }
-            const sni = params.get('sni') || '';
-            const fp = params.get('fp') || '';
-            const alpn = params.get('alpn') || '';
-            const flow = params.get('flow') || '';
-
-            const tls = security !== 'none' && security !== 'nontls';
-            const name = remark || `${server}:${port}`;
-
-            const p = [`  - name: "${this.yamlEscape(name)}"`];
-            p.push(`    type: trojan`);
-            p.push(`    server: ${server}`);
-            p.push(`    port: ${port}`);
-            p.push(`    password: ${this.yamlEscape(password)}`);
-            if (tls) {
-              p.push(`    tls: true`);
-              if (sni || host || server) p.push(`    sni: ${sni || host || server}`);
-              if (fp) p.push(`    client-fingerprint: ${fp}`);
-              if (alpn)
-                p.push(
-                  `    alpn: [${alpn
-                    .split(',')
-                    .map(s => s.trim())
-                    .join(', ')}]`
-                );
-            } else {
-              p.push(`    tls: false`);
-            }
-            if (flow) p.push(`    flow: ${flow}`);
-            p.push(`    skip-cert-verify: true`);
-            p.push(...this.commonWsOpts(network, host, path));
-            p.push(`    udp: true`);
-            return p.join('\n');
-          },
-
           // ---------- Clash YAML → URI ----------
           convertToUris() {
             if (typeof jsyaml === 'undefined') {
@@ -761,8 +578,6 @@
               const type = String(p.type || '').toLowerCase();
               try {
                 if (type === 'vless') uris.push(this.vlessToUri(p));
-                else if (type === 'vmess') uris.push(this.vmessToUri(p));
-                else if (type === 'trojan') uris.push(this.trojanToUri(p));
                 else this.skipped++;
               } catch (e) {
                 this.errorCount++;
@@ -827,72 +642,6 @@
 
             const frag = p.name ? `#${encodeURIComponent(p.name)}` : '';
             return `vless://${p.uuid || ''}@${server}:${port}?${q.join('&')}${frag}`;
-          },
-
-          vmessToUri(p) {
-            const server = p.server || '';
-            const port = p.port != null ? p.port : 443;
-            const { network, host, path } = this.wsUriPath(p);
-            const reality = p['reality-opts'] || {};
-
-            const v = {
-              v: '2',
-              ps: p.name || `${server}:${port}`,
-              add: server,
-              port: String(port),
-              id: p.uuid || '',
-              aid: String(p.alterId != null ? p.alterId : 0),
-              scy: p.cipher || 'auto',
-              net: network,
-              type: p['header-type'] || '',
-              host: host || '',
-              path: path || '',
-              tls: p.tls ? 'tls' : 'none',
-              sni: p.servername || p.sni || '',
-              alpn: Array.isArray(p.alpn) ? p.alpn.join(',') : p.alpn || '',
-              fp: p['client-fingerprint'] || '',
-              pbk: reality['public-key'] || '',
-              sid: reality['short-id'] || '',
-              spx: reality['spx'] || '',
-            };
-            return 'vmess://' + toB64(JSON.stringify(v));
-          },
-
-          trojanToUri(p) {
-            const server = p.server || '';
-            const port = p.port != null ? p.port : 443;
-            const { network, host, path } = this.wsUriPath(p);
-            const reality = p['reality-opts'] || {};
-            const tls = p.tls || Object.keys(reality).length > 0;
-
-            const q = [];
-            q.push(
-              `security=${Object.keys(reality).length > 0 ? 'reality' : tls ? 'tls' : 'none'}`
-            );
-            const sni = p.sni || p.servername || '';
-            if (sni) q.push(`sni=${encodeURIComponent(sni)}`);
-            q.push(`type=${encodeURIComponent(network)}`);
-            if (network === 'ws') {
-              if (path) q.push(`path=${encodeURIComponent(path)}`);
-              if (host) q.push(`host=${encodeURIComponent(host)}`);
-            } else if (network === 'grpc' && host) {
-              q.push(`host=${encodeURIComponent(host)}`);
-            }
-            if (p['client-fingerprint'])
-              q.push(`fp=${encodeURIComponent(p['client-fingerprint'])}`);
-            if (p.alpn)
-              q.push(
-                `alpn=${encodeURIComponent(Array.isArray(p.alpn) ? p.alpn.join(',') : p.alpn)}`
-              );
-            if (p.flow) q.push(`flow=${encodeURIComponent(p.flow)}`);
-            if (Object.keys(reality).length > 0) {
-              if (reality['public-key']) q.push(`pbk=${encodeURIComponent(reality['public-key'])}`);
-              if (reality['short-id']) q.push(`sid=${encodeURIComponent(reality['short-id'])}`);
-              if (reality['spx']) q.push(`spx=${encodeURIComponent(reality['spx'])}`);
-            }
-
-            const frag = p.name ? `#${encodeURIComponent(p.name)}` : '';
-            return `trojan://${p.password || ''}@${server}:${port}?${q.join('&')}${frag}`;
           },
 
           // ---------- Helpers ----------

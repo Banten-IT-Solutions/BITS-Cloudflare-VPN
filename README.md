@@ -6,7 +6,7 @@
     </a>
   </p>
   <p>
-    High-performance serverless VPN relay for VLESS, VMess, and Trojan over WebSocket on Cloudflare Workers.
+    High-performance serverless VPN relay for VLESS over WebSocket on Cloudflare Workers.
   </p>
   <br>
   <p>
@@ -24,11 +24,11 @@
 
 | Feature                   | Description                                                                                                                               |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Multi-Protocol Relay**  | VLESS, VMess, and Trojan over WebSocket.                                                                                                  |
+| **VLESS Relay**           | VLESS over WebSocket.                                                                                                                     |
 | **Four Frontend Pages**   | `/`, `/build`, `/country`, `/convert`.                                                                                                    |
 | **Provider Build**        | Build config from proxy list with search, filter, and ping check.                                                                         |
 | **Country Build**         | Build config by country path like `/ID` or `/ID,SG`.                                                                                      |
-| **URI ↔ Clash Converter** | Convert VLESS / VMess / Trojan URI to Clash YAML and back.                                                                                |
+| **URI ↔ Clash Converter** | Convert VLESS URI to Clash YAML and back.                                                                                                 |
 | **Proxy List API**        | Paginated proxy list with country, port, and query filters.                                                                               |
 | **Country KV Source**     | Country buckets loaded from `KV.json` for relay routing.                                                                                  |
 | **Latency Probe**         | `/api/check` validates allowed proxy target with rate limit.                                                                              |
@@ -192,11 +192,11 @@ Non-sensitive. Configure at `Settings → Secrets and variables → Actions → 
 
 Sensitive. Configure at `Settings → Secrets and variables → Actions → Secrets`. Injected via `wrangler secret bulk` during deploy. For local dev, put them in `.dev.vars`.
 
-| Secret                  | Required    | Description                                                |
-| ----------------------- | ----------- | ---------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | ✅ Required | Cloudflare API token with Workers Edit permission          |
-| `CLOUDFLARE_ACCOUNT_ID` | ✅ Required | Cloudflare Account ID (Dashboard → right sidebar)          |
-| `SUB_TOKEN`             | ✅ Required | Token for `/api/sub` and the derive UUID / Trojan password |
+| Secret                  | Required    | Description                                       |
+| ----------------------- | ----------- | ------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | ✅ Required | Cloudflare API token with Workers Edit permission |
+| `CLOUDFLARE_ACCOUNT_ID` | ✅ Required | Cloudflare Account ID (Dashboard → right sidebar) |
+| `SUB_TOKEN`             | ✅ Required | Token for `/api/sub` and derive UUID              |
 
 ### 6. Configuration Flow
 
@@ -221,19 +221,18 @@ wrangler.jsonc           (generated, gitignored — used by wrangler)
 
 ### Commands
 
-| Command                           | Description                                                   |
-| --------------------------------- | ------------------------------------------------------------- |
-| `bun run cf:config`               | Generate `wrangler.jsonc` from `.env` / environment           |
-| `bun run dev`                     | Start local Worker dev server (auto-runs `cf:config`)         |
-| `bun run deploy`                  | Deploy Worker to Cloudflare (auto-runs `cf:config`)           |
-| `bun run build`                   | Alias for `cf:config` (wrangler bundles the Worker at deploy) |
-| `bun run types`                   | TypeScript type-check (`tsc --noEmit`)                        |
-| `bun run check`                   | Alias for `bun run types`                                     |
-| `bun run fetch.ts`                | Merge raw proxy sources into `raw.txt`                        |
-| `bun run scan.ts`                 | Scan active proxy and generate `proxy.txt` / `KV.json`        |
-| `bun test src/core/relay.test.ts` | Run relay tests                                               |
-| `bun run format`                  | Format all files with Prettier                                |
-| `bun run format:check`            | Check formatting without writing                              |
+| Command                | Description                                                   |
+| ---------------------- | ------------------------------------------------------------- |
+| `bun run cf:config`    | Generate `wrangler.jsonc` from `.env` / environment           |
+| `bun run dev`          | Start local Worker dev server (auto-runs `cf:config`)         |
+| `bun run deploy`       | Deploy Worker to Cloudflare (auto-runs `cf:config`)           |
+| `bun run build`        | Alias for `cf:config` (wrangler bundles the Worker at deploy) |
+| `bun run types`        | TypeScript type-check (`tsc --noEmit`)                        |
+| `bun run check`        | Alias for `bun run types`                                     |
+| `bun run fetch.ts`     | Merge raw proxy sources into `raw.txt`                        |
+| `bun run scan.ts`      | Scan active proxy and generate `proxy.txt` / `KV.json`        |
+| `bun run format`       | Format all files with Prettier                                |
+| `bun run format:check` | Check formatting without writing                              |
 
 ### Code Style & Git Hooks
 
@@ -275,8 +274,8 @@ All endpoints are under `/api`. `/api/sub` requires a valid `?token=<SUB_TOKEN>`
 # Default: VLESS, clash format, cdn mode, wildcard, port 443, cc ID,SG
 curl "https://yuliana.my.id/api/sub?token=<SUB_TOKEN>"
 
-# Non-wildcard SNI mode, Trojan, port 80
-curl "https://yuliana.my.id/api/sub?token=<SUB_TOKEN>&mode=sni&wildcard=no&domain=support.zoom.us&proto=trojan&port=80"
+# Non-wildcard SNI mode, port 80
+curl "https://yuliana.my.id/api/sub?token=<SUB_TOKEN>&mode=sni&wildcard=no&domain=support.zoom.us&port=80"
 ```
 
 The `mode` (`sni` / `cdn`) and `wildcard` (`yes` / `no`) params select the `server`, `servername` (SNI), and `host` (WS Host header):
@@ -292,11 +291,8 @@ The `mode` (`sni` / `cdn`) and `wildcard` (`yes` / `no`) params select the `serv
 
 Relay only accepts connections with credentials derived deterministically from `SUB_TOKEN` (a Cloudflare Worker secret — never hard-coded):
 
-- **VLESS / VMesh:** UUID = first 16 bytes of `SHA-256(SUB_TOKEN)` with UUID v4 bits set.
-- **Trojan:** two accepted password forms, both derived from `SUB_TOKEN`:
-  - raw `SUB_TOKEN` → sent hash = `hex(SHA-224(SUB_TOKEN))`
-  - hashed link form → sent hash = `hex(SHA-224(SHA-224(SUB_TOKEN)))`
-- The `/api/sub` link always uses the **hashed** form; the raw token never appears in output.
+- **VLESS:** UUID = first 16 bytes of `SHA-256(SUB_TOKEN)` with UUID v4 bits set.
+- The `/api/sub` link always uses the derived UUID; the raw token never appears in output.
 
 Generate a strong token once: `openssl rand -base64 48`.
 
