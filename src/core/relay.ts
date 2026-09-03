@@ -29,11 +29,8 @@ export async function websocketHandler(request: Request, prxIP: string, expected
     console.log(`[${addressLog}:${portLog}] ${info}`, event || '');
   };
   const earlyDataHeader = request.headers.get('sec-websocket-protocol') || '';
-  // Source identification for short/broken handshakes (storm diagnosis).
-  const clientIp = request.headers.get('cf-connecting-ip') || 'unknown-ip';
-  const clientUa = request.headers.get('user-agent') || 'unknown-ua';
 
-  const readableWebSocketStream = makeReadableWebSocketStream(webSocket, earlyDataHeader, log);
+  const readableWebSocketStream = makeReadableWebSocketStream(webSocket, earlyDataHeader);
 
   let remoteSocketWrapper = {
     value: null as any,
@@ -44,7 +41,6 @@ export async function websocketHandler(request: Request, prxIP: string, expected
   // full VLESS header is present (prevents RangeError on split handshakes).
   let headerParsed = false;
   let headerBuf: Uint8Array | null = null;
-  let headerLogged = false;
   let headerTimer: any = null;
   const clearHeaderTimer = () => {
     if (headerTimer) {
@@ -68,23 +64,8 @@ export async function websocketHandler(request: Request, prxIP: string, expected
             }
             const need = vlessHeaderLength(headerBuf);
             if (need !== 0 && (need < 0 || headerBuf.length < need)) {
-              if (!headerLogged) {
-                headerLogged = true;
-                const uuidHex =
-                  headerBuf.length >= 17
-                    ? Array.from(headerBuf.slice(1, 17))
-                        .map(b => b.toString(16).padStart(2, '0'))
-                        .join('')
-                    : 'n/a';
-                log(
-                  `short handshake first=${incoming.length}B buffered=${headerBuf.length}B uuid=${uuidHex} from ${clientIp} ua=${clientUa.slice(0, 120)} — waiting for full header`
-                );
-              }
               if (!headerTimer) {
                 headerTimer = setTimeout(() => {
-                  log(
-                    `handshake timeout buffered=${headerBuf?.length || 0}B from ${clientIp} ua=${clientUa.slice(0, 120)}`
-                  );
                   try {
                     webSocket.close();
                   } catch {}
@@ -170,14 +151,10 @@ export async function websocketHandler(request: Request, prxIP: string, expected
         close() {
           clearHeaderTimer();
         },
-        abort(reason) {
-          log(`readableWebSocketStream is abort`, JSON.stringify(reason));
-        },
+        abort() {},
       })
     )
-    .catch(err => {
-      log('readableWebSocketStream pipeTo error', err);
-    });
+    .catch(() => {});
 
   return new Response(null, {
     status: 101,
@@ -291,9 +268,7 @@ async function handleTCPOutBound(
       parseInt(prxIP.split(/[:=-]/)[1]) || portRemote
     );
     tcpSocket.closed
-      .catch((error: any) => {
-        console.log('retry tcpSocket closed error', error);
-      })
+      .catch(() => {})
       .finally(() => {
         safeCloseWebSocket(webSocket);
       });
@@ -353,12 +328,8 @@ async function handleUDPOutbound(
             }
           }
         },
-        close() {
-          log(`UDP connection to ${targetAddress} closed`);
-        },
-        abort(reason) {
-          console.error(`UDP connection aborted due to ${reason}`);
-        },
+        close() {},
+        abort() {},
       })
     );
   } catch (e: any) {
@@ -366,7 +337,7 @@ async function handleUDPOutbound(
   }
 }
 
-function makeReadableWebSocketStream(webSocketServer: any, earlyDataHeader: string, log: any) {
+function makeReadableWebSocketStream(webSocketServer: any, earlyDataHeader: string) {
   let readableStreamCancel = false;
   const stream = new ReadableStream({
     start(controller) {
@@ -385,7 +356,6 @@ function makeReadableWebSocketStream(webSocketServer: any, earlyDataHeader: stri
         controller.close();
       });
       webSocketServer.addEventListener('error', (err: any) => {
-        log('webSocketServer has error');
         controller.error(err);
       });
       const { earlyData, error } = base64ToArrayBuffer(earlyDataHeader);
@@ -521,9 +491,7 @@ async function remoteSocketToWS(
           }
         },
         close() {},
-        abort(reason: any) {
-          console.error(`remoteConnection!.readable abort`, reason);
-        },
+        abort() {},
       })
     )
     .catch((error: any) => {
