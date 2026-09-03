@@ -166,6 +166,17 @@ export async function websocketHandler(
           portLog = `${protocolHeader.portRemote} -> ${protocolHeader.isUDP ? 'UDP' : 'TCP'}`;
 
           if (protocolHeader.hasError) {
+            // Diagnostic: for STRUCTURAL errors (not auth failures) on a buffered
+            // handshake, dump the raw bytes so we can fingerprint the sender.
+            // Never dump on Invalid-UUID (would leak client secrets into logs).
+            if (headerBuf && !String(protocolHeader.message || '').includes('Invalid VLESS UUID')) {
+              const dump = Array.from(headerBuf.slice(0, 64))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+              log(
+                `bad handshake ${headerBuf.length}B hex=${dump} from ${clientIp} ua=${clientUa.slice(0, 80)}`
+              );
+            }
             throw new Error(protocolHeader.message);
           }
 
