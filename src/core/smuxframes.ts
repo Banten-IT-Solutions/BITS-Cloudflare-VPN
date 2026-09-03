@@ -140,9 +140,10 @@ export class SmuxStream {
     const ver = this.buf[o];
     if (ver !== SMUX_VERSION_1 && ver !== SMUX_VERSION_2) return null;
     const cmd = this.buf[o + 1];
+    // xtaci/smux wire order: ver(1) cmd(1) len(2 LE) sid(4 LE)
+    const len = this.buf[o + 2] | (this.buf[o + 3] << 8);
     const sid =
-      this.buf[o + 2] | (this.buf[o + 3] << 8) | (this.buf[o + 4] << 16) | (this.buf[o + 5] << 24);
-    const len = this.buf[o + 6] | (this.buf[o + 7] << 8);
+      this.buf[o + 4] | (this.buf[o + 5] << 8) | (this.buf[o + 6] << 16) | (this.buf[o + 7] << 24);
     if (this.avail < 8 + len) return null;
     const payload = this.buf.slice(o + 8, o + 8 + len);
     this.off = o + 8 + len;
@@ -171,8 +172,8 @@ export function buildSmuxFrame(
   out[0] = SMUX_VERSION_1;
   out[1] = cmd;
   const dv = new DataView(out.buffer);
-  dv.setUint32(2, sid, true); // LE
-  dv.setUint16(6, payload.length, true); // LE
+  dv.setUint16(2, payload.length, true); // LE
+  dv.setUint32(4, sid, true); // LE
   out.set(payload, 8);
   return out;
 }

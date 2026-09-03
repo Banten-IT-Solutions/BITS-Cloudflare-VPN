@@ -188,8 +188,8 @@ function run() {
 
   // ---- smux version 2 accepted ----
   {
-    // header: ver=2, cmd=PSH, sid=9 (LE), len=5 (LE) + "abcde"
-    const raw = new Uint8Array([0x02, SMUX_CMD_PSH, ...u32le(9), 0x05, 0x00, ...enc('abcde')]);
+    // header: ver=2, cmd=PSH, len=5 (LE), sid=9 (LE) + "abcde"
+    const raw = new Uint8Array([0x02, SMUX_CMD_PSH, 0x05, 0x00, ...u32le(9), ...enc('abcde')]);
     const s = new SmuxStream();
     s.feed(raw);
     const f = s.next()!;
