@@ -653,7 +653,7 @@
             this.building = true;
             setTimeout(() => {
               const hostname = location.hostname;
-              const { mode, bug, wildcard, port, proto } = this.config;
+              const { mode, bug, wildcard, port } = this.config;
 
               // Validate & sanitize input bug domain
               const cleanBug = bug.replace(/[^a-zA-Z0-9.-]/g, '').trim();

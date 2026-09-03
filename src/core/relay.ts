@@ -1,4 +1,4 @@
-// Relay WebSocket handler + protocol parsers (verbatim from worker.js lines 418-1167)
+// VLESS-over-WebSocket relay: handshake framing, TCP/UDP forwarding, DNS.
 import { connect } from 'cloudflare:sockets';
 import {
   DNS_SERVER_ADDRESS,
@@ -56,7 +56,7 @@ export async function websocketHandler(request: Request, prxIP: string, expected
   readableWebSocketStream
     .pipeTo(
       new WritableStream({
-        async write(chunk, controller) {
+        async write(chunk) {
           if (!headerParsed) {
             const incoming =
               typeof chunk === 'string' ? new TextEncoder().encode(chunk) : new Uint8Array(chunk);
@@ -114,7 +114,7 @@ export async function websocketHandler(request: Request, prxIP: string, expected
             return;
           }
 
-          const protocol = await protocolSniffer(chunk);
+          const protocol = protocolSniffer(chunk);
           if (protocol !== atob(neko)) {
             safeCloseWebSocket(webSocket);
             return;
@@ -221,7 +221,7 @@ function isDestinationSafe(address: string, port: number): boolean {
     const octets = match.slice(1).map(x => parseInt(x, 10));
     if (octets.some(o => o < 0 || o > 255)) return false;
 
-    const [o1, o2, o3, o4] = octets;
+    const [o1, o2] = octets;
 
     // 127.0.0.0/8 (Loopback)
     if (o1 === 127) return false;
@@ -297,12 +297,12 @@ async function handleTCPOutBound(
       .finally(() => {
         safeCloseWebSocket(webSocket);
       });
-    remoteSocketToWS(tcpSocket, webSocket, responseHeader, null, log);
+    remoteSocketToWS(tcpSocket, webSocket, responseHeader, null);
   }
 
   const tcpSocket = await connectAndWrite(addressRemote, portRemote);
 
-  remoteSocketToWS(tcpSocket, webSocket, responseHeader, retry, log);
+  remoteSocketToWS(tcpSocket, webSocket, responseHeader, retry);
 }
 
 async function handleUDPOutbound(
@@ -396,8 +396,7 @@ function makeReadableWebSocketStream(webSocketServer: any, earlyDataHeader: stri
       }
     },
 
-    pull(controller) {},
-    cancel(reason) {
+    cancel() {
       if (readableStreamCancel) {
         return;
       }
@@ -490,9 +489,7 @@ function readNekoHeader(buffer: ArrayBuffer, expectedUuid?: string) {
   return {
     hasError: false,
     addressRemote: addressValue,
-    addressType: addressType,
     portRemote: portRemote,
-    rawDataIndex: addressValueIndex + addressLength,
     rawClientData: buffer.slice(addressValueIndex + addressLength),
     version: new Uint8Array([version[0], 0]),
     isUDP: isUDP,
@@ -503,8 +500,7 @@ async function remoteSocketToWS(
   remoteSocket: any,
   webSocket: any,
   responseHeader: any,
-  retry: any,
-  log: any
+  retry: any
 ) {
   let header = responseHeader;
   let hasIncomingData = false;
