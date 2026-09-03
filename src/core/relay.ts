@@ -17,12 +17,7 @@ import {
   HANDSHAKE_TIMEOUT_MS,
 } from './header';
 
-export async function websocketHandler(
-  request: Request,
-  prxIP: string,
-  vmessUuid?: string,
-  subToken?: string
-) {
+export async function websocketHandler(request: Request, prxIP: string, expectedUuid?: string) {
   const webSocketPair = new WebSocketPair();
   const [client, webSocket] = Object.values(webSocketPair);
 
@@ -124,7 +119,7 @@ export async function websocketHandler(
             safeCloseWebSocket(webSocket);
             return;
           }
-          const protocolHeader: any = readNekoHeader(chunk, vmessUuid);
+          const protocolHeader: any = readNekoHeader(chunk, expectedUuid);
 
           addressLog = protocolHeader.addressRemote;
           portLog = `${protocolHeader.portRemote} -> ${protocolHeader.isUDP ? 'UDP' : 'TCP'}`;

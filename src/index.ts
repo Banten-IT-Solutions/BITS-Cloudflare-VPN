@@ -52,12 +52,10 @@ export default {
 
       // Handle WebSocket upgrade for relay
       if (upgradeHeader === 'websocket') {
-        // Strict auth credentials derived from SUB_TOKEN:
-        // - vmessUuid: UUID for VLESS/VMess (VLESS validated in header, VMess via AEAD)
-        // - Trojan hashes computed lazily inside the relay only for Trojan connections.
-        let vmessUuid: string | undefined;
+        // VLESS auth UUID derived from SUB_TOKEN (validated in relay header).
+        let expectedUuid: string | undefined;
         if (env.SUB_TOKEN) {
-          vmessUuid = await uuidFromToken(env.SUB_TOKEN);
+          expectedUuid = await uuidFromToken(env.SUB_TOKEN);
         }
         const prxMatch = url.pathname.match(/^\/(.+[:=-]\d+)$/);
 
@@ -73,10 +71,10 @@ export default {
 
           const prxIP = kvPrx[prxKey][Math.floor(Math.random() * kvPrx[prxKey].length)];
 
-          return await websocketHandler(request, prxIP, vmessUuid, env.SUB_TOKEN);
+          return await websocketHandler(request, prxIP, expectedUuid);
         } else if (prxMatch) {
           const prxIP = prxMatch[1];
-          return await websocketHandler(request, prxIP, vmessUuid, env.SUB_TOKEN);
+          return await websocketHandler(request, prxIP, expectedUuid);
         }
       }
 

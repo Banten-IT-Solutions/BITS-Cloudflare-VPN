@@ -7,12 +7,10 @@ import {
   CORS_HEADER_OPTIONS,
   KV_PRX_URL,
   PRX_BANK_URL,
-  horse,
   v2,
   getFlagEmoji,
   shuffleArray,
   uuidFromToken,
-  sha224Hex,
 } from '../core/constants';
 
 interface Env {
@@ -182,11 +180,8 @@ export function createApiRoutes() {
       }
       shuffleArray(prxList);
 
-      // Static UUID derived deterministically from SUB_TOKEN:
-      // - VLESS/VMess links always use the same UUID (matches relay's VMess AEAD key)
-      // - Trojan links use hex(SHA224(SUB_TOKEN)) as password (hashed, not raw token)
+      // Static UUID derived deterministically from SUB_TOKEN (matches relay auth).
       const uuid = await uuidFromToken(subToken);
-      const trojanPassword = sha224Hex(subToken);
 
       // Struktur data lengkap untuk tiap link (dipakai semua format output)
       const links: Array<{
@@ -208,15 +203,14 @@ export function createApiRoutes() {
           for (const protocol of protocols) {
             if (links.length >= filterLimit) break;
 
-            // Trojan uses hashed password (hex SHA224); VLESS/VMess use the static UUID
-            const username = protocol === atob(horse) ? trojanPassword : uuid;
+            const username = uuid;
             const security = port == 443 ? 'tls' : 'none';
-            const sni = port == 80 && protocol == atob('dm1lc3M=') ? '' : servername;
+            const sni = servername;
             const path = `/${prx.prxIP}-${prx.prxPort}`;
             const name = `${getFlagEmoji(prx.country)} ${prx.org}`;
             const remark = name;
 
-            const uri = new URL(`${atob(horse)}://${server}`);
+            const uri = new URL(`${protocol}://${server}`);
             uri.protocol = protocol;
             uri.port = port.toString();
             uri.username = username;
@@ -258,18 +252,7 @@ export function createApiRoutes() {
           `    server: ${l.server}`,
           `    port: ${l.port}`,
         ];
-        if (l.protocol === atob(horse)) {
-          fields.push(`    type: trojan`, `    password: ${l.username}`);
-        } else if (l.protocol === 'vmess') {
-          fields.push(
-            `    type: vmess`,
-            `    uuid: ${l.username}`,
-            `    alterId: 0`,
-            `    cipher: auto`
-          );
-        } else {
-          fields.push(`    type: vless`, `    uuid: ${l.username}`, `    cipher: auto`);
-        }
+        fields.push(`    type: vless`, `    uuid: ${l.username}`, `    cipher: auto`);
         fields.push(
           `    tls: ${tls}`,
           `    skip-cert-verify: true`,
@@ -298,27 +281,6 @@ export function createApiRoutes() {
           server: l.server,
           server_port: l.port,
         };
-        if (l.protocol === atob(horse)) {
-          return {
-            ...base,
-            type: 'trojan',
-            password: l.username,
-            tls: tlsObj,
-            transport,
-          };
-        }
-        if (l.protocol === 'vmess') {
-          return {
-            ...base,
-            type: 'vmess',
-            uuid: l.username,
-            security: 'auto',
-            alter_id: 0,
-            tls: tlsObj,
-            transport,
-          };
-        }
-        // vless
         return {
           ...base,
           type: 'vless',

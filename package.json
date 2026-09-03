@@ -1,7 +1,7 @@
 {
   "name": "bits-vpn-cloudflare",
   "version": "2.0.0",
-  "description": "High-performance Serverless VPN Relay for VLESS, VMess, and Trojan over Cloudflare Workers.",
+  "description": "High-performance Serverless VPN Relay for VLESS over Cloudflare Workers.",
   "keywords": [
     "vpn",
     "cloudflare",
@@ -11,8 +11,6 @@
     "proxy",
     "serverless",
     "vless",
-    "vmess",
-    "trojan",
     "websocket",
     "clash",
     "singbox"
