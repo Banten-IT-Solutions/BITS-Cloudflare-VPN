@@ -38,6 +38,7 @@ export async function websocketHandler(
   vmessUuid?: string,
   subToken?: string
 ) {
+  console.log('DEBUG websocketHandler called', request.url, prxIP);
   const webSocketPair = new WebSocketPair();
   const [client, webSocket] = Object.values(webSocketPair);
 
