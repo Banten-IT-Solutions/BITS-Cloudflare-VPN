@@ -477,11 +477,11 @@ async function remoteSocketToWS(
   await remoteSocket.readable
     .pipeTo(
       new WritableStream({
-        start() {},
         async write(chunk: any, controller: any) {
           hasIncomingData = true;
           if (webSocket.readyState !== WS_READY_STATE_OPEN) {
             controller.error('webSocket.readyState is not open, maybe close');
+            return;
           }
           if (header) {
             webSocket.send(await new Blob([header, chunk]).arrayBuffer());
