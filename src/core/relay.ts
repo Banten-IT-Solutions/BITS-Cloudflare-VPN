@@ -148,7 +148,7 @@ export async function websocketHandler(request: Request, prxIP: string, expected
             responseHeader,
             log,
             prxIP
-          );
+          ).catch(() => {});
         },
         close() {
           clearHeaderTimer();
@@ -280,13 +280,17 @@ async function handleTCPOutBound(
       safeCloseWebSocket(webSocket);
       return;
     }
-    const tcpSocket = await connectAndWrite(relayHost, relayPort);
-    tcpSocket.closed
-      .catch(() => {})
-      .finally(() => {
-        safeCloseWebSocket(webSocket);
-      });
-    remoteSocketToWS(tcpSocket, webSocket, responseHeader, null);
+    try {
+      const tcpSocket = await connectAndWrite(relayHost, relayPort);
+      tcpSocket.closed
+        .catch(() => {})
+        .finally(() => {
+          safeCloseWebSocket(webSocket);
+        });
+      remoteSocketToWS(tcpSocket, webSocket, responseHeader, null);
+    } catch {
+      safeCloseWebSocket(webSocket);
+    }
   }
 
   let tcpSocket;
